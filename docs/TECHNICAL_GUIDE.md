@@ -59,7 +59,7 @@ Responsabilita':
 - disabilitare il banner debug;
 - impostare `DashboardScreen` come schermata iniziale.
 
-Nota: il profilo contiene una preferenza `isDarkMode`, ma `themeMode` e' attualmente impostato a `ThemeMode.light`. Il supporto completo al tema scuro e' quindi pianificato, non ancora operativo.
+Nota: il profilo contiene una preferenza `isDarkMode`, ma `themeMode` e' attualmente impostato a `ThemeMode.light`. Il supporto completo al tema scuro e' pianificato, non ancora operativo; nelle impostazioni il controllo e' disabilitato per evitare un toggle senza effetto reale.
 
 ### `lib/models/`
 
@@ -277,8 +277,8 @@ Schermata impostazioni.
 Responsabilita':
 
 - gestire preferenza notifiche;
-- gestire preferenza tema scuro a livello dati;
-- mostrare voci predisposte per backup e report PDF.
+- mostrare il tema scuro come funzionalita' pianificata ma non ancora attivabile;
+- mostrare voci predisposte per backup e report PDF con feedback utente, senza implementare ancora le feature.
 
 ## Responsabilita' dei widget
 
@@ -481,6 +481,20 @@ Flusso consigliato:
 7. Aggiornare la documentazione.
 8. Riepilogare i file toccati.
 
+## Linee guida responsive e tastiera
+
+Le schermate con form lunghi devono essere progettate per schermi piccoli, tastiera aperta e dispositivi pieghevoli.
+
+Regole consigliate:
+
+- usare `SafeArea` nelle schermate che possono arrivare vicino ai bordi fisici del dispositivo;
+- usare `SingleChildScrollView` o `ListView` per form e contenuti verticali lunghi;
+- aggiungere padding inferiore legato a `MediaQuery.viewInsets.bottom` quando i bottoni sono in fondo al form;
+- mantenere `resizeToAvoidBottomInset` esplicito nelle schermate con input;
+- chiudere il focus/tastiera prima di navigare indietro da una schermata form;
+- evitare `Expanded` o `Spacer` dentro contenuti scrollabili se non sono strettamente necessari;
+- usare `LayoutBuilder` per trasformare righe affiancate in colonne sugli schermi stretti.
+
 ## Documentazione obbligatoria
 
 Il progetto deve mantenere questi file:
@@ -597,7 +611,7 @@ Limiti attuali:
 - notifiche non ancora integrate nel flusso principale;
 - terapie gestite indirettamente tramite aggiunta medicina;
 - alcune componenti UI sono duplicate localmente nelle schermate;
-- tema scuro salvato nel profilo ma non applicato.
+- tema scuro predisposto nel profilo ma non ancora applicato all'interfaccia.
 
 ## Note di manutenzione
 

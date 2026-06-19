@@ -33,17 +33,11 @@ class SettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  SwitchListTile(
-                    value: profile.isDarkMode,
-                    activeColor: const Color(0xFF2E7D32),
-                    title: const Text('Tema scuro'),
-                    subtitle: const Text('Predisposto per una prossima versione'),
-                    onChanged: (value) {
-                      provider.updateProfile(
-                        name: profile.name,
-                        isDarkMode: value,
-                      );
-                    },
+                  const SwitchListTile(
+                    value: false,
+                    title: Text('Tema scuro'),
+                    subtitle: Text('Disponibile in una prossima versione'),
+                    onChanged: null,
                   ),
                 ],
               ),
@@ -59,7 +53,10 @@ class SettingsScreen extends StatelessWidget {
                     title: const Text('Backup'),
                     subtitle: const Text('Predisposizione per backup futuro'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
+                    onTap: () => _showPlannedFeatureMessage(
+                      context,
+                      'Backup',
+                    ),
                   ),
                   ListTile(
                     leading: const Icon(
@@ -69,7 +66,10 @@ class SettingsScreen extends StatelessWidget {
                     title: const Text('Report medico PDF'),
                     subtitle: const Text('Esportazione predisposta'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {},
+                    onTap: () => _showPlannedFeatureMessage(
+                      context,
+                      'Report medico PDF',
+                    ),
                   ),
                 ],
               ),
@@ -77,6 +77,14 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  void _showPlannedFeatureMessage(BuildContext context, String featureName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("$featureName sara' disponibile in una prossima versione"),
+      ),
     );
   }
 }

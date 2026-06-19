@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/medicine_provider.dart';
 import '../widgets/primary_button.dart';
 
@@ -25,12 +26,12 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   bool _isLoading = false;
 
   final List<String> _colors = [
-    '#2E7D32', // Verde
-    '#4CAF50', // Verde chiaro
-    '#00796B', // Teal medicale
-    '#607D8B', // Grigio tecnico
-    '#8BC34A', // Verde lime soft
-    '#9E9E9E', // Neutro
+    '#2E7D32',
+    '#4CAF50',
+    '#00796B',
+    '#607D8B',
+    '#8BC34A',
+    '#9E9E9E',
   ];
 
   @override
@@ -47,366 +48,323 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _closeKeyboardAndPop,
+        ),
         title: const Text('Aggiungi Medicina'),
         elevation: 0,
         backgroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Terapia *',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _therapyController,
-                decoration: InputDecoration(
-                  hintText: 'Es. Terapia Vasculite',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (value) => value?.trim().isEmpty ?? true
-                    ? 'Inserisci la terapia'
-                    : null,
-              ),
-              const SizedBox(height: 20),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-              // Nome
-              const Text(
-                'Nome Medicina *',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  hintText: 'Es. Tachipirina',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) =>
-                    v?.isEmpty ?? true ? 'Inserisci il nome' : null,
-              ),
-              const SizedBox(height: 20),
-
-              // Dosaggio
-              const Text(
-                'Dosaggio *',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _doseController,
-                decoration: InputDecoration(
-                  hintText: 'Es. 500mg',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) =>
-                    v?.isEmpty ?? true ? 'Inserisci il dosaggio' : null,
-              ),
-              const SizedBox(height: 20),
-
-              // Orari
-              const Text(
-                'Orari di Assunzione *',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Column(
-                  children: [
-                    if (_times.isNotEmpty)
-                      Column(
-                        children: List.generate(
-                          _times.length,
-                          (index) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              border: index < _times.length - 1
-                                  ? Border(
-                                      bottom: BorderSide(
-                                        color: Colors.grey[200]!,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _times[index].format(context),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () {
-                                    setState(() => _times.removeAt(index));
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + bottomInset),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Terapia *'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _therapyController,
+                        decoration: const InputDecoration(
+                          hintText: 'Es. Terapia Vasculite',
+                          filled: true,
+                          fillColor: Colors.white,
                         ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'Nessun orario',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
+                        validator: (value) => value?.trim().isEmpty ?? true
+                            ? 'Inserisci la terapia'
+                            : null,
                       ),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.grey[200]!),
+                      const SizedBox(height: 20),
+                      _buildLabel('Nome Medicina *'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          hintText: 'Es. Tachipirina',
+                          filled: true,
+                          fillColor: Colors.white,
                         ),
+                        validator: (value) =>
+                            value?.trim().isEmpty ?? true
+                                ? 'Inserisci il nome'
+                                : null,
                       ),
-                      child: SizedBox(
+                      const SizedBox(height: 20),
+                      _buildLabel('Dosaggio *'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _doseController,
+                        decoration: const InputDecoration(
+                          hintText: 'Es. 500mg',
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        validator: (value) =>
+                            value?.trim().isEmpty ?? true
+                                ? 'Inserisci il dosaggio'
+                                : null,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildLabel('Orari di Assunzione *'),
+                      const SizedBox(height: 8),
+                      _buildTimesSection(),
+                      const SizedBox(height: 20),
+                      _buildLabel('Giorni della Settimana *'),
+                      const SizedBox(height: 8),
+                      _buildWeekdayChips(),
+                      const SizedBox(height: 20),
+                      _buildStockFields(),
+                      const SizedBox(height: 20),
+                      _buildLabel('Colore'),
+                      const SizedBox(height: 8),
+                      _buildColorPicker(),
+                      const SizedBox(height: 20),
+                      _buildLabel('Note'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _notesController,
+                        decoration: const InputDecoration(
+                          hintText: 'Es. Prendere dopo i pasti',
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _addTime,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Aggiungi Orario'),
+                        child: PrimaryButton(
+                          label: 'Aggiungi Medicina',
+                          icon: Icons.add,
+                          isLoading: _isLoading,
+                          onPressed: _addMedicine,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Giorni della settimana
-              const Text(
-                'Giorni della Settimana *',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
-                    .asMap()
-                    .entries
-                    .map((e) {
-                      final index = e.key;
-                      final day = e.value;
-                      final dayNum = index + 1;
-
-                      return FilterChip(
-                        label: Text(day),
-                        selected: _daysOfWeek.contains(dayNum),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _daysOfWeek.add(dayNum);
-                            } else {
-                              _daysOfWeek.remove(dayNum);
-                            }
-                          });
-                        },
-                        backgroundColor: Colors.white,
-                        selectedColor: const Color(0xFFE8F5E9),
-                        side: BorderSide(
-                          color: _daysOfWeek.contains(dayNum)
-                              ? const Color(0xFF2E7D32)
-                              : Colors.grey[300]!,
-                        ),
-                        labelStyle: TextStyle(
-                          color: _daysOfWeek.contains(dayNum)
-                              ? const Color(0xFF2E7D32)
-                              : Colors.grey[700],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      );
-                    })
-                    .toList(),
-              ),
-              const SizedBox(height: 20),
-
-              // Stock
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Quantita iniziale',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E1E1E),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _stockController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: _validatePositiveNumber,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Soglia Avviso',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E1E1E),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _warningController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: _validatePositiveNumber,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Colore
-              const Text(
-                'Colore',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                children: _colors
-                    .map(
-                      (color) => GestureDetector(
-                        onTap: () => setState(() => _selectedColor = color),
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: _parseColor(color),
-                            borderRadius: BorderRadius.circular(12),
-                            border: _selectedColor == color
-                                ? Border.all(color: Colors.black, width: 3)
-                                : Border.all(color: Colors.grey[300]!),
-                          ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _closeKeyboardAndPop,
+                          child: const Text('Annulla'),
                         ),
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 20),
-
-              // Note
-              const Text(
-                'Note',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E1E1E),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _notesController,
-                decoration: InputDecoration(
-                  hintText: 'Es. Prendere dopo i pasti',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 32),
-
-              // Bottoni
-              SizedBox(
-                width: double.infinity,
-                child: PrimaryButton(
-                  label: 'Aggiungi Medicina',
-                  icon: Icons.add,
-                  isLoading: _isLoading,
-                  onPressed: _addMedicine,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Annulla'),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  /// Aggiunge un orario
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF1E1E1E),
+      ),
+    );
+  }
+
+  Widget _buildTimesSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        children: [
+          if (_times.isNotEmpty)
+            Column(
+              children: List.generate(
+                _times.length,
+                (index) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: index < _times.length - 1
+                        ? Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          )
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _times[index].format(context),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        onPressed: () {
+                          setState(() => _times.removeAt(index));
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Nessun orario',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _addTime,
+                icon: const Icon(Icons.add),
+                label: const Text('Aggiungi Orario'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeekdayChips() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+          .asMap()
+          .entries
+          .map((entry) {
+        final dayNum = entry.key + 1;
+        final isSelected = _daysOfWeek.contains(dayNum);
+
+        return FilterChip(
+          label: Text(entry.value),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _daysOfWeek.add(dayNum);
+              } else {
+                _daysOfWeek.remove(dayNum);
+              }
+            });
+          },
+          backgroundColor: Colors.white,
+          selectedColor: const Color(0xFFE8F5E9),
+          side: BorderSide(
+            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[300]!,
+          ),
+          labelStyle: TextStyle(
+            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[700],
+            fontWeight: FontWeight.w600,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStockFields() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fields = [
+          _StockNumberField(
+            label: 'Quantita iniziale',
+            controller: _stockController,
+            validator: _validatePositiveNumber,
+          ),
+          _StockNumberField(
+            label: 'Soglia Avviso',
+            controller: _warningController,
+            validator: _validatePositiveNumber,
+          ),
+        ];
+
+        if (constraints.maxWidth < 340) {
+          return Column(
+            children: [
+              fields.first,
+              const SizedBox(height: 16),
+              fields.last,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: fields.first),
+            const SizedBox(width: 16),
+            Expanded(child: fields.last),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildColorPicker() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: _colors
+          .map(
+            (color) => GestureDetector(
+              onTap: () => setState(() => _selectedColor = color),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _parseColor(color),
+                  borderRadius: BorderRadius.circular(12),
+                  border: _selectedColor == color
+                      ? Border.all(color: Colors.black, width: 3)
+                      : Border.all(color: Colors.grey[300]!),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<void> _closeKeyboardAndPop() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    if (!mounted) return;
+    Navigator.maybePop(context);
+  }
+
   void _addTime() async {
     final time = await showTimePicker(
       context: context,
@@ -423,7 +381,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     }
   }
 
-  /// Salva la medicina
   void _addMedicine() async {
     if (!_formKey.currentState!.validate()) return;
     if (_times.isEmpty || _daysOfWeek.isEmpty) {
@@ -449,6 +406,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       );
 
       if (mounted) {
+        FocusManager.instance.primaryFocus?.unfocus();
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -476,9 +434,47 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     return null;
   }
 
-  /// Converte codice colore hex a Color
   Color _parseColor(String colorHex) {
-    colorHex = colorHex.replaceFirst('#', '');
-    return Color(int.parse('FF$colorHex', radix: 16));
+    final value = colorHex.replaceFirst('#', '');
+    return Color(int.parse('FF$value', radix: 16));
+  }
+}
+
+class _StockNumberField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final FormFieldValidator<String> validator;
+
+  const _StockNumberField({
+    required this.label,
+    required this.controller,
+    required this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E1E1E),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          validator: validator,
+        ),
+      ],
+    );
   }
 }

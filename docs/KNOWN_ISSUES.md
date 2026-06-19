@@ -1,185 +1,239 @@
 # Problemi noti - Meditrack
 
-Questo file raccoglie bug, discrepanze e rischi tecnici noti. Ogni problema dovrebbe restare tracciato fino a quando viene corretto, accettato come limite temporaneo o spostato nella roadmap.
-
-## Formato delle voci
-
-Ogni voce deve includere:
-
-- problema;
-- area;
-- possibili cause;
-- possibili soluzioni;
-- stato.
+Questo file raccoglie bug, discrepanze e rischi tecnici noti. Ogni problema resta tracciato fino a quando viene corretto, accettato come limite temporaneo o spostato nella roadmap.
 
 ## Naming non uniforme tra Medora e Meditrack
 
-Area: identita' progetto.
+### Categoria
 
-Problema:
+Incoerenza da chiarire/correggere ora.
 
-La cartella del progetto usa il nome Medora, mentre package Flutter, titolo app e documentazione usano Meditrack.
+### Stato
 
-Possibili cause:
+Rimandato
 
-- rinomina parziale del progetto;
-- vecchia identita' mantenuta in alcuni file;
-- scelta del nome definitivo non ancora consolidata.
+### Cosa e' stato trovato
 
-Possibili soluzioni:
+La cartella del progetto usa il nome Medora, mentre package Flutter, titolo app, label Android e documentazione usano Meditrack.
 
-- decidere il nome definitivo;
-- aggiornare documentazione, package name, app label e riferimenti UI in modo coerente;
-- valutare se cambiare anche application id Android quando il branding sara' stabile.
+### Motivazione
 
-Stato: aperto.
+La correzione richiede una decisione di prodotto sul nome definitivo. Rinominare package, application id Android, label, documentazione e riferimenti interni senza una scelta esplicita sarebbe rischioso e potrebbe generare modifiche ampie non necessarie in questo sprint.
+
+### Possibili soluzioni
+
+- decidere se il nome finale sara' Medora o Meditrack;
+- aggiornare documentazione, app title, app label e riferimenti UI in modo coerente;
+- rinominare package/application id solo quando il branding sara' stabile.
 
 ## Tema scuro salvato ma non applicato
 
-Area: UI e preferenze.
+### Categoria
 
-Problema:
+Bug da correggere ora.
 
-Il profilo contiene `isDarkMode`, ma l'app forza `ThemeMode.light`.
+### Stato
 
-Possibili cause:
+Risolto
 
-- preferenza predisposta per sviluppo futuro;
-- tema scuro non ancora rifinito graficamente.
+### Data risoluzione
 
-Possibili soluzioni:
+2026-06-19
 
-- collegare `themeMode` alla preferenza del profilo;
-- verificare contrasto, card, navbar e schermate principali in dark mode;
-- oppure nascondere temporaneamente il toggle finche' non e' realmente operativo.
+### Come e' stato risolto
 
-Stato: aperto.
+Il toggle del tema scuro nelle impostazioni e' stato disabilitato, per evitare che l'utente possa attivare una preferenza che non cambia realmente il tema dell'app. Il tema scuro resta una funzionalita' futura da implementare e verificare con un passaggio UI dedicato.
+
+### File modificati
+
+- `lib/screens/settings_screen.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+### Note
+
+Il campo `isDarkMode` resta nel model `UserProfile` come predisposizione futura, ma non viene piu' esposto come controllo operativo.
 
 ## Terapie non gestibili come entita' autonome
 
-Area: dominio e UX.
+### Categoria
 
-Problema:
+Feature futura da lasciare aperta.
+
+### Stato
+
+Aperto
+
+### Cosa e' stato trovato
 
 Le terapie vengono create indirettamente quando si aggiunge una medicina. Non esiste ancora un flusso dedicato per creare, modificare, archiviare o cancellare una terapia.
 
-Possibili cause:
+### Motivazione
 
-- fase prototipale concentrata sul flusso medicina;
-- provider gia' predisposto ma non ancora esteso alla gestione completa delle terapie.
+La gestione completa delle terapie e' una feature di prodotto prevista dalla roadmap. Implementarla ora richiederebbe nuovi flussi UI, nuove azioni nel provider e possibili cambiamenti di navigazione. Non rientra nello sprint di revisione dei problemi sicuri.
 
-Possibili soluzioni:
+### Possibili soluzioni
 
-- introdurre azioni dedicate per le terapie;
+- introdurre una schermata o un flusso dedicato alle terapie;
 - mantenere il modello `TERAPIE -> MEDICINE`;
-- aggiungere dettaglio terapia prima di introdurre database.
-
-Stato: aperto.
+- aggiungere dettaglio terapia prima di introdurre database;
+- documentare ogni nuova responsabilita' nella guida tecnica.
 
 ## Storico assunzioni non operativo
 
-Area: storico.
+### Categoria
 
-Problema:
+Feature futura da lasciare aperta.
+
+### Stato
+
+Aperto
+
+### Cosa e' stato trovato
 
 Il model `IntakeRecord` esiste, ma la schermata Storico mostra solo uno stato vuoto e non registra assunzioni.
 
-Possibili cause:
+### Motivazione
 
-- mancano azioni di conferma, salto o ritardo assunzione;
-- manca una lista di record nello stato applicativo;
-- scorte e storico non sono ancora collegati.
+Lo storico completo richiede azioni di conferma, salto o ritardo assunzione, gestione dei record in memoria e collegamento con le scorte. Sarebbe una feature nuova, quindi non viene implementata in questo sprint.
 
-Possibili soluzioni:
+### Possibili soluzioni
 
 - aggiungere gestione in memoria degli `IntakeRecord`;
 - creare azioni rapide dalla dashboard o dal dettaglio medicina;
-- collegare la conferma assunzione al decremento scorte.
-
-Stato: aperto.
+- collegare la conferma assunzione al decremento scorte;
+- introdurre persistenza solo in una fase successiva.
 
 ## Notifiche locali non integrate nel flusso principale
 
-Area: notifiche.
+### Categoria
 
-Problema:
+Feature futura da lasciare aperta.
+
+### Stato
+
+Aperto
+
+### Cosa e' stato trovato
 
 `NotificationService` e' presente, ma non viene inizializzato all'avvio e non viene usato quando una medicina viene creata, modificata, disattivata o cancellata.
 
-Possibili cause:
+### Motivazione
 
-- servizio predisposto ma non collegato al provider;
-- manca una strategia stabile per gli ID notifica delle medicine.
+L'integrazione completa delle notifiche richiede una strategia stabile per ID notifica, permessi, scheduling ricorrente e cancellazione. Non va introdotta come fix rapido.
 
-Possibili soluzioni:
+### Possibili soluzioni
 
 - inizializzare il servizio in fase di avvio;
 - pianificare notifiche alla creazione/modifica medicina;
 - cancellare notifiche quando una medicina viene disattivata o rimossa;
 - verificare permessi Android e iOS.
 
-Stato: aperto.
-
 ## Backup e report PDF sono voci non operative
 
-Area: impostazioni.
+### Categoria
 
-Problema:
+Bug da correggere ora.
 
-Le voci Backup e Report medico PDF sono visibili nelle impostazioni, ma non eseguono azioni.
+### Stato
 
-Possibili cause:
+Risolto
 
-- funzionalita' pianificate ma non ancora implementate;
-- placeholder utili alla roadmap.
+### Data risoluzione
 
-Possibili soluzioni:
+2026-06-19
 
-- mostrare un messaggio "funzione in arrivo";
-- lasciare le voci disabilitate finche' non sono pronte;
-- implementare report e backup solo nelle fasi previste.
+### Come e' stato risolto
 
-Stato: aperto.
+Le voci Backup e Report medico PDF nelle impostazioni ora mostrano un messaggio che comunica che la funzionalita' sara' disponibile in una prossima versione. Non e' stato implementato backup, cloud o generazione PDF.
+
+### File modificati
+
+- `lib/screens/settings_screen.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+### Note
+
+Backup e report PDF restano nella roadmap come feature future, ma non sono piu' controlli senza feedback.
+
+## Overflow temporaneo in Aggiungi Medicina con tastiera aperta
+
+### Categoria
+
+Bug da correggere ora.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-19
+
+### Come e' stato risolto
+
+La schermata `AddMedicineScreen` e' stata resa piu' stabile con tastiera aperta usando `SafeArea`, `LayoutBuilder`, `SingleChildScrollView` con padding legato a `MediaQuery.viewInsets.bottom` e `resizeToAvoidBottomInset`. La freccia indietro e il pulsante Annulla chiudono prima la tastiera e poi eseguono il pop della schermata. I campi delle scorte passano da layout affiancato a layout verticale sugli schermi piu' stretti.
+
+### File modificati
+
+- `lib/screens/add_medicine_screen.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/TECHNICAL_GUIDE.md`.
+
+### Note
+
+Il fix mira a evitare il warning giallo/nero visibile per un frame quando si torna indietro dalla schermata con la tastiera ancora aperta, soprattutto su schermi piccoli e telefoni pieghevoli.
 
 ## Vecchio log di build con errore NDK
 
-Area: build Android.
+### Categoria
 
-Problema:
+Problema gia' risolto.
 
-`build_output.txt` contiene un errore relativo a NDK mancante o incompleto in un percorso precedente del progetto.
+### Stato
 
-Possibili cause:
+Risolto
 
-- installazione NDK corrotta o incompleta;
-- log generato in una vecchia cartella;
-- ambiente Android non allineato.
+### Data risoluzione
 
-Possibili soluzioni:
+2026-06-19
 
-- verificare `flutter doctor`;
-- reinstallare o selezionare una versione NDK valida;
-- rigenerare il log dopo un nuovo tentativo di build.
+### Come e' stato risolto
 
-Stato: da verificare.
+Il problema risulta legato a un vecchio log di build in `build_output.txt`, generato in un percorso precedente del progetto. La versione NDK configurata nel progetto risulta avere il file `source.properties` presente nell'ambiente locale.
+
+### File modificati
+
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+### Note
+
+Non e' stata eseguita una nuova build Android completa in questo sprint. Prima di un rilascio Android e' consigliato rigenerare una build pulita.
 
 ## Application ID Android ancora generico
 
-Area: configurazione release.
+### Categoria
 
-Problema:
+Incoerenza da chiarire/correggere ora.
 
-Il progetto Android usa ancora `com.example.meditrack`.
+### Stato
 
-Possibili cause:
+Rimandato
 
-- configurazione Flutter iniziale non ancora personalizzata;
-- branding definitivo non ancora deciso.
+### Cosa e' stato trovato
 
-Possibili soluzioni:
+Il progetto Android usa ancora `com.example.meditrack` come namespace e application id.
 
-- scegliere nome definitivo dell'app;
+### Motivazione
+
+Cambiare application id e namespace e' una modifica di configurazione importante, legata al nome definitivo dell'app e alla distribuzione futura. Non e' opportuno farla prima di risolvere il naming Medora/Meditrack.
+
+### Possibili soluzioni
+
+- decidere il nome definitivo dell'app;
 - impostare namespace e application id coerenti;
-- aggiornare eventuali configurazioni store quando il progetto sara' pronto.
-
-Stato: aperto.
+- aggiornare MainActivity/package e configurazioni store quando il progetto sara' pronto.
