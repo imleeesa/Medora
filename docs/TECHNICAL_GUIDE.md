@@ -10,6 +10,7 @@ Meditrack e' un'app Flutter basata su una struttura semplice:
 - Stato applicativo gestito con Provider e `ChangeNotifier`.
 - Dati temporanei mantenuti in memoria.
 - Model di dominio gia' predisposti per serializzazione JSON.
+- Base database locale Drift predisposta ma non ancora collegata alla UI.
 - Servizio notifiche locali separato dalla UI.
 
 Il punto centrale dello stato e' `MedicineProvider`, registrato in `main.dart` tramite `ChangeNotifierProvider`. Le schermate leggono i dati con `Consumer<MedicineProvider>` e invocano metodi del provider per modificare lo stato.
@@ -31,6 +32,7 @@ main.dart
 lib/
 ├── main.dart
 ├── app.dart
+├── data/
 ├── models/
 ├── providers/
 ├── screens/
@@ -71,6 +73,24 @@ File attuali:
 - `therapy.dart`
 - `intake_record.dart`
 - `user_profile.dart`
+
+### `lib/data/`
+
+Contiene la base tecnica del database locale Drift.
+
+File attuali:
+
+- `local_database.dart`;
+- `local_database.g.dart`;
+- `database_service.dart`;
+- `tables/user_profiles_table.dart`;
+- `tables/app_settings_table.dart`;
+- `tables/therapies_table.dart`;
+- `tables/medicines_table.dart`;
+- `tables/medicine_schedules_table.dart`;
+- `tables/intake_records_table.dart`.
+
+Il layer e' stato introdotto nello Sprint Database 1, ma non e' ancora collegato a `MedicineProvider`, repository o schermate. Il comportamento dell'app resta basato su dati in memoria.
 
 ### `lib/providers/`
 
@@ -425,6 +445,282 @@ Relazioni consigliate:
 - `therapies` 1 -> N `medicines`;
 - `medicines` 1 -> N `intake_records`;
 - `profiles` 1 -> N `intake_records`, se si vuole filtrare rapidamente per profilo.
+
+## Database locale - piano di introduzione
+
+Questa sezione definisce il piano tecnico per introdurre la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali, ma il database non e' ancora collegato a Provider, repository o schermate.
+
+### Stato attuale
+
+I dati sono gestiti in memoria da `MedicineProvider`.
+
+Dati mantenuti oggi:
+
+- `_therapies`: lista di `Therapy`, ognuna con una lista annidata di `Medicine`;
+- `_currentProfile`: profilo locale corrente;
+- `_isLoading`: stato UI temporaneo.
+
+Operazioni oggi gestite dal provider:
+
+- `addMedicine`: crea una medicina e crea/riusa una terapia in base al nome;
+- `updateMedicine`: aggiorna una medicina dentro la terapia che la contiene;
+- `deleteMedicine`: elimina una medicina e rimuove la terapia se resta vuota;
+- `toggleMedicineActive`: abilita/disabilita una medicina;
+- `decrementStock`: scala la quantita' disponibile;
+- `updateProfile`: aggiorna preferenze e nome profilo;
+- `getMedicinesTodayDue`, `getNextMedicine`, `getLowStockMedicines`: calcolano viste derivate per la UI.
+
+Con il database, le operazioni di lettura/scrittura dovranno spostarsi verso repository dedicati. Il provider dovra' restare il coordinatore dello stato UI, non il proprietario della persistenza.
+
+### Sprint Database 1 - base Drift
+
+File creati:
+
+- `lib/data/local_database.dart`: definisce `LocalDatabase`, registra le tabelle Drift e apre il file SQLite locale `meditrack.sqlite`;
+- `lib/data/local_database.g.dart`: file generato da Drift tramite `build_runner`;
+- `lib/data/database_service.dart`: punto centrale preparato per accedere al database, senza ancora collegarlo all'app;
+- `lib/data/tables/user_profiles_table.dart`;
+- `lib/data/tables/app_settings_table.dart`;
+- `lib/data/tables/therapies_table.dart`;
+- `lib/data/tables/medicines_table.dart`;
+- `lib/data/tables/medicine_schedules_table.dart`;
+- `lib/data/tables/intake_records_table.dart`.
+
+Dipendenze aggiunte:
+
+- `drift`;
+- `sqlite3_flutter_libs`;
+- `path_provider`;
+- `path`;
+- `drift_dev`;
+- `build_runner`.
+
+Nota versioni: il progetto usa Dart 3.8.0. Per questo le dipendenze sono state impostate su versioni compatibili con la toolchain attuale; le release piu' recenti di alcuni pacchetti richiedono Dart 3.10 o superiore.
+
+Tabelle definite:
+
+- `user_profiles`: profilo locale utente;
+- `app_settings`: preferenze associate al profilo;
+- `therapies`: terapie raggruppatrici;
+- `medicines`: medicine, con collegamento opzionale alla terapia;
+- `medicine_schedules`: una riga per ogni combinazione medicina, giorno e orario;
+- `intake_records`: storico assunzioni con snapshot di nome e dose.
+
+Il database non e' ancora collegato alla UI per scelta progettuale. In questo modo il comportamento attuale resta invariato e il prossimo sprint puo' concentrarsi sui repository senza mescolare generazione schema, migrazione Provider e modifiche schermate.
+
+Prossimo step previsto: creare repository dedicati e mapper tra tabelle Drift e model di dominio, poi collegare gradualmente `MedicineProvider`.
+
+### Database consigliato
+
+Database consigliato: Drift.
+
+Motivazione:
+
+- il dominio dell'app e' relazionale: terapie, medicine, orari, storico, profili e impostazioni hanno collegamenti chiari;
+- servono query filtrate per data, terapia, medicina, profilo, scorte basse e prossime assunzioni;
+- servono migrazioni versionate e controllabili;
+- gli orari multipli e lo storico sono piu' robusti come tabelle normalizzate rispetto a stringhe serializzate;
+- Drift permette di mantenere SQLite come base locale, con query tipizzate e stream reattivi utili per dashboard e liste.
+
+Alternative valutate:
+
+- `sqflite`: solido e diretto, ma richiede piu' codice manuale per query, mapping e migrazioni;
+- `hive`: ottimo per key-value e preferenze semplici, meno adatto a relazioni e query articolate;
+- `isar`: performante e orientato a oggetti, ma per questo progetto il modello relazionale e le migrazioni SQL esplicite sono piu' prevedibili.
+
+### Architettura futura
+
+Flusso desiderato:
+
+```text
+UI
+  -> Provider
+    -> Repository
+      -> DatabaseService
+        -> Database locale
+```
+
+Responsabilita':
+
+- UI: mostra dati e invia azioni utente;
+- Provider: espone stato alla UI, gestisce loading/errori, combina dati se necessario;
+- Repository: contiene casi d'uso di lettura/scrittura per dominio;
+- DatabaseService: apre il database, configura migrazioni e transazioni;
+- Database locale: conserva tabelle e relazioni.
+
+### Schema dati proposto
+
+#### `user_profiles`
+
+- `id` TEXT primary key;
+- `name` TEXT not null;
+- `email` TEXT nullable;
+- `photo_url` TEXT nullable;
+- `language` TEXT not null default `it`;
+- `created_at` TEXT not null;
+- `updated_at` TEXT not null.
+
+#### `app_settings`
+
+- `id` TEXT primary key;
+- `profile_id` TEXT nullable, foreign key verso `user_profiles.id`;
+- `is_dark_mode` INTEGER not null default 0;
+- `notifications_enabled` INTEGER not null default 1;
+- `created_at` TEXT not null;
+- `updated_at` TEXT not null.
+
+Nota: le impostazioni possono restare globali nella prima fase usando un record singolo, ma lo schema lascia spazio a profili multipli futuri.
+
+#### `therapies`
+
+- `id` TEXT primary key;
+- `profile_id` TEXT not null, foreign key verso `user_profiles.id`;
+- `name` TEXT not null;
+- `color` TEXT not null;
+- `is_active` INTEGER not null default 1;
+- `created_at` TEXT not null;
+- `updated_at` TEXT not null.
+
+Indici consigliati:
+
+- `profile_id`;
+- `lower(name)` o normalizzazione applicativa per evitare duplicati visivi.
+
+#### `medicines`
+
+- `id` TEXT primary key;
+- `therapy_id` TEXT not null, foreign key verso `therapies.id`;
+- `profile_id` TEXT not null, foreign key verso `user_profiles.id`;
+- `name` TEXT not null;
+- `dose` TEXT not null;
+- `notes` TEXT nullable;
+- `stock_quantity` INTEGER not null;
+- `stock_warning_threshold` INTEGER not null;
+- `is_active` INTEGER not null default 1;
+- `color` TEXT not null;
+- `icon` TEXT nullable;
+- `created_at` TEXT not null;
+- `updated_at` TEXT not null.
+
+Indici consigliati:
+
+- `therapy_id`;
+- `profile_id`;
+- `is_active`;
+- `stock_quantity`.
+
+#### `medicine_schedules`
+
+- `id` TEXT primary key;
+- `medicine_id` TEXT not null, foreign key verso `medicines.id`;
+- `weekday` INTEGER not null, valori 1-7;
+- `hour` INTEGER not null, valori 0-23;
+- `minute` INTEGER not null, valori 0-59;
+- `is_active` INTEGER not null default 1;
+- `created_at` TEXT not null;
+- `updated_at` TEXT not null.
+
+Indici consigliati:
+
+- `medicine_id`;
+- combinato `weekday, hour, minute`;
+- vincolo logico su `medicine_id, weekday, hour, minute` per evitare duplicati.
+
+Motivazione: gli orari e i giorni non dovrebbero restare serializzati dentro `Medicine`, perche' servono query su prossime assunzioni, notifiche e storico.
+
+#### `intake_records`
+
+- `id` TEXT primary key;
+- `medicine_id` TEXT not null, foreign key verso `medicines.id`;
+- `therapy_id` TEXT nullable, snapshot o foreign key verso `therapies.id`;
+- `profile_id` TEXT not null, foreign key verso `user_profiles.id`;
+- `scheduled_date_time` TEXT not null;
+- `actual_date_time` TEXT nullable;
+- `status` TEXT not null, valori previsti: `taken`, `missed`, `skipped`;
+- `notes` TEXT nullable;
+- `medicine_name_snapshot` TEXT nullable;
+- `medicine_dose_snapshot` TEXT nullable;
+- `created_at` TEXT not null;
+- `updated_at` TEXT not null.
+
+Indici consigliati:
+
+- `medicine_id`;
+- `profile_id`;
+- `scheduled_date_time`;
+- `status`.
+
+Nota: gli snapshot aiutano a conservare uno storico leggibile anche se una medicina viene rinominata o cancellata.
+
+### File da creare o completare in futuro
+
+La struttura `lib/data/` esiste gia' come base Drift. In futuro andra' completata con repository, mapper, test e migrazioni.
+
+Possibile struttura evolutiva:
+
+```text
+lib/
+  data/
+    local_database.dart
+    database_service.dart
+    migrations/
+    tables/
+      therapies_table.dart
+      medicines_table.dart
+      medicine_schedules_table.dart
+      intake_records_table.dart
+      user_profiles_table.dart
+      app_settings_table.dart
+    mappers/
+      medicine_mapper.dart
+      therapy_mapper.dart
+  repositories/
+    therapy_repository.dart
+    medicine_repository.dart
+    intake_repository.dart
+    profile_repository.dart
+    settings_repository.dart
+```
+
+Eventuali file di supporto:
+
+- mapper tra righe database e model di dominio;
+- test repository/database;
+- fixture o seed per profilo locale iniziale.
+
+### File da modificare in futuro
+
+- `pubspec.yaml`: aggiornare dipendenze database solo quando sara' necessario un upgrade della toolchain o di Drift;
+- `lib/main.dart`: inizializzare `DatabaseService` e repository;
+- `lib/providers/medicine_provider.dart`: sostituire lo stato puramente in memoria con caricamento/salvataggio tramite repository;
+- `lib/models/medicine.dart`: rimuovere o limitare la serializzazione compatta di `times` e `daysOfWeek`;
+- `lib/models/therapy.dart`: valutare separazione tra `Therapy` pura e aggregato `TherapyWithMedicines`;
+- `lib/models/intake_record.dart`: allineare status e campi snapshot;
+- `lib/models/user_profile.dart`: separare preferenze app da dati profilo, se necessario;
+- schermate che leggono liste e dettagli: mantenere la UI invariata, ma leggere dati dal provider aggiornato.
+
+### Strategia di migrazione
+
+Fase consigliata:
+
+1. Introdurre tabelle e database service senza collegare subito la UI. Stato: completato nello Sprint Database 1.
+2. Creare repository con test su operazioni base.
+3. Aggiungere seed del profilo locale `local-user`.
+4. Migrare `MedicineProvider.init` per caricare dati dal repository.
+5. Spostare `addMedicine`, `updateMedicine`, `deleteMedicine`, `toggleMedicineActive`, `decrementStock`, `updateProfile` sui repository.
+6. Mantenere compatibilita' temporanea con model esistenti tramite mapper.
+7. Integrare storico, scorte e notifiche solo dopo la persistenza base.
+
+### Rischi e punti delicati
+
+- Migrazione dati in memoria: in questa fase non ci sono dati persistenti da migrare, ma quando il database sara' introdotto bisognera' creare un profilo locale iniziale e gestire database vuoto.
+- Giorni della settimana: oggi sono `List<int>` dentro `Medicine`; in futuro dovranno diventare righe in `medicine_schedules`.
+- Orari multipli: oggi sono `List<TimeOfDay>`; in futuro ogni combinazione giorno/orario dovra' essere interrogabile e collegabile alle notifiche.
+- Associazione medicine-terapie: oggi una terapia contiene medicine; nel database la relazione dovra' essere `therapy_id` dentro `medicines`.
+- Storico assunzioni: non deve dipendere solo dalla medicina attuale; servono snapshot per conservare dati leggibili.
+- Cancellazione medicine: prima di cancellare una medicina bisogna decidere se impedire la cancellazione quando esiste storico, fare soft delete o mantenere record storici con snapshot.
+- Notifiche locali: gli ID notifica dovranno essere derivabili da `medicine_schedules`, non solo dalla medicina.
+- Profili multipli futuri: tutte le query dovranno filtrare per `profile_id` anche se inizialmente esiste un solo profilo.
 
 ## Convenzioni di naming
 

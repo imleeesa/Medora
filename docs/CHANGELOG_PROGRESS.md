@@ -109,3 +109,99 @@ Motivazione:
 Prima di introdurre il database locale era necessario stabilizzare il comportamento responsive del form principale, riducendo layout rigidi e transizioni problematiche quando la tastiera si apre o si chiude.
 
 Stato finale: completato con verifica automatica parziale.
+
+## 2026-06-19 - Piano database locale
+
+Tipo modifica: Decisione tecnica / Progettazione / Documentation.
+
+Descrizione:
+
+- analizzati model esistenti e `MedicineProvider`;
+- definita una strategia futura per passare dai dati in memoria alla persistenza locale;
+- valutate le alternative `sqflite`, `drift`, `hive` e `isar`;
+- scelto Drift come opzione consigliata per il futuro database locale;
+- proposto schema dati per terapie, medicine, schedule, storico, profili e impostazioni;
+- documentata l'architettura futura `UI -> Provider -> Repository -> DatabaseService -> Database locale`;
+- identificati rischi tecnici da gestire prima dell'implementazione.
+
+File modificati:
+
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+Problemi risolti:
+
+- nessun bug applicativo risolto: sprint solo progettuale.
+
+Problemi rimandati:
+
+- implementazione database locale;
+- aggiunta dipendenze a `pubspec.yaml`;
+- creazione repository, database service, tabelle e migrazioni;
+- migrazione effettiva di `MedicineProvider`;
+- integrazione con notifiche, storico e scorte persistenti.
+
+Motivazione:
+
+Prima di implementare la persistenza era necessario definire una direzione tecnica chiara, evitando di introdurre uno storage non adatto a relazioni, schedule, storico e future migrazioni.
+
+Stato finale: completato come progettazione, senza modifiche al comportamento dell'app.
+
+## 2026-06-19 - Sprint Database 1
+
+Tipo modifica: Database / Infrastructure / Documentation.
+
+Descrizione:
+
+- aggiunte le dipendenze base per Drift e SQLite locale;
+- creata la struttura `lib/data/` per database locale e servizio di accesso centralizzato;
+- definite le tabelle principali per profili, impostazioni, terapie, medicine, orari e storico;
+- generato il file Drift `local_database.g.dart`;
+- mantenuto invariato il comportamento dell'app: Provider, UI e schermate non sono stati collegati al database;
+- documentati vincoli di compatibilita' con Dart 3.8 e tooling locale.
+
+File modificati:
+
+- `.gitignore`;
+- `pubspec.yaml`;
+- `pubspec.lock`;
+- `linux/flutter/generated_plugin_registrant.cc`;
+- `linux/flutter/generated_plugins.cmake`;
+- `macos/Flutter/GeneratedPluginRegistrant.swift`;
+- `windows/flutter/generated_plugin_registrant.cc`;
+- `windows/flutter/generated_plugins.cmake`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+File creati:
+
+- `lib/data/local_database.dart`;
+- `lib/data/local_database.g.dart`;
+- `lib/data/database_service.dart`;
+- `lib/data/tables/user_profiles_table.dart`;
+- `lib/data/tables/app_settings_table.dart`;
+- `lib/data/tables/therapies_table.dart`;
+- `lib/data/tables/medicines_table.dart`;
+- `lib/data/tables/medicine_schedules_table.dart`;
+- `lib/data/tables/intake_records_table.dart`.
+
+Problemi risolti:
+
+- predisposta una base Drift compilabile senza migrare ancora lo stato in memoria;
+- introdotta una cache Dart locale ignorata da Git per aggirare il problema di permessi sulla cache globale.
+
+Problemi rimandati:
+
+- collegamento del database a repository e Provider;
+- migrazione dei dati in memoria verso persistenza locale;
+- gestione seed profilo locale e migrazioni future;
+- integrazione con notifiche, storico e scorte persistenti;
+- timeout del comando `flutter analyze` nell'ambiente corrente.
+
+Motivazione:
+
+Lo sprint introduce solo la base tecnica del database locale, mantenendo separato il nuovo layer dati dal comportamento attuale dell'app. Questo permette di verificare schema e generazione Drift prima di spostare logica e stato nei repository.
+
+Stato finale: completato con generazione Drift e analisi Dart pulita.

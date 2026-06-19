@@ -45,6 +45,10 @@ dependencies:
   intl: ^0.19.0
   
   # Utilities
+  drift: ^2.28.1
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  sqlite3_flutter_libs: ^0.5.42
   uuid: ^4.0.0
 
 dev_dependencies:
@@ -56,6 +60,8 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
+  build_runner: ^2.15.0
+  drift_dev: ^2.28.1
   flutter_lints: ^5.0.0
 
 # For information on the generic Dart part of this file, see the

@@ -237,3 +237,103 @@ Cambiare application id e namespace e' una modifica di configurazione importante
 - decidere il nome definitivo dell'app;
 - impostare namespace e application id coerenti;
 - aggiornare MainActivity/package e configurazioni store quando il progetto sara' pronto.
+
+## Migrazione futura al database locale
+
+### Categoria
+
+Rischio tecnico da verificare.
+
+### Stato
+
+Rimandato
+
+### Cosa e' stato trovato
+
+L'app oggi mantiene terapie, medicine e profilo in memoria dentro `MedicineProvider`. Quando verra' introdotto il database locale, bisognera' spostare lettura e scrittura verso repository senza rompere il comportamento attuale.
+
+### Motivazione
+
+La persistenza non viene implementata in questo sprint. Il rischio resta aperto perche' riguarda migrazioni, seed del profilo locale, mapping tra model e tabelle, gestione database vuoto e mantenimento del flusso UI esistente.
+
+### Possibili soluzioni
+
+- introdurre `DatabaseService` e repository in uno sprint dedicato;
+- partire con seed del profilo `local-user`;
+- migrare un metodo del provider alla volta;
+- aggiungere test repository prima di collegare la UI;
+- mantenere la possibilita' di ricostruire `Therapy` con medicine associate tramite mapper.
+
+## Normalizzazione di orari, giorni e storico
+
+### Categoria
+
+Rischio tecnico da verificare.
+
+### Stato
+
+Rimandato
+
+### Cosa e' stato trovato
+
+`Medicine` oggi contiene `List<TimeOfDay>` e `List<int>` per orari e giorni, serializzati come stringhe compatte nei metodi `toJson` e `fromJson`. Questo formato e' semplice, ma poco adatto a query, notifiche ricorrenti e storico.
+
+### Motivazione
+
+La normalizzazione richiede una tabella futura `medicine_schedules` e una strategia per collegare ogni schedule a notifiche e assunzioni. Non va fatta finche' non viene introdotto il database locale.
+
+### Possibili soluzioni
+
+- salvare ogni combinazione giorno/orario in `medicine_schedules`;
+- usare indici su `weekday`, `hour` e `minute`;
+- collegare notifiche locali agli schedule invece che solo alla medicina;
+- usare snapshot in `intake_records` per mantenere storico leggibile anche dopo modifiche o cancellazioni.
+
+## Compatibilita' dipendenze database con Dart 3.8
+
+### Categoria
+
+Problema tecnico da verificare.
+
+### Stato
+
+Da verificare
+
+### Cosa e' stato trovato
+
+Durante lo Sprint Database 1 il progetto e' risultato basato su Dart 3.8.0. Alcune release recenti dei pacchetti database, inclusi Drift, `drift_dev`, `sqlite3_flutter_libs` e `path_provider`, richiedono Dart 3.10 o superiore.
+
+### Motivazione
+
+Per completare lo sprint senza aggiornare l'intera toolchain sono state usate versioni compatibili con Dart 3.8. Il database compila e il file Drift generato e' stato creato correttamente, ma un futuro upgrade delle dipendenze richiedera' prima l'aggiornamento di Flutter/Dart.
+
+### Possibili soluzioni
+
+- mantenere le versioni attuali finche' il progetto resta su Dart 3.8;
+- aggiornare Flutter/Dart prima di aggiornare Drift e pacchetti collegati;
+- rieseguire `pub get`, generazione Drift e analisi dopo ogni upgrade.
+
+## Timeout dei comandi Flutter wrapper nell'ambiente locale
+
+### Categoria
+
+Problema tecnico da verificare.
+
+### Stato
+
+Da verificare
+
+### Cosa e' stato trovato
+
+I comandi eseguiti tramite wrapper Flutter/Dart hanno mostrato timeout o blocchi nell'ambiente corrente. L'eseguibile Dart diretto ha invece permesso di completare `pub get`, `build_runner` e `dart analyze`.
+
+### Motivazione
+
+Il problema sembra legato all'ambiente locale e alla cache globale di Dart, dove e' stato rilevato anche un errore di permessi. Per non bloccare lo sprint e' stata usata una cache locale ignorata da Git.
+
+### Possibili soluzioni
+
+- verificare permessi della cartella cache Dart globale dell'utente;
+- rigenerare la cache globale con una sessione terminale normale;
+- riprovare `flutter pub get` e `flutter analyze` fuori dal sandbox;
+- mantenere `.dart_cli_config/` fuori da Git.
