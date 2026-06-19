@@ -458,12 +458,17 @@ Convenzioni consigliate per nuove feature:
 Prima di aggiungere una nuova funzionalita':
 
 - verificare se riguarda UI, stato, dati o servizio esterno;
+- analizzare il codice esistente e rispettare pattern gia' presenti;
 - mantenere i model indipendenti dalla UI;
 - evitare logica di business complessa dentro gli screen;
 - aggiungere metodi al provider solo se coordinano stato applicativo;
 - creare widget riutilizzabili quando una UI viene ripetuta;
 - preparare test per logiche di calcolo o trasformazione dati;
-- aggiornare README e guida tecnica quando cambia l'architettura.
+- non introdurre database, cloud o login senza una richiesta esplicita;
+- mantenere lo stile verde/bianco medical-tech;
+- aggiornare README e guida tecnica quando cambia l'architettura;
+- aggiornare `docs/CHANGELOG_PROGRESS.md` per modifiche importanti;
+- aggiornare `docs/KNOWN_ISSUES.md` quando emergono bug, discrepanze o limiti tecnici.
 
 Flusso consigliato:
 
@@ -474,6 +479,72 @@ Flusso consigliato:
 5. Collegare eventuali servizi esterni.
 6. Verificare su emulatore e dispositivo.
 7. Aggiornare la documentazione.
+8. Riepilogare i file toccati.
+
+## Documentazione obbligatoria
+
+Il progetto deve mantenere questi file:
+
+- `README.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+### `README.md`
+
+Deve descrivere:
+
+- obiettivo dell'app;
+- funzionalita' attuali;
+- funzionalita' future;
+- tecnologie usate;
+- come avviare il progetto;
+- stato attuale;
+- roadmap.
+
+Aggiornarlo quando cambia lo stato generale del progetto, la roadmap o il modo di avviare l'app.
+
+### `docs/TECHNICAL_GUIDE.md`
+
+Deve descrivere:
+
+- architettura;
+- cartelle;
+- model;
+- screen;
+- provider e state management;
+- widget;
+- gestione dati in memoria;
+- come aggiungere nuove funzionalita';
+- futura integrazione database.
+
+Aggiornarlo quando cambiano architettura, responsabilita' dei moduli o flusso dati.
+
+### `docs/CHANGELOG_PROGRESS.md`
+
+Deve registrare ogni modifica importante con:
+
+- data;
+- tipo modifica;
+- descrizione;
+- file modificati;
+- motivazione;
+- stato.
+
+Aggiornarlo alla fine di ogni blocco di lavoro significativo.
+
+### `docs/KNOWN_ISSUES.md`
+
+Deve contenere:
+
+- bug;
+- problemi;
+- discrepanze;
+- possibili cause;
+- possibili soluzioni;
+- stato del problema.
+
+Aggiornarlo quando si trova un bug, quando un problema viene corretto o quando una discrepanza viene accettata temporaneamente.
 
 ## Linee guida specifiche per le prossime aree
 

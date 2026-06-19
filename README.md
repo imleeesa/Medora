@@ -297,3 +297,26 @@ Il codice contiene gia' model serializzabili e un servizio notifiche locali, ele
 ## Documentazione aggiuntiva
 
 - [Guida tecnica](docs/TECHNICAL_GUIDE.md)
+- [Changelog progresso](docs/CHANGELOG_PROGRESS.md)
+- [Problemi noti](docs/KNOWN_ISSUES.md)
+
+## Flusso di lavoro del progetto
+
+Ogni modifica importante deve essere documentata. Il progetto mantiene quattro documenti principali:
+
+- `README.md`: obiettivo dell'app, funzionalita', tecnologie, avvio, stato e roadmap.
+- `docs/TECHNICAL_GUIDE.md`: architettura, cartelle, model, screen, provider, widget e linee guida tecniche.
+- `docs/CHANGELOG_PROGRESS.md`: registro delle modifiche importanti con data, tipo, descrizione, file modificati, motivazione e stato.
+- `docs/KNOWN_ISSUES.md`: registro di bug, discrepanze, possibili cause, possibili soluzioni e stato.
+
+Regole operative:
+
+- analizzare il codice esistente prima di modificare;
+- non riscrivere file interi se non serve;
+- non introdurre database, cloud o login senza richiesta esplicita;
+- mantenere lo stile verde/bianco medical-tech;
+- aggiornare il changelog per modifiche importanti;
+- aggiornare la guida tecnica se cambiano architettura o funzionalita';
+- aggiornare i problemi noti quando emergono bug o discrepanze;
+- aggiornare il README quando cambia lo stato generale del progetto;
+- chiedere conferma prima di grandi refactor.
