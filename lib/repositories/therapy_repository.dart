@@ -2,7 +2,9 @@ import 'package:drift/drift.dart';
 
 import '../data/database_service.dart';
 import '../data/local_database.dart';
+import '../data/mappers/medicine_mapper.dart';
 import '../data/mappers/therapy_mapper.dart';
+import '../models/medicine.dart' as app_medicine;
 import '../models/therapy.dart' as app;
 
 class TherapyRepository {
@@ -32,6 +34,29 @@ class TherapyRepository {
     await _database
         .into(_database.therapies)
         .insert(TherapyMapper.toCompanion(therapy));
+  }
+
+  Future<void> createTherapyWithMedicine(
+    app.Therapy therapy,
+    app_medicine.Medicine medicine,
+  ) async {
+    await _database.transaction(() async {
+      await _database
+          .into(_database.therapies)
+          .insert(TherapyMapper.toCompanion(therapy));
+      await _database
+          .into(_database.medicines)
+          .insert(MedicineMapper.toCompanion(medicine));
+      final schedules = MedicineMapper.toScheduleCompanions(
+        medicine.id,
+        medicine.schedules,
+      );
+      if (schedules.isNotEmpty) {
+        await _database.batch((batch) {
+          batch.insertAll(_database.medicineSchedules, schedules);
+        });
+      }
+    });
   }
 
   Future<bool> updateTherapy(app.Therapy therapy) {

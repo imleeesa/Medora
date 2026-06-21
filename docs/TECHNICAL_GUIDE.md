@@ -121,7 +121,7 @@ File attuale:
 
 - `medicine_provider.dart`
 
-Il provider gestisce lo stato temporaneo e notifica la UI quando i dati cambiano.
+Il provider mantiene una cache in memoria per la UI, coordina repository e notifica le schermate quando i dati persistiti cambiano.
 
 ### `lib/screens/`
 
@@ -381,6 +381,7 @@ Lo state management usa Provider.
 - lista privata `_therapies`;
 - profilo corrente `_currentProfile`;
 - stato `_isLoading`.
+- eventuale `_errorMessage` per errori di caricamento o salvataggio.
 
 Espone:
 
@@ -388,10 +389,11 @@ Espone:
 - `medicines`;
 - `currentProfile`;
 - `isLoading`.
+- `errorMessage`.
 
 Metodi principali:
 
-- `init`;
+- `initialize` e `init` per compatibilita';
 - `addMedicine`;
 - `updateMedicine`;
 - `deleteMedicine`;
@@ -406,29 +408,27 @@ Ogni modifica allo stato chiama `notifyListeners()`, causando l'aggiornamento de
 
 ## Flusso principale dell'app
 
-1. `main.dart` avvia l'app e registra `MedicineProvider`.
-2. `MyApp` configura tema e schermata iniziale.
-3. `DashboardScreen` mostra la navigazione principale.
-4. L'utente apre il form di aggiunta medicina.
-5. `AddMedicineScreen` valida i dati inseriti.
-6. Il form chiama `MedicineProvider.addMedicine`.
-7. Il provider crea o riusa una terapia e aggiunge la medicina.
-8. Il provider chiama `notifyListeners()`.
+1. `main.dart` registra `MedicineProvider` e avvia `initialize`.
+2. Il provider recupera o crea il profilo locale `local-user` e le impostazioni di default.
+3. Il provider carica terapie, medicine e schedule dai repository Drift e ricostruisce la cache `_therapies`.
+4. `MyApp` configura tema e schermata iniziale.
+5. `DashboardScreen` mostra la navigazione principale quando il caricamento e' completo.
+6. L'utente apre il form di aggiunta medicina.
+7. `AddMedicineScreen` valida i dati inseriti e chiama `MedicineProvider.addMedicine`.
+8. Il provider salva tramite repository, ricarica la cache e chiama `notifyListeners()`.
 9. Dashboard, elenco terapie, profilo e scorte si aggiornano.
 
-## Gestione temporanea dei dati
+## Gestione dati e persistenza
 
-Attualmente i dati sono conservati solo in memoria:
+Il Provider mantiene in memoria solo una cache destinata alla UI:
 
-- le terapie sono nella lista `_therapies`;
-- le medicine sono contenute dentro ogni `Therapy`;
-- il profilo e' un oggetto locale inizializzato nel provider;
-- lo storico non viene ancora popolato;
-- le preferenze non vengono salvate su disco.
+- le terapie sono nella lista `_therapies` con medicine gia' associate;
+- il profilo corrente e' `_currentProfile`;
+- loading ed errore restano stato UI temporaneo.
 
-Conseguenza: al riavvio dell'app i dati inseriti vengono persi.
+Terapie, medicine, schedule, profilo e impostazioni vengono ora letti e scritti nel database locale tramite repository. Al riavvio l'app ricostruisce la cache dal database, quindi medicine e terapie create dal flusso esistente restano disponibili.
 
-Questa scelta e' accettabile per la fase prototipale, ma deve essere sostituita da persistenza locale prima di un uso reale.
+Storico assunzioni, notifiche e backup non sono ancora collegati al flusso persistente.
 
 ## Introduzione futura del database
 
@@ -473,13 +473,13 @@ Questa sezione definisce il piano tecnico per introdurre la persistenza locale. 
 
 ### Stato attuale
 
-I dati sono gestiti in memoria da `MedicineProvider`.
+I dati persistiti sono coordinati da `MedicineProvider`, che conserva una cache in memoria per le schermate.
 
 Dati mantenuti oggi:
 
 - `_therapies`: lista di `Therapy`, ognuna con una lista annidata di `Medicine`;
 - `_currentProfile`: profilo locale corrente;
-- `_isLoading`: stato UI temporaneo.
+- `_isLoading` e `_errorMessage`: stato UI temporaneo.
 
 Operazioni oggi gestite dal provider:
 
@@ -491,7 +491,7 @@ Operazioni oggi gestite dal provider:
 - `updateProfile`: aggiorna preferenze e nome profilo;
 - `getMedicinesTodayDue`, `getNextMedicine`, `getLowStockMedicines`: calcolano viste derivate per la UI.
 
-Con il database, le operazioni di lettura/scrittura dovranno spostarsi verso repository dedicati. Il provider dovra' restare il coordinatore dello stato UI, non il proprietario della persistenza.
+Le operazioni di lettura e scrittura principali passano ora ai repository. Il Provider resta il coordinatore dello stato UI e non importa classi Drift generate.
 
 ### Sprint Database 1 - base Drift
 
@@ -558,6 +558,16 @@ Mapper creati:
 `MedicineSchedule` mantiene una rappresentazione comoda per la UI: un orario con piu' giorni. Il mapper lo espande in una riga per combinazione giorno/orario quando salva e ricompone i gruppi quando legge. Lo stream delle medicine osserva sia `medicines` sia `medicine_schedules`.
 
 Prossimo step previsto: aggiungere test repository, definire il seed del profilo locale e collegare gradualmente `MedicineProvider` ai repository, senza esporre Drift alla UI.
+
+### Sprint Database 3 - Provider persistente
+
+`MedicineProvider` usa `ProfileRepository`, `SettingsRepository`, `TherapyRepository` e `MedicineRepository`.
+
+All'avvio `initialize` crea il profilo `local-user` con nome `Utente` solo se il database non contiene profili. Crea inoltre le impostazioni predefinite con tema `light` e notifiche abilitate se mancanti. Poi carica terapie e medicine, inclusi gli schedule normalizzati, e ricostruisce la cache usata dalla UI.
+
+Le operazioni gia' esposte dal Provider ora persistono nel database: aggiunta, modifica, eliminazione, attivazione/disattivazione e decremento scorte delle medicine, creazione della terapia collegata al flusso di aggiunta, nome profilo e impostazioni esistenti. La prima terapia e la prima medicina vengono inserite nella stessa transazione.
+
+Restano non persistiti nel flusso applicativo storico assunzioni, notifiche locali, backup/cloud e gestione autonoma delle terapie. Prossimo step consigliato: test repository e poi sprint dedicato al sistema Terapie.
 
 ### Database consigliato
 
@@ -755,15 +765,15 @@ Fase consigliata:
 1. Introdurre tabelle e database service senza collegare subito la UI. Stato: completato nello Sprint Database 1.
 2. Creare repository per operazioni base. Stato: completato nello Sprint Database 2; i test repository restano da aggiungere.
 3. Allineare i model di dominio allo schema e introdurre mapper completi. Stato: completato nello Sprint Database 2.5.
-4. Aggiungere test repository e definire il seed del profilo locale `local-user` durante il collegamento al Provider.
-5. Migrare `MedicineProvider.init` per caricare dati dal repository.
-6. Spostare `addMedicine`, `updateMedicine`, `deleteMedicine`, `toggleMedicineActive`, `decrementStock`, `updateProfile` sui repository.
+4. Aggiungere test repository e definire il seed del profilo locale `local-user`. Stato: seed completato nello Sprint Database 3; i test repository restano da aggiungere.
+5. Migrare `MedicineProvider.init` per caricare dati dal repository. Stato: completato nello Sprint Database 3.
+6. Spostare `addMedicine`, `updateMedicine`, `deleteMedicine`, `toggleMedicineActive`, `decrementStock`, `updateProfile` sui repository. Stato: completato nello Sprint Database 3.
 7. Integrare storico, scorte e notifiche solo dopo la persistenza base.
 
 ### Rischi e punti delicati
 
-- Migrazione dati in memoria: in questa fase non ci sono dati persistenti da migrare, ma quando il database sara' introdotto bisognera' creare un profilo locale iniziale e gestire database vuoto.
-- Giorni della settimana e orari: il mapper ora li converte da e verso `medicine_schedules`; il Provider usa ancora le liste legacy finche' non verra' collegato ai repository.
+- Migrazione dati in memoria: non esistevano dati persistenti da migrare. Il Provider crea il profilo locale iniziale e gestisce il database vuoto al primo avvio.
+- Giorni della settimana e orari: mapper e Provider convertono da e verso `medicine_schedules`, mantenendo liste e schedule comodi per la UI.
 - Associazione medicine-terapie: oggi una terapia contiene medicine; nel database la relazione dovra' essere `therapy_id` dentro `medicines`.
 - Storico assunzioni: non deve dipendere solo dalla medicina attuale; servono snapshot per conservare dati leggibili.
 - Cancellazione medicine: prima di cancellare una medicina bisogna decidere se impedire la cancellazione quando esiste storico, fare soft delete o mantenere record storici con snapshot.

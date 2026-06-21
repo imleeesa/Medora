@@ -57,27 +57,37 @@ Il campo `isDarkMode` resta nel model `UserProfile` come predisposizione futura,
 
 ## Terapie non gestibili come entita' autonome
 
-### Categoria
+### Tipo
 
-Feature futura da lasciare aperta.
+Funzionalita' incompleta / Limite architetturale
+
+### Gravita'
+
+Media
 
 ### Stato
 
-Aperto
+Aperto / Pianificato
+
+### Area
+
+Terapie, Medicine, Provider, Database futuro
 
 ### Cosa e' stato trovato
 
-Le terapie vengono create indirettamente quando si aggiunge una medicina. Non esiste ancora un flusso dedicato per creare, modificare, archiviare o cancellare una terapia.
+Le terapie vengono create o usate principalmente durante l'aggiunta di una medicina. Non esiste ancora un flusso autonomo per creare, modificare, eliminare o archiviare una terapia, aprirne il dettaglio, aggiungere medicine al suo interno o visualizzare tutte le medicine associate.
 
 ### Motivazione
 
-La gestione completa delle terapie e' una feature di prodotto prevista dalla roadmap. Implementarla ora richiederebbe nuovi flussi UI, nuove azioni nel provider e possibili cambiamenti di navigazione. Non rientra nello sprint di revisione dei problemi sicuri.
+La gestione completa delle terapie e' una feature di prodotto prevista dalla roadmap. Richiede flussi UI dedicati, nuove azioni del Provider e il collegamento graduale alla persistenza locale. Non deve essere risolta nello Sprint Database 3: verra' affrontata in uno sprint dedicato al sistema Terapie dopo l'integrazione del Provider con il database.
 
 ### Possibili soluzioni
 
 - introdurre una schermata o un flusso dedicato alle terapie;
 - mantenere il modello `TERAPIE -> MEDICINE`;
-- aggiungere dettaglio terapia prima di introdurre database;
+- aggiungere creazione, modifica, archiviazione ed eliminazione controllata della terapia;
+- aggiungere dettaglio terapia con elenco delle medicine associate;
+- consentire l'aggiunta di medicine all'interno di una terapia;
 - documentare ogni nuova responsabilita' nella guida tecnica.
 
 ## Storico assunzioni non operativo
@@ -246,23 +256,28 @@ Rischio tecnico da verificare.
 
 ### Stato
 
-Rimandato
+Risolto
 
-### Cosa e' stato trovato
+### Data risoluzione
 
-L'app oggi mantiene terapie, medicine e profilo in memoria dentro `MedicineProvider`. Quando verra' introdotto il database locale, bisognera' spostare lettura e scrittura verso repository senza rompere il comportamento attuale.
+2026-06-21
 
-### Motivazione
+### Come e' stato risolto
 
-La persistenza non viene implementata in questo sprint. Il rischio resta aperto perche' riguarda migrazioni, seed del profilo locale, mapping tra model e tabelle, gestione database vuoto e mantenimento del flusso UI esistente.
+Lo Sprint Database 3 collega `MedicineProvider` ai repository. Il Provider carica il database all'avvio, crea il profilo `local-user` e le impostazioni di default se mancanti, ricostruisce la cache UI e salva le modifiche principali nel database locale.
 
-### Possibili soluzioni
+### File modificati
 
-- introdurre `DatabaseService` e repository in uno sprint dedicato;
-- partire con seed del profilo `local-user`;
-- migrare un metodo del provider alla volta;
-- aggiungere test repository prima di collegare la UI;
-- mantenere la possibilita' di ricostruire `Therapy` con medicine associate tramite mapper.
+- `lib/main.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/repositories/therapy_repository.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+### Note
+
+Non esistevano dati persistiti da migrare. Il test su database temporaneo e le feature ancora fuori dal flusso restano pianificati separatamente.
 
 ## Normalizzazione di orari, giorni e storico
 

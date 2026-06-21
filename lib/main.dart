@@ -8,7 +8,7 @@ void main() {
 
   runApp(
     ChangeNotifierProvider(
-      create: (_) => MedicineProvider(),
+      create: (_) => MedicineProvider()..initialize(),
       child: const MyApp(),
     ),
   );

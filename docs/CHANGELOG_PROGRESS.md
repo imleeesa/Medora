@@ -307,3 +307,69 @@ Motivazione:
 Il mapper layer chiude il confine tra dominio e persistenza. Provider e UI potranno essere collegati ai repository nello sprint successivo senza importare classi Drift generate.
 
 Stato finale: completato con analisi Dart pulita.
+
+## 2026-06-21 - Documentazione limite sistema Terapie
+
+Tipo modifica: Documentation.
+
+Descrizione:
+
+- aggiornata la problematica gia' nota sulla gestione non autonoma delle terapie;
+- classificato il limite come funzionalita' incompleta / limite architetturale, gravita' media, stato aperto e pianificato;
+- chiarito l'obiettivo futuro `TERAPIE -> MEDICINE` e le azioni previste per la gestione terapia;
+- confermato che il problema non verra' risolto nello Sprint Database 3.
+
+File modificati:
+
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+La gestione completa delle terapie dipende dal successivo collegamento tra Provider e database. Documentarla ora evita che venga trattata come un bug puntuale durante gli sprint di persistenza.
+
+Stato finale: completato, nessuna modifica al codice applicativo.
+
+## 2026-06-21 - Sprint Database 3
+
+Tipo modifica: Database / Provider integration / Bug Fix / Documentation.
+
+Descrizione:
+
+- collegato `MedicineProvider` ai repository di profilo, impostazioni, terapie e medicine;
+- aggiunto caricamento automatico del database all'avvio dell'app;
+- creato seed sicuro del profilo locale `local-user` e delle impostazioni predefinite quando il database e' vuoto;
+- rese persistenti le operazioni esistenti su medicine, terapie collegate, scorte e profilo;
+- mantenuta la cache in memoria per la UI e aggiunti loading/error state semplici;
+- salvata in transazione la prima coppia terapia piu' medicina;
+- mantenute invariati schermate, UI, notifiche e storico assunzioni.
+
+File modificati:
+
+- `lib/main.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/models/medicine.dart`;
+- `lib/repositories/therapy_repository.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+Problemi risolti:
+
+- Provider basato solo su memoria;
+- persistenza non attiva per medicine, terapie collegate, schedule, profilo e impostazioni;
+- seed del profilo locale mancante.
+
+Problemi rimandati:
+
+- test repository su database temporaneo;
+- gestione autonoma delle terapie;
+- storico assunzioni operativo;
+- notifiche locali collegate agli schedule;
+- persistenza dei campi legacy profilo e icona testuale.
+
+Motivazione:
+
+Lo sprint rende persistente il flusso esistente senza cambiare la UI. Il Provider continua a essere l'unica fonte dati per le schermate, mentre repository e mapper proteggono l'app dai dettagli Drift.
+
+Stato finale: completato con analisi e test Flutter eseguiti.

@@ -1,11 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/app_settings.dart';
 import '../models/medicine.dart';
 import '../models/therapy.dart';
 import '../models/user_profile.dart';
+import '../repositories/medicine_repository.dart';
+import '../repositories/profile_repository.dart';
+import '../repositories/settings_repository.dart';
+import '../repositories/therapy_repository.dart';
 
 class MedicineProvider extends ChangeNotifier {
+  MedicineProvider({
+    ProfileRepository? profileRepository,
+    SettingsRepository? settingsRepository,
+    TherapyRepository? therapyRepository,
+    MedicineRepository? medicineRepository,
+  }) : _profileRepository = profileRepository ?? ProfileRepository(),
+       _settingsRepository = settingsRepository ?? SettingsRepository(),
+       _therapyRepository = therapyRepository ?? TherapyRepository(),
+       _medicineRepository = medicineRepository ?? MedicineRepository();
+
+  final ProfileRepository _profileRepository;
+  final SettingsRepository _settingsRepository;
+  final TherapyRepository _therapyRepository;
+  final MedicineRepository _medicineRepository;
   final List<Therapy> _therapies = [];
   UserProfile _currentProfile = UserProfile(
     id: 'local-user',
@@ -14,24 +33,39 @@ class MedicineProvider extends ChangeNotifier {
     updatedAt: DateTime.now(),
   );
   bool _isLoading = false;
+  bool _isInitialized = false;
+  String? _errorMessage;
 
   List<Therapy> get therapies => List.unmodifiable(_therapies);
 
-  List<Medicine> get medicines => _therapies
-      .expand((therapy) => therapy.medicines)
-      .toList(growable: false);
+  List<Medicine> get medicines =>
+      _therapies.expand((therapy) => therapy.medicines).toList(growable: false);
 
   UserProfile get currentProfile => _currentProfile;
 
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  Future<void> init() async {
+  Future<void> initialize() async {
+    if (_isInitialized || _isLoading) return;
+
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
-    _isLoading = false;
-    notifyListeners();
+    try {
+      _currentProfile = await _loadOrCreateDefaultProfile();
+      await _reloadCache();
+      _isInitialized = true;
+    } catch (_) {
+      _errorMessage = 'Impossibile caricare i dati salvati.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
+
+  Future<void> init() => initialize();
 
   Future<void> addMedicine({
     required String name,
@@ -52,12 +86,22 @@ class MedicineProvider extends ChangeNotifier {
       (therapy) =>
           therapy.name.toLowerCase() == cleanedTherapyName.toLowerCase(),
     );
-    final therapyId = therapyIndex == -1
-        ? const Uuid().v4()
-        : _therapies[therapyIndex].id;
+    final now = DateTime.now();
+    final therapy = therapyIndex == -1
+        ? Therapy(
+            id: const Uuid().v4(),
+            profileId: _currentProfile.id,
+            name: cleanedTherapyName,
+            color: color,
+            medicines: const [],
+            createdAt: now,
+            updatedAt: now,
+          )
+        : _therapies[therapyIndex];
 
     final medicine = Medicine(
       id: const Uuid().v4(),
+      therapyId: therapy.id,
       name: name.trim(),
       dose: dose.trim(),
       times: List<TimeOfDay>.from(times),
@@ -68,27 +112,24 @@ class MedicineProvider extends ChangeNotifier {
       color: color,
       icon: icon,
       profileId: _currentProfile.id,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      createdAt: now,
+      updatedAt: now,
     );
 
-    if (therapyIndex == -1) {
-      _therapies.add(
-        Therapy(
-          id: therapyId,
-          name: cleanedTherapyName,
-          color: color,
-          medicines: [medicine],
-        ),
-      );
-    } else {
-      final therapy = _therapies[therapyIndex];
-      _therapies[therapyIndex] = therapy.copyWith(
-        medicines: [...therapy.medicines, medicine],
-      );
+    try {
+      if (therapyIndex == -1) {
+        await _therapyRepository.createTherapyWithMedicine(therapy, medicine);
+      } else {
+        await _medicineRepository.createMedicine(medicine);
+      }
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile salvare la medicina.';
+      notifyListeners();
+      rethrow;
     }
-
-    notifyListeners();
   }
 
   Future<void> updateMedicine({
@@ -122,13 +163,17 @@ class MedicineProvider extends ChangeNotifier {
       isActive: isActive,
       updatedAt: DateTime.now(),
     );
-    final updatedMedicines = [...therapy.medicines];
-    updatedMedicines[location.medicineIndex] = updatedMedicine;
-    _therapies[location.therapyIndex] = therapy.copyWith(
-      medicines: updatedMedicines,
-    );
-
-    notifyListeners();
+    try {
+      final updated = await _medicineRepository.updateMedicine(updatedMedicine);
+      if (!updated) return;
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare la medicina.';
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> deleteMedicine(String id) async {
@@ -136,18 +181,22 @@ class MedicineProvider extends ChangeNotifier {
     if (location == null) return;
 
     final therapy = _therapies[location.therapyIndex];
-    final updatedMedicines = [...therapy.medicines]
-      ..removeAt(location.medicineIndex);
+    final isLastMedicine = therapy.medicines.length == 1;
 
-    if (updatedMedicines.isEmpty) {
-      _therapies.removeAt(location.therapyIndex);
-    } else {
-      _therapies[location.therapyIndex] = therapy.copyWith(
-        medicines: updatedMedicines,
-      );
+    try {
+      await _medicineRepository.deleteMedicine(id);
+      if (isLastMedicine) {
+        await _therapyRepository.deleteTherapy(therapy.id);
+      }
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      await _reloadCache();
+      _errorMessage = 'Impossibile eliminare la medicina.';
+      notifyListeners();
+      rethrow;
     }
-
-    notifyListeners();
   }
 
   Future<void> toggleMedicineActive(String id) async {
@@ -156,16 +205,22 @@ class MedicineProvider extends ChangeNotifier {
 
     final therapy = _therapies[location.therapyIndex];
     final medicine = therapy.medicines[location.medicineIndex];
-    final updatedMedicines = [...therapy.medicines];
-    updatedMedicines[location.medicineIndex] = medicine.copyWith(
+    final updatedMedicine = medicine.copyWith(
       isActive: !medicine.isActive,
       updatedAt: DateTime.now(),
     );
-    _therapies[location.therapyIndex] = therapy.copyWith(
-      medicines: updatedMedicines,
-    );
 
-    notifyListeners();
+    try {
+      final updated = await _medicineRepository.updateMedicine(updatedMedicine);
+      if (!updated) return;
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare lo stato della medicina.';
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> decrementStock(String id) async {
@@ -176,16 +231,22 @@ class MedicineProvider extends ChangeNotifier {
     final medicine = therapy.medicines[location.medicineIndex];
     if (medicine.stockQuantity <= 0) return;
 
-    final updatedMedicines = [...therapy.medicines];
-    updatedMedicines[location.medicineIndex] = medicine.copyWith(
+    final updatedMedicine = medicine.copyWith(
       stockQuantity: medicine.stockQuantity - 1,
       updatedAt: DateTime.now(),
     );
-    _therapies[location.therapyIndex] = therapy.copyWith(
-      medicines: updatedMedicines,
-    );
 
-    notifyListeners();
+    try {
+      final updated = await _medicineRepository.updateMedicine(updatedMedicine);
+      if (!updated) return;
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare la scorta.';
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> updateProfile({
@@ -193,13 +254,35 @@ class MedicineProvider extends ChangeNotifier {
     bool? isDarkMode,
     bool? notificationsEnabled,
   }) async {
-    _currentProfile = _currentProfile.copyWith(
+    final updatedProfile = _currentProfile.copyWith(
       name: name.trim().isEmpty ? 'Utente' : name.trim(),
       isDarkMode: isDarkMode,
       notificationsEnabled: notificationsEnabled,
       updatedAt: DateTime.now(),
     );
-    notifyListeners();
+    try {
+      final existingSettings = await _settingsRepository.getSettingsForProfile(
+        _currentProfile.id,
+      );
+      final settings =
+          (existingSettings ?? _defaultSettings(_currentProfile.id)).copyWith(
+            themeMode: (isDarkMode ?? _currentProfile.isDarkMode)
+                ? 'dark'
+                : 'light',
+            notificationsEnabled:
+                notificationsEnabled ?? _currentProfile.notificationsEnabled,
+            updatedAt: DateTime.now(),
+          );
+      await _profileRepository.updateProfile(updatedProfile);
+      await _settingsRepository.updateSettings(settings);
+      _currentProfile = updatedProfile;
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare il profilo.';
+      notifyListeners();
+      rethrow;
+    }
   }
 
   List<Medicine> getMedicinesTodayDue() {
@@ -236,8 +319,71 @@ class MedicineProvider extends ChangeNotifier {
     return first.minute.compareTo(second.minute);
   }
 
+  Future<UserProfile> _loadOrCreateDefaultProfile() async {
+    var profile = await _profileRepository.getCurrentProfile();
+    if (profile == null) {
+      final now = DateTime.now();
+      profile = UserProfile(
+        id: 'local-user',
+        name: 'Utente',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await _profileRepository.createProfile(profile);
+    }
+
+    final settings = await _settingsRepository.getSettingsForProfile(
+      profile.id,
+    );
+    if (settings == null) {
+      await _settingsRepository.updateSettings(_defaultSettings(profile.id));
+    }
+
+    return await _profileRepository.getProfileById(profile.id) ?? profile;
+  }
+
+  AppSettings _defaultSettings(String profileId) {
+    final now = DateTime.now();
+    return AppSettings(
+      id: '$profileId-settings',
+      profileId: profileId,
+      themeMode: 'light',
+      notificationsEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  Future<void> _reloadCache() async {
+    final therapies = await _therapyRepository.getTherapies(_currentProfile.id);
+    final medicines = await _medicineRepository.getMedicines(
+      _currentProfile.id,
+    );
+    final medicinesByTherapyId = <String, List<Medicine>>{};
+
+    for (final medicine in medicines) {
+      final therapyId = medicine.therapyId;
+      if (therapyId == null) continue;
+      medicinesByTherapyId.putIfAbsent(therapyId, () => []).add(medicine);
+    }
+
+    _therapies
+      ..clear()
+      ..addAll(
+        therapies.map(
+          (therapy) => therapy.copyWith(
+            medicines: medicinesByTherapyId[therapy.id] ?? const [],
+          ),
+        ),
+      );
+  }
+
   _MedicineLocation? _findMedicine(String id) {
-    for (var therapyIndex = 0; therapyIndex < _therapies.length; therapyIndex++) {
+    for (
+      var therapyIndex = 0;
+      therapyIndex < _therapies.length;
+      therapyIndex++
+    ) {
       final medicineIndex = _therapies[therapyIndex].medicines.indexWhere(
         (medicine) => medicine.id == id,
       );

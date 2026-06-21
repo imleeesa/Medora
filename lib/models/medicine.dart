@@ -175,25 +175,43 @@ class Medicine {
     List<MedicineSchedule>? schedules,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) => Medicine(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    dose: dose ?? this.dose,
-    notes: notes ?? this.notes,
-    times: times ?? this.times,
-    daysOfWeek: daysOfWeek ?? this.daysOfWeek,
-    stockQuantity: stockQuantity ?? this.stockQuantity,
-    stockWarningThreshold: stockWarningThreshold ?? this.stockWarningThreshold,
-    isActive: isActive ?? this.isActive,
-    color: color ?? this.color,
-    icon: icon ?? this.icon,
-    iconCodePoint: iconCodePoint ?? this.iconCodePoint,
-    profileId: profileId ?? this.profileId,
-    therapyId: therapyId ?? this.therapyId,
-    schedules: schedules ?? this.schedules,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-  );
+  }) {
+    final resolvedTimes = times ?? this.times;
+    final resolvedDaysOfWeek = daysOfWeek ?? this.daysOfWeek;
+    final resolvedSchedules =
+        schedules ??
+        (times != null || daysOfWeek != null
+            ? resolvedTimes
+                  .map(
+                    (time) => MedicineSchedule(
+                      time: time,
+                      daysOfWeek: List<int>.from(resolvedDaysOfWeek),
+                    ),
+                  )
+                  .toList(growable: false)
+            : this.schedules);
+
+    return Medicine(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      dose: dose ?? this.dose,
+      notes: notes ?? this.notes,
+      times: resolvedTimes,
+      daysOfWeek: resolvedDaysOfWeek,
+      stockQuantity: stockQuantity ?? this.stockQuantity,
+      stockWarningThreshold:
+          stockWarningThreshold ?? this.stockWarningThreshold,
+      isActive: isActive ?? this.isActive,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
+      iconCodePoint: iconCodePoint ?? this.iconCodePoint,
+      profileId: profileId ?? this.profileId,
+      therapyId: therapyId ?? this.therapyId,
+      schedules: resolvedSchedules,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   @override
   String toString() => 'Medicine(id: $id, name: $name, dose: $dose)';
