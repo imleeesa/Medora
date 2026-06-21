@@ -84,6 +84,12 @@ File attuali:
 - `local_database.dart`;
 - `local_database.g.dart`;
 - `database_service.dart`;
+- `mappers/color_value_mapper.dart`;
+- `mappers/user_profile_mapper.dart`;
+- `mappers/settings_mapper.dart`;
+- `mappers/therapy_mapper.dart`;
+- `mappers/medicine_mapper.dart`;
+- `mappers/intake_record_mapper.dart`;
 - `tables/user_profiles_table.dart`;
 - `tables/app_settings_table.dart`;
 - `tables/therapies_table.dart`;
@@ -91,7 +97,7 @@ File attuali:
 - `tables/medicine_schedules_table.dart`;
 - `tables/intake_records_table.dart`.
 
-Il layer e' stato introdotto nello Sprint Database 1 e viene usato dai repository creati nello Sprint Database 2. Non e' ancora collegato a `MedicineProvider` o alle schermate, quindi il comportamento dell'app resta basato su dati in memoria.
+Il layer e' stato introdotto nello Sprint Database 1, usato dai repository creati nello Sprint Database 2 e isolato da Drift tramite mapper nello Sprint Database 2.5. Non e' ancora collegato a `MedicineProvider` o alle schermate, quindi il comportamento dell'app resta basato su dati in memoria.
 
 ### `lib/repositories/`
 
@@ -105,7 +111,7 @@ File attuali:
 - `medicine_repository.dart`;
 - `intake_repository.dart`.
 
-Il layer non e' ancora iniettato in `MedicineProvider`. In questa fase espone le righe e i companion generati da Drift, per evitare mapper incompleti finche' i model di dominio non saranno allineati completamente allo schema persistente.
+Il layer non e' ancora iniettato in `MedicineProvider`. Le API pubbliche dei repository ricevono e restituiscono model di dominio; le righe e i companion Drift restano confinati nei mapper e nei metodi privati.
 
 ### `lib/providers/`
 
@@ -463,7 +469,7 @@ Relazioni consigliate:
 
 ## Database locale - piano di introduzione
 
-Questa sezione definisce il piano tecnico per introdurre la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali; lo Sprint Database 2 ha aggiunto i repository. Il database non e' ancora collegato a Provider o schermate.
+Questa sezione definisce il piano tecnico per introdurre la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali, lo Sprint Database 2 ha aggiunto i repository e lo Sprint Database 2.5 ha allineato model e mapper. Il database non e' ancora collegato a Provider o schermate.
 
 ### Stato attuale
 
@@ -535,9 +541,23 @@ Repository creati:
 - `MedicineRepository`: stream e lettura delle medicine, filtro per terapia, gestione scorte, orari e cancellazione transazionale che conserva lo storico;
 - `IntakeRepository`: lettura dello storico per profilo o medicina, creazione e aggiornamento dei record.
 
-I repository non sono ancora collegati a `MedicineProvider`, non eseguono seed automatici e non cambiano il comportamento dell'app. Espongono temporaneamente le entita' generate da Drift e i relativi companion: i mapper verso `Medicine`, `Therapy`, `IntakeRecord` e `UserProfile` sono rimandati perche' gli attuali model non coprono ancora tutti i campi dello schema locale.
+I repository non sono ancora collegati a `MedicineProvider`, non eseguono seed automatici e non cambiano il comportamento dell'app.
 
-Prossimo step previsto: allineare i model allo schema o introdurre mapper completi, aggiungere test repository e collegare gradualmente `MedicineProvider` al database.
+### Sprint Database 2.5 - model alignment e mapper layer
+
+I mapper separano il dominio applicativo da Drift. La UI e il Provider continueranno a usare `Medicine`, `Therapy`, `IntakeRecord`, `UserProfile`, `AppSettings` e `MedicineSchedule`; solo mapper e repository conoscono righe, companion e query Drift.
+
+Mapper creati:
+
+- `UserProfileMapper` e `SettingsMapper`: convertono profilo e preferenze separate;
+- `TherapyMapper`: converte status, colore e metadati della terapia;
+- `MedicineMapper`: converte medicine, colore e `medicine_schedules`;
+- `IntakeRecordMapper`: converte storico, snapshot e stato dell'assunzione;
+- `ColorValueMapper`: centralizza la conversione tra colore hex UI e valore intero persistito.
+
+`MedicineSchedule` mantiene una rappresentazione comoda per la UI: un orario con piu' giorni. Il mapper lo espande in una riga per combinazione giorno/orario quando salva e ricompone i gruppi quando legge. Lo stream delle medicine osserva sia `medicines` sia `medicine_schedules`.
+
+Prossimo step previsto: aggiungere test repository, definire il seed del profilo locale e collegare gradualmente `MedicineProvider` ai repository, senza esporre Drift alla UI.
 
 ### Database consigliato
 
@@ -683,7 +703,7 @@ Nota: gli snapshot aiutano a conservare uno storico leggibile anche se una medic
 
 ### File da creare o completare in futuro
 
-Le strutture `lib/data/` e `lib/repositories/` esistono gia'. In futuro andranno completate con mapper, test e migrazioni.
+Le strutture `lib/data/`, `lib/data/mappers/` e `lib/repositories/` esistono gia'. In futuro andranno completate con test e migrazioni.
 
 Possibile struttura evolutiva:
 
@@ -734,8 +754,8 @@ Fase consigliata:
 
 1. Introdurre tabelle e database service senza collegare subito la UI. Stato: completato nello Sprint Database 1.
 2. Creare repository per operazioni base. Stato: completato nello Sprint Database 2; i test repository restano da aggiungere.
-3. Allineare i model di dominio allo schema o introdurre mapper completi.
-4. Aggiungere seed del profilo locale `local-user` solo durante il collegamento al Provider.
+3. Allineare i model di dominio allo schema e introdurre mapper completi. Stato: completato nello Sprint Database 2.5.
+4. Aggiungere test repository e definire il seed del profilo locale `local-user` durante il collegamento al Provider.
 5. Migrare `MedicineProvider.init` per caricare dati dal repository.
 6. Spostare `addMedicine`, `updateMedicine`, `deleteMedicine`, `toggleMedicineActive`, `decrementStock`, `updateProfile` sui repository.
 7. Integrare storico, scorte e notifiche solo dopo la persistenza base.
@@ -743,8 +763,7 @@ Fase consigliata:
 ### Rischi e punti delicati
 
 - Migrazione dati in memoria: in questa fase non ci sono dati persistenti da migrare, ma quando il database sara' introdotto bisognera' creare un profilo locale iniziale e gestire database vuoto.
-- Giorni della settimana: oggi sono `List<int>` dentro `Medicine`; in futuro dovranno diventare righe in `medicine_schedules`.
-- Orari multipli: oggi sono `List<TimeOfDay>`; in futuro ogni combinazione giorno/orario dovra' essere interrogabile e collegabile alle notifiche.
+- Giorni della settimana e orari: il mapper ora li converte da e verso `medicine_schedules`; il Provider usa ancora le liste legacy finche' non verra' collegato ai repository.
 - Associazione medicine-terapie: oggi una terapia contiene medicine; nel database la relazione dovra' essere `therapy_id` dentro `medicines`.
 - Storico assunzioni: non deve dipendere solo dalla medicina attuale; servono snapshot per conservare dati leggibili.
 - Cancellazione medicine: prima di cancellare una medicina bisogna decidere se impedire la cancellazione quando esiste storico, fare soft delete o mantenere record storici con snapshot.

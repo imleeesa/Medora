@@ -250,3 +250,60 @@ Motivazione:
 Il layer repository prepara una migrazione ordinata verso la persistenza locale, mantenendo fuori dal Provider i dettagli di query e transazioni. In questa fase non viene modificato alcun flusso utente.
 
 Stato finale: completato con `dart analyze` senza problemi.
+
+## 2026-06-21 - Sprint Database 2.5
+
+Tipo modifica: Database / Model alignment / Mapper layer / Documentation.
+
+Descrizione:
+
+- allineati i model di dominio allo schema Drift in modo retrocompatibile;
+- aggiunti model per impostazioni e schedule logici delle medicine;
+- creati mapper per profilo, impostazioni, terapie, medicine, schedule, storico e colori;
+- aggiornati tutti i repository affinche' espongano model dell'app e mantengano privati i tipi Drift;
+- reso reattivo lo stream medicine anche alle modifiche di `medicine_schedules`;
+- mantenuti invariati Provider, schermate e comportamento dell'app.
+
+File creati:
+
+- `lib/models/app_settings.dart`;
+- `lib/models/medicine_schedule.dart`;
+- `lib/data/mappers/color_value_mapper.dart`;
+- `lib/data/mappers/user_profile_mapper.dart`;
+- `lib/data/mappers/settings_mapper.dart`;
+- `lib/data/mappers/therapy_mapper.dart`;
+- `lib/data/mappers/medicine_mapper.dart`;
+- `lib/data/mappers/intake_record_mapper.dart`.
+
+File modificati:
+
+- `lib/models/medicine.dart`;
+- `lib/models/therapy.dart`;
+- `lib/models/intake_record.dart`;
+- `lib/repositories/profile_repository.dart`;
+- `lib/repositories/settings_repository.dart`;
+- `lib/repositories/therapy_repository.dart`;
+- `lib/repositories/medicine_repository.dart`;
+- `lib/repositories/intake_repository.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+Problemi risolti:
+
+- repository che esponevano entita' e companion Drift;
+- perdita della relazione logica tra orari e giorni durante la conversione da `medicine_schedules`;
+- stream medicine non reattivo alle modifiche degli schedule.
+
+Problemi rimandati:
+
+- persistenza di alcuni campi legacy del profilo e dell'icona testuale della medicina;
+- test automatici dei repository;
+- seed del profilo locale;
+- collegamento di `MedicineProvider` ai repository.
+
+Motivazione:
+
+Il mapper layer chiude il confine tra dominio e persistenza. Provider e UI potranno essere collegati ai repository nello sprint successivo senza importare classi Drift generate.
+
+Stato finale: completato con analisi Dart pulita.

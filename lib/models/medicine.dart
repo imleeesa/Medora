@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'medicine_schedule.dart';
+
 /// Modello per una medicina
 class Medicine {
   final String id;
@@ -13,7 +15,10 @@ class Medicine {
   final bool isActive;
   final String color; // Codice colore hex
   final String? icon; // Nome icona
+  final int? iconCodePoint;
   final String? profileId;
+  final String? therapyId;
+  final List<MedicineSchedule> schedules;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,10 +34,22 @@ class Medicine {
     this.isActive = true,
     this.color = '#2E7D32',
     this.icon,
+    this.iconCodePoint,
     this.profileId,
+    this.therapyId,
+    List<MedicineSchedule>? schedules,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : schedules =
+           schedules ??
+           times
+               .map(
+                 (time) => MedicineSchedule(
+                   time: time,
+                   daysOfWeek: List<int>.from(daysOfWeek),
+                 ),
+               )
+               .toList(growable: false);
 
   /// Verifica se la medicina deve essere assunta oggi
   bool shouldTakeToday() {
@@ -65,7 +82,21 @@ class Medicine {
     'isActive': isActive ? 1 : 0,
     'color': color,
     'icon': icon,
+    'iconCodePoint': iconCodePoint,
     'profileId': profileId,
+    'therapyId': therapyId,
+    'schedules': schedules
+        .map(
+          (schedule) => {
+            'hour': schedule.time.hour,
+            'minute': schedule.time.minute,
+            'daysOfWeek': schedule.daysOfWeek,
+            'isActive': schedule.isActive,
+            'createdAt': schedule.createdAt?.toIso8601String(),
+            'updatedAt': schedule.updatedAt?.toIso8601String(),
+          },
+        )
+        .toList(growable: false),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -83,6 +114,27 @@ class Medicine {
         .map((d) => int.parse(d))
         .toList();
 
+    final schedulesJson = json['schedules'] as List<dynamic>?;
+    final schedules = schedulesJson
+        ?.whereType<Map<String, dynamic>>()
+        .map(
+          (schedule) => MedicineSchedule(
+            time: TimeOfDay(
+              hour: schedule['hour'] as int,
+              minute: schedule['minute'] as int,
+            ),
+            daysOfWeek: List<int>.from(schedule['daysOfWeek'] as List),
+            isActive: schedule['isActive'] as bool? ?? true,
+            createdAt: schedule['createdAt'] != null
+                ? DateTime.parse(schedule['createdAt'] as String)
+                : null,
+            updatedAt: schedule['updatedAt'] != null
+                ? DateTime.parse(schedule['updatedAt'] as String)
+                : null,
+          ),
+        )
+        .toList(growable: false);
+
     return Medicine(
       id: json['id'],
       name: json['name'],
@@ -95,7 +147,10 @@ class Medicine {
       isActive: json['isActive'] == 1,
       color: json['color'] ?? '#2E7D32',
       icon: json['icon'],
+      iconCodePoint: json['iconCodePoint'],
       profileId: json['profileId'],
+      therapyId: json['therapyId'],
+      schedules: schedules,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );
@@ -114,7 +169,10 @@ class Medicine {
     bool? isActive,
     String? color,
     String? icon,
+    int? iconCodePoint,
     String? profileId,
+    String? therapyId,
+    List<MedicineSchedule>? schedules,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Medicine(
@@ -129,7 +187,10 @@ class Medicine {
     isActive: isActive ?? this.isActive,
     color: color ?? this.color,
     icon: icon ?? this.icon,
+    iconCodePoint: iconCodePoint ?? this.iconCodePoint,
     profileId: profileId ?? this.profileId,
+    therapyId: therapyId ?? this.therapyId,
+    schedules: schedules ?? this.schedules,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );

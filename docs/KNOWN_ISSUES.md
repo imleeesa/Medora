@@ -346,19 +346,49 @@ Problema tecnico da verificare.
 
 ### Stato
 
+Risolto
+
+### Data risoluzione
+
+2026-06-21
+
+### Come e' stato risolto
+
+Lo Sprint Database 2.5 ha introdotto mapper dedicati e aggiornato i repository affinche' espongano model dell'app invece di entita' e companion Drift. I model ora rappresentano metadati terapia, profilo, snapshot dello storico e schedule logici delle medicine.
+
+### File modificati
+
+- `lib/models/`;
+- `lib/data/mappers/`;
+- `lib/repositories/`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+### Note
+
+I campi legacy non ancora presenti nello schema persistente restano tracciati in un problema separato.
+
+## Campi legacy profilo e icona non persistiti completamente
+
+### Categoria
+
+Problema tecnico da verificare.
+
+### Stato
+
 Rimandato
 
 ### Cosa e' stato trovato
 
-Nello Sprint Database 2 i repository espongono temporaneamente entita' e companion generati da Drift. Gli attuali model `Medicine`, `Therapy`, `IntakeRecord` e `UserProfile` non rappresentano ancora tutti i campi persistenti, tra cui profilo e impostazioni separati, metadati terapia, colore e icona normalizzati, schedule e snapshot storico.
+`UserProfile.email` e `UserProfile.language` non hanno colonne dedicate nello schema `user_profiles`. Inoltre il vecchio campo `Medicine.icon` usa un nome testuale, mentre il database persiste `iconCodePoint`. Il model conserva entrambi i percorsi per compatibilita', ma il mapper salva il code point.
 
 ### Motivazione
 
-Creare mapper parziali in questo sprint avrebbe rischiato di perdere informazioni o di introdurre modifiche ai model e al Provider, in contrasto con l'obiettivo di non cambiare il comportamento dell'app. Il repository layer resta comunque isolato dalla UI e pronto per una migrazione graduale.
+Estendere le tabelle richiederebbe una migrazione di schema Drift, non necessaria prima che il database venga collegato al Provider. Forzare una conversione da nome icona a code point sarebbe fragile e non e' usata dalla UI attuale.
 
 ### Possibili soluzioni
 
-- allineare i model esistenti allo schema Drift mantenendo compatibilita' con la UI;
-- introdurre DTO o mapper completi per ciascun dominio;
-- aggiungere test repository prima di collegare `MedicineProvider` al database;
-- definire il seed del profilo locale solo nello sprint di integrazione.
+- introdurre una migrazione che aggiunga email e lingua al profilo, se diventano dati locali necessari;
+- scegliere un unico formato per le icone e migrare il campo legacy;
+- coprire i mapper con test prima dell'integrazione nel Provider.
