@@ -337,3 +337,28 @@ Il problema sembra legato all'ambiente locale e alla cache globale di Dart, dove
 - rigenerare la cache globale con una sessione terminale normale;
 - riprovare `flutter pub get` e `flutter analyze` fuori dal sandbox;
 - mantenere `.dart_cli_config/` fuori da Git.
+
+## Allineamento incompleto tra model di dominio e schema Drift
+
+### Categoria
+
+Problema tecnico da verificare.
+
+### Stato
+
+Rimandato
+
+### Cosa e' stato trovato
+
+Nello Sprint Database 2 i repository espongono temporaneamente entita' e companion generati da Drift. Gli attuali model `Medicine`, `Therapy`, `IntakeRecord` e `UserProfile` non rappresentano ancora tutti i campi persistenti, tra cui profilo e impostazioni separati, metadati terapia, colore e icona normalizzati, schedule e snapshot storico.
+
+### Motivazione
+
+Creare mapper parziali in questo sprint avrebbe rischiato di perdere informazioni o di introdurre modifiche ai model e al Provider, in contrasto con l'obiettivo di non cambiare il comportamento dell'app. Il repository layer resta comunque isolato dalla UI e pronto per una migrazione graduale.
+
+### Possibili soluzioni
+
+- allineare i model esistenti allo schema Drift mantenendo compatibilita' con la UI;
+- introdurre DTO o mapper completi per ciascun dominio;
+- aggiungere test repository prima di collegare `MedicineProvider` al database;
+- definire il seed del profilo locale solo nello sprint di integrazione.

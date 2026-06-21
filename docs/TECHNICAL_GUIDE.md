@@ -35,6 +35,7 @@ lib/
 ├── data/
 ├── models/
 ├── providers/
+├── repositories/
 ├── screens/
 ├── services/
 └── widgets/
@@ -90,7 +91,21 @@ File attuali:
 - `tables/medicine_schedules_table.dart`;
 - `tables/intake_records_table.dart`.
 
-Il layer e' stato introdotto nello Sprint Database 1, ma non e' ancora collegato a `MedicineProvider`, repository o schermate. Il comportamento dell'app resta basato su dati in memoria.
+Il layer e' stato introdotto nello Sprint Database 1 e viene usato dai repository creati nello Sprint Database 2. Non e' ancora collegato a `MedicineProvider` o alle schermate, quindi il comportamento dell'app resta basato su dati in memoria.
+
+### `lib/repositories/`
+
+Contiene il layer che incapsula query e transazioni del database locale. I repository dipendono da `DatabaseService`, non dalla UI o dal Provider.
+
+File attuali:
+
+- `profile_repository.dart`;
+- `settings_repository.dart`;
+- `therapy_repository.dart`;
+- `medicine_repository.dart`;
+- `intake_repository.dart`.
+
+Il layer non e' ancora iniettato in `MedicineProvider`. In questa fase espone le righe e i companion generati da Drift, per evitare mapper incompleti finche' i model di dominio non saranno allineati completamente allo schema persistente.
 
 ### `lib/providers/`
 
@@ -448,7 +463,7 @@ Relazioni consigliate:
 
 ## Database locale - piano di introduzione
 
-Questa sezione definisce il piano tecnico per introdurre la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali, ma il database non e' ancora collegato a Provider, repository o schermate.
+Questa sezione definisce il piano tecnico per introdurre la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali; lo Sprint Database 2 ha aggiunto i repository. Il database non e' ancora collegato a Provider o schermate.
 
 ### Stato attuale
 
@@ -508,7 +523,21 @@ Tabelle definite:
 
 Il database non e' ancora collegato alla UI per scelta progettuale. In questo modo il comportamento attuale resta invariato e il prossimo sprint puo' concentrarsi sui repository senza mescolare generazione schema, migrazione Provider e modifiche schermate.
 
-Prossimo step previsto: creare repository dedicati e mapper tra tabelle Drift e model di dominio, poi collegare gradualmente `MedicineProvider`.
+### Sprint Database 2 - repository layer
+
+Il repository layer separa Provider e database: contiene query, ordinamenti e transazioni, mentre il Provider futuro restera' responsabile di stato UI, loading ed errori mostrati all'utente.
+
+Repository creati:
+
+- `ProfileRepository`: recupero del profilo corrente o per ID, creazione e aggiornamento;
+- `SettingsRepository`: lettura e upsert delle impostazioni per profilo;
+- `TherapyRepository`: stream e lettura delle terapie, creazione, aggiornamento ed eliminazione transazionale con scollegamento delle medicine;
+- `MedicineRepository`: stream e lettura delle medicine, filtro per terapia, gestione scorte, orari e cancellazione transazionale che conserva lo storico;
+- `IntakeRepository`: lettura dello storico per profilo o medicina, creazione e aggiornamento dei record.
+
+I repository non sono ancora collegati a `MedicineProvider`, non eseguono seed automatici e non cambiano il comportamento dell'app. Espongono temporaneamente le entita' generate da Drift e i relativi companion: i mapper verso `Medicine`, `Therapy`, `IntakeRecord` e `UserProfile` sono rimandati perche' gli attuali model non coprono ancora tutti i campi dello schema locale.
+
+Prossimo step previsto: allineare i model allo schema o introdurre mapper completi, aggiungere test repository e collegare gradualmente `MedicineProvider` al database.
 
 ### Database consigliato
 
@@ -654,7 +683,7 @@ Nota: gli snapshot aiutano a conservare uno storico leggibile anche se una medic
 
 ### File da creare o completare in futuro
 
-La struttura `lib/data/` esiste gia' come base Drift. In futuro andra' completata con repository, mapper, test e migrazioni.
+Le strutture `lib/data/` e `lib/repositories/` esistono gia'. In futuro andranno completate con mapper, test e migrazioni.
 
 Possibile struttura evolutiva:
 
@@ -704,11 +733,11 @@ Eventuali file di supporto:
 Fase consigliata:
 
 1. Introdurre tabelle e database service senza collegare subito la UI. Stato: completato nello Sprint Database 1.
-2. Creare repository con test su operazioni base.
-3. Aggiungere seed del profilo locale `local-user`.
-4. Migrare `MedicineProvider.init` per caricare dati dal repository.
-5. Spostare `addMedicine`, `updateMedicine`, `deleteMedicine`, `toggleMedicineActive`, `decrementStock`, `updateProfile` sui repository.
-6. Mantenere compatibilita' temporanea con model esistenti tramite mapper.
+2. Creare repository per operazioni base. Stato: completato nello Sprint Database 2; i test repository restano da aggiungere.
+3. Allineare i model di dominio allo schema o introdurre mapper completi.
+4. Aggiungere seed del profilo locale `local-user` solo durante il collegamento al Provider.
+5. Migrare `MedicineProvider.init` per caricare dati dal repository.
+6. Spostare `addMedicine`, `updateMedicine`, `deleteMedicine`, `toggleMedicineActive`, `decrementStock`, `updateProfile` sui repository.
 7. Integrare storico, scorte e notifiche solo dopo la persistenza base.
 
 ### Rischi e punti delicati

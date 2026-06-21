@@ -205,3 +205,48 @@ Motivazione:
 Lo sprint introduce solo la base tecnica del database locale, mantenendo separato il nuovo layer dati dal comportamento attuale dell'app. Questo permette di verificare schema e generazione Drift prima di spostare logica e stato nei repository.
 
 Stato finale: completato con generazione Drift e analisi Dart pulita.
+
+## 2026-06-21 - Sprint Database 2
+
+Tipo modifica: Database / Repository layer / Documentation.
+
+Descrizione:
+
+- creato il layer `lib/repositories/` sopra `DatabaseService` e `LocalDatabase`;
+- aggiunti repository per profilo, impostazioni, terapie, medicine e storico assunzioni;
+- incapsulate query, ordinamenti e transazioni di cancellazione nel layer dati;
+- mantenuta invariata l'app: `MedicineProvider`, schermate e dati in memoria non sono stati collegati al database;
+- documentato il ruolo del repository layer e il prossimo step di migrazione graduale del Provider.
+
+File creati:
+
+- `lib/repositories/profile_repository.dart`;
+- `lib/repositories/settings_repository.dart`;
+- `lib/repositories/therapy_repository.dart`;
+- `lib/repositories/medicine_repository.dart`;
+- `lib/repositories/intake_repository.dart`.
+
+File modificati:
+
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`.
+
+Problemi risolti:
+
+- introdotto un punto unico per query e operazioni database, separato da Provider e UI;
+- gestita la cancellazione dei record relazionati senza perdere gli snapshot dello storico assunzioni.
+
+Problemi rimandati:
+
+- mapper completi fra righe Drift e model di dominio;
+- test automatici dei repository;
+- seed del profilo locale;
+- collegamento di `MedicineProvider` ai repository;
+- timeout intermittente dei wrapper Flutter nell'ambiente locale.
+
+Motivazione:
+
+Il layer repository prepara una migrazione ordinata verso la persistenza locale, mantenendo fuori dal Provider i dettagli di query e transazioni. In questa fase non viene modificato alcun flusso utente.
+
+Stato finale: completato con `dart analyze` senza problemi.
