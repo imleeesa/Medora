@@ -10,6 +10,8 @@ import '../repositories/profile_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../repositories/therapy_repository.dart';
 
+enum TherapyRemovalResult { archived, deleted }
+
 class MedicineProvider extends ChangeNotifier {
   MedicineProvider({
     ProfileRepository? profileRepository,
@@ -78,14 +80,20 @@ class MedicineProvider extends ChangeNotifier {
     String color = '#2E7D32',
     String? icon,
     String therapyName = 'Terapia generale',
+    String? therapyId,
   }) async {
     final cleanedTherapyName = therapyName.trim().isEmpty
         ? 'Terapia generale'
         : therapyName.trim();
-    final therapyIndex = _therapies.indexWhere(
-      (therapy) =>
-          therapy.name.toLowerCase() == cleanedTherapyName.toLowerCase(),
-    );
+    final therapyIndex = therapyId == null
+        ? _therapies.indexWhere(
+            (therapy) =>
+                therapy.name.toLowerCase() == cleanedTherapyName.toLowerCase(),
+          )
+        : _therapies.indexWhere((therapy) => therapy.id == therapyId);
+    if (therapyId != null && therapyIndex == -1) {
+      throw StateError('La terapia selezionata non e\' disponibile.');
+    }
     final now = DateTime.now();
     final therapy = therapyIndex == -1
         ? Therapy(
@@ -120,6 +128,11 @@ class MedicineProvider extends ChangeNotifier {
       if (therapyIndex == -1) {
         await _therapyRepository.createTherapyWithMedicine(therapy, medicine);
       } else {
+        if (!therapy.isActive) {
+          await _therapyRepository.updateTherapy(
+            therapy.copyWith(isActive: true, updatedAt: DateTime.now()),
+          );
+        }
         await _medicineRepository.createMedicine(medicine);
       }
       await _reloadCache();
@@ -130,6 +143,182 @@ class MedicineProvider extends ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+  }
+
+  Future<void> addMedicineToTherapy({
+    required String therapyId,
+    required String name,
+    required String dose,
+    required List<TimeOfDay> times,
+    required List<int> daysOfWeek,
+    required int stockQuantity,
+    required int stockWarningThreshold,
+    String? notes,
+    String color = '#2E7D32',
+    String? icon,
+  }) {
+    return addMedicine(
+      therapyId: therapyId,
+      name: name,
+      dose: dose,
+      times: times,
+      daysOfWeek: daysOfWeek,
+      stockQuantity: stockQuantity,
+      stockWarningThreshold: stockWarningThreshold,
+      notes: notes,
+      color: color,
+      icon: icon,
+    );
+  }
+
+  Future<Therapy> createTherapy({
+    required String name,
+    String? description,
+    String color = '#2E7D32',
+    int? iconCodePoint,
+    DateTime? startDate,
+  }) async {
+    final cleanedName = name.trim();
+    if (cleanedName.isEmpty) {
+      throw ArgumentError.value(
+        name,
+        'name',
+        'Il nome della terapia e obbligatorio.',
+      );
+    }
+    final duplicate = _therapies.any(
+      (therapy) => therapy.name.toLowerCase() == cleanedName.toLowerCase(),
+    );
+    if (duplicate) {
+      throw StateError('Esiste gia una terapia con questo nome.');
+    }
+
+    final now = DateTime.now();
+    final cleanedDescription = description?.trim();
+    final therapy = Therapy(
+      id: const Uuid().v4(),
+      profileId: _currentProfile.id,
+      name: cleanedName,
+      description: cleanedDescription?.isEmpty ?? true
+          ? null
+          : cleanedDescription,
+      color: color,
+      iconCodePoint: iconCodePoint,
+      startDate: startDate,
+      createdAt: now,
+      updatedAt: now,
+      medicines: const [],
+    );
+
+    try {
+      await _therapyRepository.createTherapy(therapy);
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+      return _therapies.firstWhere((item) => item.id == therapy.id);
+    } catch (_) {
+      _errorMessage = 'Impossibile creare la terapia.';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<bool> updateTherapy(Therapy therapy) async {
+    final cleanedName = therapy.name.trim();
+    if (cleanedName.isEmpty) {
+      throw ArgumentError.value(
+        therapy.name,
+        'therapy.name',
+        'Il nome della terapia e obbligatorio.',
+      );
+    }
+    final duplicate = _therapies.any(
+      (item) =>
+          item.id != therapy.id &&
+          item.name.toLowerCase() == cleanedName.toLowerCase(),
+    );
+    if (duplicate) {
+      throw StateError('Esiste gia una terapia con questo nome.');
+    }
+
+    final updatedTherapy = therapy.copyWith(
+      name: cleanedName,
+      updatedAt: DateTime.now(),
+    );
+    try {
+      final updated = await _therapyRepository.updateTherapy(updatedTherapy);
+      if (!updated) return false;
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare la terapia.';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<TherapyRemovalResult> deleteOrArchiveTherapy(String therapyId) async {
+    final therapy = _therapies
+        .where((item) => item.id == therapyId)
+        .firstOrNull;
+    if (therapy == null) {
+      throw StateError('La terapia selezionata non e disponibile.');
+    }
+
+    try {
+      if (therapy.medicines.isNotEmpty) {
+        await _therapyRepository.updateTherapy(
+          therapy.copyWith(isActive: false, updatedAt: DateTime.now()),
+        );
+        await _reloadCache();
+        _errorMessage = null;
+        notifyListeners();
+        return TherapyRemovalResult.archived;
+      }
+
+      await _therapyRepository.deleteTherapy(therapy.id);
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+      return TherapyRemovalResult.deleted;
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare la terapia.';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> reactivateTherapy(String therapyId) async {
+    final therapy = _therapies
+        .where((item) => item.id == therapyId)
+        .firstOrNull;
+    if (therapy == null) {
+      throw StateError('La terapia selezionata non e disponibile.');
+    }
+    if (therapy.isActive) return;
+
+    try {
+      final updated = await _therapyRepository.updateTherapy(
+        therapy.copyWith(isActive: true, updatedAt: DateTime.now()),
+      );
+      if (!updated) return;
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile riattivare la terapia.';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  List<Medicine> getMedicinesByTherapy(String therapyId) {
+    return _therapies
+        .where((therapy) => therapy.id == therapyId)
+        .expand((therapy) => therapy.medicines)
+        .toList(growable: false);
   }
 
   Future<void> updateMedicine({
@@ -180,14 +369,8 @@ class MedicineProvider extends ChangeNotifier {
     final location = _findMedicine(id);
     if (location == null) return;
 
-    final therapy = _therapies[location.therapyIndex];
-    final isLastMedicine = therapy.medicines.length == 1;
-
     try {
       await _medicineRepository.deleteMedicine(id);
-      if (isLastMedicine) {
-        await _therapyRepository.deleteTherapy(therapy.id);
-      }
       await _reloadCache();
       _errorMessage = null;
       notifyListeners();

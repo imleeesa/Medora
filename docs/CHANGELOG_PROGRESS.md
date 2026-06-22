@@ -373,3 +373,93 @@ Motivazione:
 Lo sprint rende persistente il flusso esistente senza cambiare la UI. Il Provider continua a essere l'unica fonte dati per le schermate, mentre repository e mapper proteggono l'app dai dettagli Drift.
 
 Stato finale: completato con analisi e test Flutter eseguiti.
+
+## 2026-06-22 - Sprint Gestione Autonoma Terapie
+
+Tipo modifica: Feature / Provider integration / UI / Documentation.
+
+Descrizione:
+
+- resa autonoma la gestione delle terapie con elenco, creazione, modifica e dettaglio;
+- aggiunta creazione di una terapia senza medicine e persistenza immediata in Drift;
+- aggiunto dettaglio terapia con medicine associate e ingresso diretto al form medicina;
+- aggiunta archiviazione sicura per terapie con medicine ed eliminazione per terapie vuote;
+- eliminazione di una medicina senza cancellazione automatica della terapia;
+- aggiornato il vecchio flusso medicina per riusare o riattivare terapie omonime;
+- mantenute UI e Provider indipendenti da classi Drift generate.
+
+File creati:
+
+- `lib/screens/add_therapy_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `lib/widgets/therapy_card.dart`.
+
+File modificati:
+
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/screens/medicines_screen.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- terapie non gestibili come entita' autonome;
+- impossibilita' di aggiungere una medicina nel contesto di una terapia esistente;
+- rischio di duplicare una terapia gia' esistente dal vecchio form medicina.
+
+Problemi rimandati:
+
+- spostamento medicine tra terapie;
+- riattivazione esplicita di una terapia archiviata dall'interfaccia;
+- filtri e ordinamenti avanzati delle terapie;
+- storico, notifiche e backup.
+
+Motivazione:
+
+Il progetto ora rispetta il modello `TERAPIE -> MEDICINE`: una terapia puo' esistere e venire gestita prima di contenere medicine, mantenendo la persistenza locale introdotta negli sprint database.
+
+Stato finale: completato con verifiche statiche e test Flutter.
+
+## 2026-06-22 - QA e bug fix Terapie/Medicine
+
+Tipo modifica: Bug Fix / QA / Documentation.
+
+Descrizione:
+
+- aggiunta eliminazione della medicina dal dettaglio terapia e dal dettaglio medicina, con conferma;
+- aggiunta riattivazione di una terapia archiviata dal menu azioni;
+- resa esplicita la CTA globale `Aggiungi medicina` nella sezione Terapie;
+- mantenuti il flusso medicina dentro terapia e il riuso/riattivazione della terapia omonima nel form globale;
+- documentato uno sprint futuro di rifinitura UI/UX Terapie e Medicine.
+
+File modificati:
+
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `lib/screens/medicines_screen.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- eliminazione medicina non accessibile dal dettaglio terapia;
+- terapia archiviata senza azione di riattivazione;
+- flusso globale per aggiungere una medicina poco evidente.
+
+Problemi rimandati:
+
+- revisione UI/UX completa di Terapie e Medicine;
+- spostamento medicine tra terapie;
+- storico, notifiche, PDF e backup.
+
+Motivazione:
+
+Lo sprint corregge i primi blocchi emersi dal test manuale senza alterare l'architettura Provider -> Repository -> Drift o introdurre feature fuori perimetro.
+
+Stato finale: completato con verifiche statiche e test Flutter.

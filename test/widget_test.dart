@@ -5,7 +5,9 @@ import 'package:meditrack/app.dart';
 import 'package:meditrack/providers/medicine_provider.dart';
 
 void main() {
-  testWidgets('shows the empty dashboard state', (WidgetTester tester) async {
+  testWidgets('shows the empty therapy dashboard state', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: MedicineProvider(),
@@ -15,6 +17,6 @@ void main() {
 
     expect(find.text('Buongiorno, Utente'), findsOneWidget);
     expect(find.text('Non hai ancora aggiunto terapie'), findsOneWidget);
-    expect(find.text('Aggiungi Medicina'), findsOneWidget);
+    expect(find.text('Crea Terapia'), findsOneWidget);
   });
 }

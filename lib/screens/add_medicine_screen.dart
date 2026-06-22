@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../widgets/primary_button.dart';
 
 class AddMedicineScreen extends StatefulWidget {
-  const AddMedicineScreen({super.key});
+  final Therapy? therapy;
+
+  const AddMedicineScreen({super.key, this.therapy});
 
   @override
   State<AddMedicineScreen> createState() => _AddMedicineScreenState();
@@ -33,6 +36,16 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     '#8BC34A',
     '#9E9E9E',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final therapy = widget.therapy;
+    if (therapy != null) {
+      _therapyController.text = therapy.name;
+      _selectedColor = therapy.color;
+    }
+  }
 
   @override
   void dispose() {
@@ -74,19 +87,25 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel('Terapia *'),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _therapyController,
-                        decoration: const InputDecoration(
-                          hintText: 'Es. Terapia Vasculite',
-                          filled: true,
-                          fillColor: Colors.white,
+                      if (widget.therapy == null) ...[
+                        _buildLabel('Terapia *'),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _therapyController,
+                          decoration: const InputDecoration(
+                            hintText: 'Es. Terapia Vasculite',
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          validator: (value) => value?.trim().isEmpty ?? true
+                              ? 'Inserisci la terapia'
+                              : null,
                         ),
-                        validator: (value) => value?.trim().isEmpty ?? true
-                            ? 'Inserisci la terapia'
-                            : null,
-                      ),
+                      ] else ...[
+                        _buildLabel('Terapia'),
+                        const SizedBox(height: 8),
+                        _SelectedTherapyField(therapy: widget.therapy!),
+                      ],
                       const SizedBox(height: 20),
                       _buildLabel('Nome Medicina *'),
                       const SizedBox(height: 8),
@@ -97,10 +116,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                           filled: true,
                           fillColor: Colors.white,
                         ),
-                        validator: (value) =>
-                            value?.trim().isEmpty ?? true
-                                ? 'Inserisci il nome'
-                                : null,
+                        validator: (value) => value?.trim().isEmpty ?? true
+                            ? 'Inserisci il nome'
+                            : null,
                       ),
                       const SizedBox(height: 20),
                       _buildLabel('Dosaggio *'),
@@ -112,10 +130,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                           filled: true,
                           fillColor: Colors.white,
                         ),
-                        validator: (value) =>
-                            value?.trim().isEmpty ?? true
-                                ? 'Inserisci il dosaggio'
-                                : null,
+                        validator: (value) => value?.trim().isEmpty ?? true
+                            ? 'Inserisci il dosaggio'
+                            : null,
                       ),
                       const SizedBox(height: 20),
                       _buildLabel('Orari di Assunzione *'),
@@ -203,9 +220,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   ),
                   decoration: BoxDecoration(
                     border: index < _times.length - 1
-                        ? Border(
-                            bottom: BorderSide(color: Colors.grey[200]!),
-                          )
+                        ? Border(bottom: BorderSide(color: Colors.grey[200]!))
                         : null,
                   ),
                   child: Row(
@@ -267,32 +282,33 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           .asMap()
           .entries
           .map((entry) {
-        final dayNum = entry.key + 1;
-        final isSelected = _daysOfWeek.contains(dayNum);
+            final dayNum = entry.key + 1;
+            final isSelected = _daysOfWeek.contains(dayNum);
 
-        return FilterChip(
-          label: Text(entry.value),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _daysOfWeek.add(dayNum);
-              } else {
-                _daysOfWeek.remove(dayNum);
-              }
-            });
-          },
-          backgroundColor: Colors.white,
-          selectedColor: const Color(0xFFE8F5E9),
-          side: BorderSide(
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[300]!,
-          ),
-          labelStyle: TextStyle(
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[700],
-            fontWeight: FontWeight.w600,
-          ),
-        );
-      }).toList(),
+            return FilterChip(
+              label: Text(entry.value),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    _daysOfWeek.add(dayNum);
+                  } else {
+                    _daysOfWeek.remove(dayNum);
+                  }
+                });
+              },
+              backgroundColor: Colors.white,
+              selectedColor: const Color(0xFFE8F5E9),
+              side: BorderSide(
+                color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[300]!,
+              ),
+              labelStyle: TextStyle(
+                color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[700],
+                fontWeight: FontWeight.w600,
+              ),
+            );
+          })
+          .toList(),
     );
   }
 
@@ -314,11 +330,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
 
         if (constraints.maxWidth < 340) {
           return Column(
-            children: [
-              fields.first,
-              const SizedBox(height: 16),
-              fields.last,
-            ],
+            children: [fields.first, const SizedBox(height: 16), fields.last],
           );
         }
 
@@ -393,17 +405,32 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await Provider.of<MedicineProvider>(context, listen: false).addMedicine(
-        therapyName: _therapyController.text,
-        name: _nameController.text,
-        dose: _doseController.text,
-        times: _times,
-        daysOfWeek: _daysOfWeek,
-        stockQuantity: int.parse(_stockController.text),
-        stockWarningThreshold: int.parse(_warningController.text),
-        notes: _notesController.text,
-        color: _selectedColor,
-      );
+      final provider = Provider.of<MedicineProvider>(context, listen: false);
+      if (widget.therapy == null) {
+        await provider.addMedicine(
+          therapyName: _therapyController.text,
+          name: _nameController.text,
+          dose: _doseController.text,
+          times: _times,
+          daysOfWeek: _daysOfWeek,
+          stockQuantity: int.parse(_stockController.text),
+          stockWarningThreshold: int.parse(_warningController.text),
+          notes: _notesController.text,
+          color: _selectedColor,
+        );
+      } else {
+        await provider.addMedicineToTherapy(
+          therapyId: widget.therapy!.id,
+          name: _nameController.text,
+          dose: _doseController.text,
+          times: _times,
+          daysOfWeek: _daysOfWeek,
+          stockQuantity: int.parse(_stockController.text),
+          stockWarningThreshold: int.parse(_warningController.text),
+          notes: _notesController.text,
+          color: _selectedColor,
+        );
+      }
 
       if (mounted) {
         FocusManager.instance.primaryFocus?.unfocus();
@@ -432,6 +459,49 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       return 'Inserisci un numero valido';
     }
     return null;
+  }
+
+  Color _parseColor(String colorHex) {
+    final value = colorHex.replaceFirst('#', '');
+    return Color(int.parse('FF$value', radix: 16));
+  }
+}
+
+class _SelectedTherapyField extends StatelessWidget {
+  final Therapy therapy;
+
+  const _SelectedTherapyField({required this.therapy});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(therapy.color);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.spa_outlined, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              therapy.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E1E1E),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _parseColor(String colorHex) {

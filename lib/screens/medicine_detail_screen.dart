@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../models/medicine.dart';
+import '../providers/medicine_provider.dart';
 
 class MedicineDetailScreen extends StatelessWidget {
   final Medicine medicine;
@@ -14,6 +17,13 @@ class MedicineDetailScreen extends StatelessWidget {
         title: const Text('Dettagli Medicina'),
         elevation: 0,
         backgroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Elimina medicina',
+            onPressed: () => _confirmDelete(context),
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -301,6 +311,41 @@ class MedicineDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminare medicina?'),
+        content: Text('Vuoi eliminare ${medicine.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await context.read<MedicineProvider>().deleteMedicine(medicine.id);
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Medicina eliminata')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 
   /// Ottiene i nomi dei giorni

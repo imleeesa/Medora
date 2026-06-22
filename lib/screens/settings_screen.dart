@@ -53,10 +53,7 @@ class SettingsScreen extends StatelessWidget {
                     title: const Text('Backup'),
                     subtitle: const Text('Predisposizione per backup futuro'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showPlannedFeatureMessage(
-                      context,
-                      'Backup',
-                    ),
+                    onTap: () => _showPlannedFeatureMessage(context, 'Backup'),
                   ),
                   ListTile(
                     leading: const Icon(
@@ -83,7 +80,9 @@ class SettingsScreen extends StatelessWidget {
   void _showPlannedFeatureMessage(BuildContext context, String featureName) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("$featureName sara' disponibile in una prossima versione"),
+        content: Text(
+          "$featureName sara' disponibile in una prossima versione",
+        ),
       ),
     );
   }

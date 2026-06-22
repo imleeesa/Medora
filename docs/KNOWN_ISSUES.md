@@ -67,7 +67,11 @@ Media
 
 ### Stato
 
-Aperto / Pianificato
+Risolto
+
+### Data risoluzione
+
+2026-06-22
 
 ### Area
 
@@ -75,20 +79,99 @@ Terapie, Medicine, Provider, Database futuro
 
 ### Cosa e' stato trovato
 
-Le terapie vengono create o usate principalmente durante l'aggiunta di una medicina. Non esiste ancora un flusso autonomo per creare, modificare, eliminare o archiviare una terapia, aprirne il dettaglio, aggiungere medicine al suo interno o visualizzare tutte le medicine associate.
+Le terapie venivano create o usate principalmente durante l'aggiunta di una medicina. Non esisteva un flusso autonomo per crearle, modificarle, archiviarle o aprirne il dettaglio.
 
 ### Motivazione
 
-La gestione completa delle terapie e' una feature di prodotto prevista dalla roadmap. Richiede flussi UI dedicati, nuove azioni del Provider e il collegamento graduale alla persistenza locale. Non deve essere risolta nello Sprint Database 3: verra' affrontata in uno sprint dedicato al sistema Terapie dopo l'integrazione del Provider con il database.
+Lo Sprint Terapie ha introdotto una lista autonoma, form di creazione e modifica, dettaglio con medicine associate e pulsante di aggiunta medicina nel contesto della terapia. Le operazioni usano il Provider e restano persistite in Drift.
 
 ### Possibili soluzioni
 
-- introdurre una schermata o un flusso dedicato alle terapie;
-- mantenere il modello `TERAPIE -> MEDICINE`;
-- aggiungere creazione, modifica, archiviazione ed eliminazione controllata della terapia;
-- aggiungere dettaglio terapia con elenco delle medicine associate;
-- consentire l'aggiunta di medicine all'interno di una terapia;
-- documentare ogni nuova responsabilita' nella guida tecnica.
+### Come e' stato risolto
+
+- introdotte `AddTherapyScreen` e `TherapyDetailScreen`;
+- aggiunti metodi Provider per creare, modificare, archiviare/eliminare e interrogare terapie;
+- aggiunta associazione medicina a una terapia selezionata;
+- mantenuto il modello `TERAPIE -> MEDICINE` senza esporre Drift alla UI;
+- le terapie con medicine vengono archiviate, mentre quelle vuote possono essere eliminate;
+- eliminare l'ultima medicina non elimina automaticamente la terapia;
+- il vecchio flusso riusa o riattiva la terapia esistente con lo stesso nome.
+
+### Note
+
+Spostamento di medicine tra terapie e filtri avanzati restano miglioramenti futuri, non bloccanti per la gestione autonoma di base.
+
+## Eliminazione medicina non immediata dal dettaglio terapia
+
+### Categoria
+
+Bug da correggere ora.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-22
+
+### Come e' stato risolto
+
+Il dettaglio terapia ora mostra un menu elimina per ogni medicina; il dettaglio della singola medicina espone la stessa azione. Entrambe richiedono conferma e chiamano `MedicineProvider.deleteMedicine`, che aggiorna database e cache UI.
+
+### File modificati
+
+- `lib/screens/therapy_detail_screen.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `docs/KNOWN_ISSUES.md`.
+
+## Terapia archiviata senza riattivazione dalla UI
+
+### Categoria
+
+Bug da correggere ora.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-22
+
+### Come e' stato risolto
+
+Il menu azioni nel dettaglio di una terapia archiviata ora mostra `Riattiva`. L'azione usa `MedicineProvider.reactivateTherapy`, aggiorna lo stato persistito e ricarica la cache senza duplicare la terapia.
+
+### File modificati
+
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `docs/KNOWN_ISSUES.md`.
+
+## UI/UX Terapie e Medicine da rifinire
+
+### Categoria
+
+Incoerenza da chiarire/correggere ora.
+
+### Stato
+
+Rimandato
+
+### Cosa e' stato trovato
+
+La gestione autonoma delle terapie e i flussi medicina sono funzionali, ma la gerarchia visiva e alcune azioni richiedono un passaggio UI/UX dedicato per essere ancora piu' immediate su schermi piccoli e pieghevoli.
+
+### Motivazione
+
+Un redesign completo non rientra nello sprint QA. In questa fase sono state corrette solo leggibilita', azioni mancanti e responsivita' dei form esistenti.
+
+### Possibili soluzioni
+
+- revisione dei flussi e della gerarchia visiva Terapie/Medicine;
+- test manuali su schermi piccoli e Samsung Z Flip;
+- consolidamento delle card e delle azioni contestuali.
 
 ## Storico assunzioni non operativo
 

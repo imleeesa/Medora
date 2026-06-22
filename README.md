@@ -6,7 +6,7 @@ Meditrack e' un'app Flutter per la gestione personale di medicine, terapie, orar
 
 L'app permette all'utente di creare una terapia, associare una o piu' medicine, definire dosaggio, orari, giorni della settimana, note e quantita' disponibili. La dashboard mostra una sintesi dello stato della giornata, la prossima medicina prevista, le terapie attive e gli eventuali avvisi di scorta bassa.
 
-Al momento i dati sono gestiti temporaneamente in memoria tramite Provider. I model sono gia' predisposti per la serializzazione JSON, cosi' da facilitare l'introduzione futura di un database locale e di funzionalita' di backup.
+I dati principali sono salvati localmente con Drift e SQLite. Provider mantiene una cache per la UI, mentre repository e mapper isolano l'app dai dettagli di persistenza.
 
 ## Obiettivo dell'app
 
@@ -29,30 +29,34 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Dashboard principale con riepilogo della giornata.
 - Navigazione inferiore tra Home, Terapie, Storico e Profilo.
 - Creazione di una medicina associata a una terapia.
+- Creazione, modifica, dettaglio e archiviazione di terapie anche senza medicine.
+- Aggiunta di una medicina direttamente dal dettaglio terapia.
 - Inserimento di nome medicina, dosaggio, note, colore, orari, giorni della settimana, quantita' iniziale e soglia minima.
 - Raggruppamento delle medicine per terapia.
 - Ricerca per nome terapia o nome medicina.
 - Dettaglio della medicina con dosaggio, stato, orari, giorni, scorte e note.
 - Attivazione o disattivazione di una medicina.
-- Eliminazione di una medicina dalla sessione corrente.
+- Eliminazione persistente di una medicina senza rimuovere automaticamente la terapia.
+- Archiviazione sicura delle terapie con medicine ed eliminazione delle terapie vuote.
 - Calcolo della prossima medicina da assumere nella giornata.
 - Rilevamento delle medicine con scorta bassa.
 - Schermata Scorte con indicatore visivo della disponibilita'.
 - Schermata Storico predisposta per le assunzioni future.
 - Profilo utente locale con nome, preferenze tema e notifiche.
+- Persistenza locale di profilo, impostazioni, terapie, medicine, scorte e schedule.
 - Schermata Impostazioni predisposta per backup e report PDF.
 - Servizio notifiche locali presente nel codice e pronto per integrazione nel flusso applicativo.
 
 ## Funzionalita' pianificate
 
 - Miglioramento generale della UI e consolidamento del design system.
-- Sistema Terapie completo con creazione, modifica, archiviazione e stato attivo/inattivo.
-- Associazione piu' strutturata Medicine -> Terapie.
+- Evoluzione del sistema Terapie con filtri, riattivazione esplicita e spostamento medicine.
+- Associazione piu' strutturata Medicine -> Terapie con eventuale spostamento tra terapie.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
 - Storico delle assunzioni con conferma, salto, ritardo e note.
 - Gestione avanzata delle scorte con carico/scarico, soglie e promemoria di riacquisto.
 - Notifiche locali integrate con le medicine salvate.
-- Database locale persistente.
+- Migrazioni schema e test automatici del database locale.
 - Profili multipli per utente, familiari o caregiver.
 - Report PDF esportabile per medico o uso personale.
 - Backup Cloud e sincronizzazione tra dispositivi.
@@ -67,6 +71,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - timezone per la pianificazione delle notifiche
 - intl per supporto a date e formattazioni
 - uuid per generazione degli identificativi
+- drift e SQLite per persistenza locale
 - flutter_lints per le regole di qualita' del codice
 
 ## Architettura generale
@@ -76,12 +81,12 @@ Il progetto segue una struttura semplice e leggibile, adatta alla fase attuale d
 - `main.dart` inizializza Flutter e registra il provider globale.
 - `app.dart` configura tema, MaterialApp e schermata iniziale.
 - `models/` contiene le entita' di dominio.
-- `providers/` contiene lo stato applicativo temporaneo e le operazioni sui dati.
+- `providers/` contiene la cache UI e coordina repository e operazioni sui dati.
 - `screens/` contiene le pagine principali dell'interfaccia.
 - `widgets/` contiene componenti riutilizzabili.
 - `services/` contiene servizi applicativi esterni alla UI, come le notifiche.
 
-Il flusso dati principale passa da `MedicineProvider`, che mantiene in memoria terapie, medicine e profilo corrente. Le schermate leggono e aggiornano questo stato tramite `Consumer` o accesso diretto al provider.
+Il flusso dati principale passa da `MedicineProvider`, che mantiene una cache di terapie, medicine e profilo corrente per la UI. I repository leggono e scrivono i dati persistenti nel database Drift; le schermate restano collegate solo al Provider tramite `Consumer` o accesso diretto.
 
 ## Struttura delle cartelle
 
@@ -211,7 +216,7 @@ flutter run -d <device-id>
 
 ## Stato attuale del progetto
 
-Meditrack e' in una fase prototipale avanzata. La UI principale e i flussi base sono presenti, ma la persistenza dei dati non e' ancora implementata: le medicine, le terapie e le preferenze vengono perse al riavvio dell'app.
+Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app.
 
 Il codice contiene gia' model serializzabili e un servizio notifiche locali, elementi utili per la prossima evoluzione architetturale. Le schermate Storico, Backup e Report PDF sono predisposte ma non ancora operative.
 
@@ -224,12 +229,11 @@ Il codice contiene gia' model serializzabili e un servizio notifiche locali, ele
 - Migliorare accessibilita', leggibilita' e responsive layout.
 - Rivedere testi e microcopy in italiano.
 
-### Fase 2 - Sistema Terapie
+### Fase 2 - Evoluzione Terapie
 
-- Creare una schermata dedicata alla gestione delle terapie.
-- Consentire modifica, eliminazione e archiviazione delle terapie.
-- Gestire stato attivo/inattivo della terapia.
-- Preparare ordinamento e filtri.
+- Aggiungere riattivazione esplicita, filtri e ordinamento.
+- Consentire lo spostamento delle medicine tra terapie.
+- Rifinire gli stati archiviati e le azioni di gestione.
 
 ### Fase 3 - Associazione Medicine -> Terapie
 
@@ -268,10 +272,9 @@ Il codice contiene gia' model serializzabili e un servizio notifiche locali, ele
 
 ### Fase 8 - Database
 
-- Introdurre persistenza locale.
-- Creare repository dedicati per medicine, terapie, profili e storico.
-- Migrare lo stato temporaneo dal provider al database.
+- Aggiungere test repository su database temporaneo.
 - Gestire migrazioni e versionamento schema.
+- Estendere la persistenza a storico e nuove funzionalita'.
 
 ### Fase 9 - Profili
 

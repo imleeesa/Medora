@@ -5,7 +5,7 @@ import '../models/medicine.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../widgets/empty_state.dart';
-import 'add_medicine_screen.dart';
+import 'add_therapy_screen.dart';
 import 'history_screen.dart';
 import 'medicines_screen.dart';
 import 'profile_screen.dart';
@@ -53,14 +53,13 @@ class _HomeDashboard extends StatelessWidget {
           );
         }
 
-        final medicines = provider.medicines;
         final therapies = provider.therapies;
         final nextMedicine = provider.getNextMedicine();
         final lowStockMedicines = provider.getLowStockMedicines();
         final todayMedicines = provider.getMedicinesTodayDue();
 
         return SafeArea(
-          child: medicines.isEmpty
+          child: therapies.isEmpty
               ? Padding(
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
                   child: Column(
@@ -72,8 +71,8 @@ class _HomeDashboard extends StatelessWidget {
                           description:
                               'Crea la tua prima terapia e aggiungi i farmaci da seguire',
                           icon: Icons.health_and_safety_outlined,
-                          buttonLabel: 'Aggiungi Medicina',
-                          onButtonPressed: () => _openAddMedicine(context),
+                          buttonLabel: 'Crea Terapia',
+                          onButtonPressed: () => _openAddTherapy(context),
                         ),
                       ),
                     ],
@@ -127,10 +126,10 @@ class _HomeDashboard extends StatelessWidget {
     );
   }
 
-  void _openAddMedicine(BuildContext context) {
+  void _openAddTherapy(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const AddMedicineScreen()),
+      MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
     );
   }
 }
@@ -407,7 +406,10 @@ class _NextMedicineCard extends StatelessWidget {
                 label: nextTime == null ? '--:--' : nextTime.format(context),
               ),
               if (nextTime != null)
-                _Pill(icon: Icons.timer_outlined, label: 'Tra ${_timeUntil(nextTime)}'),
+                _Pill(
+                  icon: Icons.timer_outlined,
+                  label: 'Tra ${_timeUntil(nextTime)}',
+                ),
             ],
           ),
         ],

@@ -111,7 +111,7 @@ File attuali:
 - `medicine_repository.dart`;
 - `intake_repository.dart`.
 
-Il layer non e' ancora iniettato in `MedicineProvider`. Le API pubbliche dei repository ricevono e restituiscono model di dominio; le righe e i companion Drift restano confinati nei mapper e nei metodi privati.
+Il layer e' usato da `MedicineProvider`. Le API pubbliche dei repository ricevono e restituiscono model di dominio; le righe e i companion Drift restano confinati nei mapper e nei metodi privati.
 
 ### `lib/providers/`
 
@@ -132,6 +132,8 @@ File attuali:
 - `dashboard_screen.dart`
 - `medicines_screen.dart`
 - `add_medicine_screen.dart`
+- `add_therapy_screen.dart`
+- `therapy_detail_screen.dart`
 - `medicine_detail_screen.dart`
 - `history_screen.dart`
 - `stock_screen.dart`
@@ -148,6 +150,7 @@ File attuali:
 - `medicine_card.dart`
 - `empty_state.dart`
 - `dashboard_card.dart`
+- `therapy_card.dart`
 
 ### `lib/services/`
 
@@ -243,16 +246,15 @@ Responsabilita':
 
 ### `MedicinesScreen`
 
-Schermata dedicata all'elenco di terapie e medicine.
+Schermata dedicata all'elenco autonomo delle terapie.
 
 Responsabilita':
 
 - visualizzare le terapie;
 - filtrare per nome terapia o medicina;
-- aprire il dettaglio medicina;
-- attivare/disattivare medicine;
-- eliminare medicine dalla sessione corrente;
-- aprire il form di aggiunta.
+- aprire il dettaglio terapia;
+- aprire il flusso di creazione terapia;
+- mostrare descrizione, stato e numero medicine associate.
 
 ### `AddMedicineScreen`
 
@@ -261,9 +263,31 @@ Form di inserimento di una nuova medicina.
 Responsabilita':
 
 - validare terapia, nome, dosaggio, orari, giorni e quantita';
+- ricevere opzionalmente una terapia esistente per associare una medicina senza reinserirne il nome;
 - permettere selezione di colore e note;
-- chiamare `MedicineProvider.addMedicine`;
+- chiamare `MedicineProvider.addMedicine` o `addMedicineToTherapy`;
 - mostrare feedback di successo o errore.
+
+### `AddTherapyScreen`
+
+Form responsivo per creare o modificare una terapia.
+
+Responsabilita':
+
+- validare nome, descrizione opzionale, colore, icona e data inizio;
+- chiamare `MedicineProvider.createTherapy` o `updateTherapy`;
+- mantenere il form scrollabile con tastiera aperta.
+
+### `TherapyDetailScreen`
+
+Schermata di dettaglio per una terapia salvata.
+
+Responsabilita':
+
+- mostrare stato, descrizione, data inizio e medicine associate;
+- aprire il form medicina con terapia gia' selezionata;
+- modificare una terapia;
+- archiviare terapie con medicine oppure eliminare in sicurezza terapie vuote.
 
 ### `MedicineDetailScreen`
 
@@ -400,6 +424,12 @@ Metodi principali:
 - `toggleMedicineActive`;
 - `decrementStock`;
 - `updateProfile`;
+- `createTherapy`;
+- `updateTherapy`;
+- `deleteOrArchiveTherapy`;
+- `reactivateTherapy`;
+- `getMedicinesByTherapy`;
+- `addMedicineToTherapy`;
 - `getMedicinesTodayDue`;
 - `getNextMedicine`;
 - `getLowStockMedicines`.
@@ -567,7 +597,7 @@ All'avvio `initialize` crea il profilo `local-user` con nome `Utente` solo se il
 
 Le operazioni gia' esposte dal Provider ora persistono nel database: aggiunta, modifica, eliminazione, attivazione/disattivazione e decremento scorte delle medicine, creazione della terapia collegata al flusso di aggiunta, nome profilo e impostazioni esistenti. La prima terapia e la prima medicina vengono inserite nella stessa transazione.
 
-Restano non persistiti nel flusso applicativo storico assunzioni, notifiche locali, backup/cloud e gestione autonoma delle terapie. Prossimo step consigliato: test repository e poi sprint dedicato al sistema Terapie.
+Restano non persistiti nel flusso applicativo storico assunzioni, notifiche locali, backup/cloud e gestione avanzata delle terapie. Prossimo step consigliato: test repository e miglioramenti di gestione medicine tra terapie.
 
 ### Database consigliato
 
@@ -918,7 +948,7 @@ Aggiornarlo quando si trova un bug, quando un problema viene corretto o quando u
 
 ### Sistema Terapie
 
-La terapia deve diventare un'entita' gestibile autonomamente. Evitare che venga creata solo come effetto secondario dell'aggiunta di una medicina.
+Le terapie sono entita' autonome persistite. Possono essere create, modificate, aperte in dettaglio, archiviate e riattivate; una terapia vuota puo' essere eliminata. Una terapia con medicine viene archiviata per preservare i collegamenti esistenti. Eliminare una medicina non elimina mai automaticamente la terapia. Il vecchio flusso di aggiunta medicina riusa una terapia omonima e riattiva una terapia archiviata invece di duplicarla.
 
 ### Medicine
 
@@ -956,14 +986,14 @@ Punti solidi:
 - model separati dalla UI;
 - Provider centralizzato;
 - UI principale gia' navigabile;
-- predisposizione per database e notifiche.
+- persistenza locale attiva per profilo, terapie e medicine;
+- gestione autonoma delle terapie con dettaglio e archiviazione sicura.
 
 Limiti attuali:
 
 - dati non persistenti;
 - storico non ancora operativo;
 - notifiche non ancora integrate nel flusso principale;
-- terapie gestite indirettamente tramite aggiunta medicina;
 - alcune componenti UI sono duplicate localmente nelle schermate;
 - tema scuro predisposto nel profilo ma non ancora applicato all'interfaccia.
 
