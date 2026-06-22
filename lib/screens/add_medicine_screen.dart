@@ -16,15 +16,19 @@ class AddMedicineScreen extends StatefulWidget {
 
 class _AddMedicineScreenState extends State<AddMedicineScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _therapyController = TextEditingController();
   final _nameController = TextEditingController();
-  final _doseController = TextEditingController();
+  final _customQuantityController = TextEditingController();
+  final _customUnitController = TextEditingController();
   final _notesController = TextEditingController();
   final _stockController = TextEditingController(text: '30');
   final _warningController = TextEditingController(text: '5');
 
   final List<TimeOfDay> _times = [];
   final List<int> _daysOfWeek = [];
+  String? _selectedTherapyId;
+  String? _selectedQuantity;
+  String? _selectedUnit;
+  bool _isCustomQuantity = false;
   String _selectedColor = '#2E7D32';
   bool _isLoading = false;
 
@@ -37,21 +41,36 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     '#9E9E9E',
   ];
 
+  static const _quantityPresets = ['1', '1/2', '1/4', '2', '3'];
+  static const _unitOptions = [
+    'pastiglia',
+    'compressa',
+    'capsula',
+    'gocce',
+    'ml',
+    'mg',
+    'bustina',
+    'spray',
+    'cucchiaino',
+    'unita',
+    'Altro',
+  ];
+
   @override
   void initState() {
     super.initState();
     final therapy = widget.therapy;
     if (therapy != null) {
-      _therapyController.text = therapy.name;
+      _selectedTherapyId = therapy.id;
       _selectedColor = therapy.color;
     }
   }
 
   @override
   void dispose() {
-    _therapyController.dispose();
     _nameController.dispose();
-    _doseController.dispose();
+    _customQuantityController.dispose();
+    _customUnitController.dispose();
     _notesController.dispose();
     _stockController.dispose();
     _warningController.dispose();
@@ -90,17 +109,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       if (widget.therapy == null) ...[
                         _buildLabel('Terapia *'),
                         const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _therapyController,
-                          decoration: const InputDecoration(
-                            hintText: 'Es. Terapia Vasculite',
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: (value) => value?.trim().isEmpty ?? true
-                              ? 'Inserisci la terapia'
-                              : null,
-                        ),
+                        _buildTherapySelector(),
                       ] else ...[
                         _buildLabel('Terapia'),
                         const SizedBox(height: 8),
@@ -121,19 +130,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             : null,
                       ),
                       const SizedBox(height: 20),
-                      _buildLabel('Dosaggio *'),
+                      _buildLabel('Quantita per assunzione'),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _doseController,
-                        decoration: const InputDecoration(
-                          hintText: 'Es. 500mg',
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        validator: (value) => value?.trim().isEmpty ?? true
-                            ? 'Inserisci il dosaggio'
-                            : null,
-                      ),
+                      _buildDoseFields(),
                       const SizedBox(height: 20),
                       _buildLabel('Orari di Assunzione *'),
                       const SizedBox(height: 8),
@@ -198,6 +197,123 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         color: Color(0xFF1E1E1E),
       ),
     );
+  }
+
+  Widget _buildTherapySelector() {
+    return Consumer<MedicineProvider>(
+      builder: (context, provider, _) => DropdownButtonFormField<String>(
+        value: _selectedTherapyId,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          hintText: 'Seleziona una terapia',
+          filled: true,
+          fillColor: Colors.white,
+        ),
+        items: provider.therapies
+            .map(
+              (therapy) => DropdownMenuItem(
+                value: therapy.id,
+                child: Text(
+                  therapy.isActive
+                      ? therapy.name
+                      : '${therapy.name} (archiviata)',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList(growable: false),
+        onChanged: (therapyId) {
+          setState(() => _selectedTherapyId = therapyId);
+        },
+        validator: (value) => value == null ? 'Seleziona una terapia' : null,
+      ),
+    );
+  }
+
+  Widget _buildDoseFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ..._quantityPresets.map(
+              (quantity) => ChoiceChip(
+                label: Text(quantity),
+                selected: !_isCustomQuantity && _selectedQuantity == quantity,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedQuantity = quantity;
+                    _isCustomQuantity = false;
+                  });
+                },
+              ),
+            ),
+            ChoiceChip(
+              label: const Text('Personalizzata'),
+              selected: _isCustomQuantity,
+              onSelected: (_) => setState(() => _isCustomQuantity = true),
+            ),
+          ],
+        ),
+        if (_isCustomQuantity) ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customQuantityController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              hintText: 'Es. 1.5',
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _selectedUnit,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            hintText: 'Unita (opzionale)',
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          items: _unitOptions
+              .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
+              .toList(growable: false),
+          onChanged: (unit) => setState(() => _selectedUnit = unit),
+        ),
+        if (_selectedUnit == 'Altro') ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customUnitController,
+            decoration: const InputDecoration(
+              hintText: 'Inserisci l\'unita',
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+        ],
+        const SizedBox(height: 6),
+        Text(
+          'Opzionale. La quantita per assunzione non modifica la scorta.',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
+    );
+  }
+
+  String _buildDose() {
+    final quantity = _isCustomQuantity
+        ? _customQuantityController.text.trim()
+        : _selectedQuantity ?? '';
+    final unit = _selectedUnit == 'Altro'
+        ? _customUnitController.text.trim()
+        : _selectedUnit ?? '';
+    return [
+      quantity.trim(),
+      unit.trim(),
+    ].where((value) => value.isNotEmpty).join(' ');
   }
 
   Widget _buildTimesSection() {
@@ -402,35 +518,31 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       return;
     }
 
+    final therapyId = widget.therapy?.id ?? _selectedTherapyId;
+    if (therapyId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleziona una terapia prima di continuare'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final provider = Provider.of<MedicineProvider>(context, listen: false);
-      if (widget.therapy == null) {
-        await provider.addMedicine(
-          therapyName: _therapyController.text,
-          name: _nameController.text,
-          dose: _doseController.text,
-          times: _times,
-          daysOfWeek: _daysOfWeek,
-          stockQuantity: int.parse(_stockController.text),
-          stockWarningThreshold: int.parse(_warningController.text),
-          notes: _notesController.text,
-          color: _selectedColor,
-        );
-      } else {
-        await provider.addMedicineToTherapy(
-          therapyId: widget.therapy!.id,
-          name: _nameController.text,
-          dose: _doseController.text,
-          times: _times,
-          daysOfWeek: _daysOfWeek,
-          stockQuantity: int.parse(_stockController.text),
-          stockWarningThreshold: int.parse(_warningController.text),
-          notes: _notesController.text,
-          color: _selectedColor,
-        );
-      }
+      await provider.addMedicineToTherapy(
+        therapyId: therapyId,
+        name: _nameController.text,
+        dose: _buildDose(),
+        times: _times,
+        daysOfWeek: _daysOfWeek,
+        stockQuantity: int.parse(_stockController.text),
+        stockWarningThreshold: int.parse(_warningController.text),
+        notes: _notesController.text,
+        color: _selectedColor,
+      );
 
       if (mounted) {
         FocusManager.instance.primaryFocus?.unfocus();

@@ -76,7 +76,7 @@ class MedicineCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              medicine.dose,
+                              medicine.doseLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

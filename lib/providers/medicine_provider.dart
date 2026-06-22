@@ -70,6 +70,7 @@ class MedicineProvider extends ChangeNotifier {
   Future<void> init() => initialize();
 
   Future<void> addMedicine({
+    required String therapyId,
     required String name,
     required String dose,
     required List<TimeOfDay> times,
@@ -79,33 +80,15 @@ class MedicineProvider extends ChangeNotifier {
     String? notes,
     String color = '#2E7D32',
     String? icon,
-    String therapyName = 'Terapia generale',
-    String? therapyId,
   }) async {
-    final cleanedTherapyName = therapyName.trim().isEmpty
-        ? 'Terapia generale'
-        : therapyName.trim();
-    final therapyIndex = therapyId == null
-        ? _therapies.indexWhere(
-            (therapy) =>
-                therapy.name.toLowerCase() == cleanedTherapyName.toLowerCase(),
-          )
-        : _therapies.indexWhere((therapy) => therapy.id == therapyId);
-    if (therapyId != null && therapyIndex == -1) {
+    final therapyIndex = _therapies.indexWhere(
+      (therapy) => therapy.id == therapyId,
+    );
+    if (therapyIndex == -1) {
       throw StateError('La terapia selezionata non e\' disponibile.');
     }
     final now = DateTime.now();
-    final therapy = therapyIndex == -1
-        ? Therapy(
-            id: const Uuid().v4(),
-            profileId: _currentProfile.id,
-            name: cleanedTherapyName,
-            color: color,
-            medicines: const [],
-            createdAt: now,
-            updatedAt: now,
-          )
-        : _therapies[therapyIndex];
+    final therapy = _therapies[therapyIndex];
 
     final medicine = Medicine(
       id: const Uuid().v4(),
@@ -125,16 +108,12 @@ class MedicineProvider extends ChangeNotifier {
     );
 
     try {
-      if (therapyIndex == -1) {
-        await _therapyRepository.createTherapyWithMedicine(therapy, medicine);
-      } else {
-        if (!therapy.isActive) {
-          await _therapyRepository.updateTherapy(
-            therapy.copyWith(isActive: true, updatedAt: DateTime.now()),
-          );
-        }
-        await _medicineRepository.createMedicine(medicine);
+      if (!therapy.isActive) {
+        await _therapyRepository.updateTherapy(
+          therapy.copyWith(isActive: true, updatedAt: DateTime.now()),
+        );
       }
+      await _medicineRepository.createMedicine(medicine);
       await _reloadCache();
       _errorMessage = null;
       notifyListeners();

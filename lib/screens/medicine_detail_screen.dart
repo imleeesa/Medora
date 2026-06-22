@@ -57,7 +57,7 @@ class MedicineDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Dosaggio: ${medicine.dose}',
+                    'Dosaggio: ${medicine.doseLabel}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

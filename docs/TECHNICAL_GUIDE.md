@@ -499,7 +499,7 @@ Relazioni consigliate:
 
 ## Database locale - piano di introduzione
 
-Questa sezione definisce il piano tecnico per introdurre la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali, lo Sprint Database 2 ha aggiunto i repository e lo Sprint Database 2.5 ha allineato model e mapper. Il database non e' ancora collegato a Provider o schermate.
+Questa sezione definisce il piano tecnico per la persistenza locale. Lo Sprint Database 1 ha creato la base Drift e le tabelle principali, lo Sprint Database 2 ha aggiunto i repository, lo Sprint Database 2.5 ha allineato model e mapper e lo Sprint Database 3 ha collegato il Provider ai repository senza esporre Drift alla UI.
 
 ### Stato attuale
 
@@ -513,9 +513,9 @@ Dati mantenuti oggi:
 
 Operazioni oggi gestite dal provider:
 
-- `addMedicine`: crea una medicina e crea/riusa una terapia in base al nome;
+- `addMedicine`: crea una medicina in una terapia esistente identificata da `therapyId`;
 - `updateMedicine`: aggiorna una medicina dentro la terapia che la contiene;
-- `deleteMedicine`: elimina una medicina e rimuove la terapia se resta vuota;
+- `deleteMedicine`: elimina una medicina senza eliminare automaticamente la terapia;
 - `toggleMedicineActive`: abilita/disabilita una medicina;
 - `decrementStock`: scala la quantita' disponibile;
 - `updateProfile`: aggiorna preferenze e nome profilo;
@@ -948,11 +948,11 @@ Aggiornarlo quando si trova un bug, quando un problema viene corretto o quando u
 
 ### Sistema Terapie
 
-Le terapie sono entita' autonome persistite. Possono essere create, modificate, aperte in dettaglio, archiviate e riattivate; una terapia vuota puo' essere eliminata. Una terapia con medicine viene archiviata per preservare i collegamenti esistenti. Eliminare una medicina non elimina mai automaticamente la terapia. Il vecchio flusso di aggiunta medicina riusa una terapia omonima e riattiva una terapia archiviata invece di duplicarla.
+Le terapie sono entita' autonome persistite. Possono essere create, modificate, aperte in dettaglio, archiviate e riattivate; una terapia vuota puo' essere eliminata definitivamente. Una terapia con medicine non puo' essere eliminata definitivamente: puo' essere archiviata per preservare i collegamenti esistenti. Eliminare una medicina non elimina mai automaticamente la terapia.
 
 ### Medicine
 
-Le medicine dovrebbero poter essere modificate, spostate tra terapie e collegate alle notifiche. Ogni modifica rilevante deve aggiornare `updatedAt`.
+Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Le medicine dovrebbero poter essere modificate, spostate tra terapie e collegate alle notifiche. Ogni modifica rilevante deve aggiornare `updatedAt`.
 
 ### Storico
 

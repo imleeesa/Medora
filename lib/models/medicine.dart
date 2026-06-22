@@ -51,6 +51,10 @@ class Medicine {
                )
                .toList(growable: false);
 
+  /// Testo sicuro da usare nell'interfaccia quando il dosaggio non e definito.
+  String get doseLabel =>
+      dose.trim().isEmpty ? 'Dose non specificata' : dose.trim();
+
   /// Verifica se la medicina deve essere assunta oggi
   bool shouldTakeToday() {
     final today = DateTime.now().weekday;
@@ -138,7 +142,7 @@ class Medicine {
     return Medicine(
       id: json['id'],
       name: json['name'],
-      dose: json['dose'],
+      dose: json['dose'] as String? ?? '',
       notes: json['notes'],
       times: times,
       daysOfWeek: daysOfWeek,

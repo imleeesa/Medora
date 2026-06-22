@@ -280,6 +280,87 @@ La schermata `AddMedicineScreen` e' stata resa piu' stabile con tastiera aperta 
 
 Il fix mira a evitare il warning giallo/nero visibile per un frame quando si torna indietro dalla schermata con la tastiera ancora aperta, soprattutto su schermi piccoli e telefoni pieghevoli.
 
+## Medicine create senza una terapia esistente
+
+### Categoria
+
+Incoerenza funzionale / modello dati.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-22
+
+### Come e' stato risolto
+
+Il flusso globale di aggiunta medicina richiede ora la selezione di una terapia esistente. Se non esistono terapie, l'app non apre il form e propone di crearne una. Il Provider richiede inoltre un `therapyId` valido e non crea piu' terapie in modo implicito dal nome digitato nel form.
+
+### File modificati
+
+- `lib/screens/medicines_screen.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `README.md`.
+
+### Note
+
+Le medicine create dai flussi attuali hanno sempre una terapia associata. Gli eventuali record legacy senza `therapyId` non vengono modificati automaticamente in questo sprint.
+
+## Eliminazione definitiva di una terapia con medicine associate
+
+### Categoria
+
+Bug di comportamento / rischio di perdita dati.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-22
+
+### Come e' stato risolto
+
+Il menu della terapia distingue ora archiviazione ed eliminazione definitiva. L'archiviazione mantiene medicine e collegamenti; l'eliminazione definitiva e' consentita solo quando la terapia e' vuota. Se contiene medicine, l'app blocca l'azione e mostra la motivazione.
+
+### File modificati
+
+- `lib/screens/therapy_detail_screen.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/TECHNICAL_GUIDE.md`.
+
+### Note
+
+Lo spostamento di medicine tra terapie resta una funzionalita' futura; fino ad allora l'archiviazione e' l'azione sicura per una terapia ancora popolata.
+
+## Record legacy di medicine senza terapia
+
+### Categoria
+
+Problema tecnico da verificare.
+
+### Stato
+
+Rimandato
+
+### Motivazione
+
+Lo schema Drift consente ancora `therapyId` nullo per compatibilita' con dati precedenti. Il Provider non mostra tali record nella cache organizzata per terapie e questo sprint non introduce una migrazione automatica, per evitare di associare dati sanitari a una terapia arbitraria.
+
+### Possibili soluzioni
+
+- preparare una migrazione guidata che assegni una terapia scelta dall'utente;
+- valutare un controllo di integrita' e rendere `therapyId` obbligatorio in una futura versione dello schema;
+- aggiungere test di migrazione prima di modificare dati esistenti.
+
 ## Vecchio log di build con errore NDK
 
 ### Categoria

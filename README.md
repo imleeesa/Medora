@@ -216,7 +216,7 @@ flutter run -d <device-id>
 
 ## Stato attuale del progetto
 
-Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app.
+Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
 Il codice contiene gia' model serializzabili e un servizio notifiche locali, elementi utili per la prossima evoluzione architetturale. Le schermate Storico, Backup e Report PDF sono predisposte ma non ancora operative.
 

@@ -424,6 +424,54 @@ Il progetto ora rispetta il modello `TERAPIE -> MEDICINE`: una terapia puo' esis
 
 Stato finale: completato con verifiche statiche e test Flutter.
 
+## 2026-06-22 - Sprint Rifinitura funzionale Terapie e Medicine
+
+Tipo modifica: Bug Fix / Refactor leggero / Documentation.
+
+Descrizione:
+
+- resa obbligatoria l'associazione di ogni nuova medicina a una terapia esistente;
+- bloccata l'apertura del form globale medicina quando non esistono terapie, con azione diretta per crearne una;
+- rimosso dal Provider il comportamento che creava una terapia implicita partendo da testo libero;
+- resa opzionale la dose senza modificare lo schema Drift: il form combina quantita' e unita' per assunzione, mentre la UI gestisce il valore non definito;
+- distinta l'archiviazione dall'eliminazione definitiva della terapia e bloccata quest'ultima quando sono presenti medicine associate;
+- documentato il limite dei record legacy eventualmente privi di terapia.
+
+File modificati:
+
+- `lib/models/medicine.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/screens/medicines_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/widgets/medicine_card.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+- `test/medicine_test.dart`.
+
+Problemi risolti:
+
+- creazione implicita di terapie dal flusso medicina;
+- eliminazione definitiva non esplicitamente bloccata per terapie con medicine;
+- dose obbligatoria e possibile visualizzazione vuota nel dettaglio;
+- ambiguita' tra quantita' per assunzione e scorta.
+
+Problemi rimandati:
+
+- spostamento delle medicine tra terapie;
+- migrazione guidata di eventuali medicine legacy senza terapia;
+- storico, notifiche, report e backup.
+
+Motivazione:
+
+Lo sprint consolida le regole fondamentali del dominio senza cambiare lo schema database o introdurre nuove aree funzionali.
+
+Stato finale: completato con `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali del flusso su dispositivo.
+
 ## 2026-06-22 - QA e bug fix Terapie/Medicine
 
 Tipo modifica: Bug Fix / QA / Documentation.

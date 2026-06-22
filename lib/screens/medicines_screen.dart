@@ -153,6 +153,20 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
   }
 
   Future<void> _openAddMedicine() async {
+    if (context.read<MedicineProvider>().therapies.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Per aggiungere una medicina devi prima creare una terapia.',
+          ),
+          action: SnackBarAction(
+            label: 'Crea terapia',
+            onPressed: _openAddTherapy,
+          ),
+        ),
+      );
+      return;
+    }
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AddMedicineScreen()),

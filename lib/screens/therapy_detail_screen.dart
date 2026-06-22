@@ -42,28 +42,27 @@ class TherapyDetailScreen extends StatelessWidget {
                 tooltip: 'Azioni terapia',
                 onSelected: (action) => _handleAction(context, therapy, action),
                 itemBuilder: (_) => [
+                  if (therapy.isActive && medicines.isNotEmpty)
+                    const PopupMenuItem(
+                      value: _TherapyAction.archive,
+                      child: _TherapyActionRow(
+                        icon: Icons.archive_outlined,
+                        label: 'Archivia',
+                      ),
+                    ),
+                  if (!therapy.isActive)
+                    const PopupMenuItem(
+                      value: _TherapyAction.reactivate,
+                      child: _TherapyActionRow(
+                        icon: Icons.unarchive_outlined,
+                        label: 'Riattiva',
+                      ),
+                    ),
                   PopupMenuItem(
-                    value: therapy.isActive
-                        ? _TherapyAction.removeOrArchive
-                        : _TherapyAction.reactivate,
-                    child: Row(
-                      children: [
-                        Icon(
-                          therapy.isActive
-                              ? medicines.isEmpty
-                                    ? Icons.delete_outline
-                                    : Icons.archive_outlined
-                              : Icons.unarchive_outlined,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          therapy.isActive
-                              ? medicines.isEmpty
-                                    ? 'Elimina'
-                                    : 'Archivia'
-                              : 'Riattiva',
-                        ),
-                      ],
+                    value: _TherapyAction.deletePermanently,
+                    child: const _TherapyActionRow(
+                      icon: Icons.delete_outline,
+                      label: 'Elimina definitivamente',
                     ),
                   ),
                 ],
@@ -174,16 +173,30 @@ class TherapyDetailScreen extends StatelessWidget {
     }
 
     final hasMedicines = therapy.medicines.isNotEmpty;
+    if (action == _TherapyAction.deletePermanently && hasMedicines) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Non puoi eliminare definitivamente una terapia con medicine associate. '
+            'Elimina o sposta prima tutte le medicine, oppure archivia la terapia.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          hasMedicines ? 'Archiviare terapia?' : 'Eliminare terapia?',
+          action == _TherapyAction.archive
+              ? 'Archiviare terapia?'
+              : 'Eliminare terapia?',
         ),
         content: Text(
-          hasMedicines
+          action == _TherapyAction.archive
               ? 'Le medicine resteranno associate, ma la terapia verra archiviata.'
-              : 'La terapia non contiene medicine e verra eliminata.',
+              : 'La terapia non contiene medicine e verra eliminata definitivamente.',
         ),
         actions: [
           TextButton(
@@ -192,7 +205,9 @@ class TherapyDetailScreen extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(hasMedicines ? 'Archivia' : 'Elimina'),
+            child: Text(
+              action == _TherapyAction.archive ? 'Archivia' : 'Elimina',
+            ),
           ),
         ],
       ),
@@ -267,7 +282,19 @@ class TherapyDetailScreen extends StatelessWidget {
   }
 }
 
-enum _TherapyAction { removeOrArchive, reactivate }
+enum _TherapyAction { archive, deletePermanently, reactivate }
+
+class _TherapyActionRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _TherapyActionRow({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [Icon(icon), const SizedBox(width: 8), Text(label)]);
+  }
+}
 
 class _TherapyHeader extends StatelessWidget {
   final Therapy therapy;
@@ -503,7 +530,7 @@ class _TherapyMedicineTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${medicine.dose} - $schedules',
+                      '${medicine.doseLabel} - $schedules',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

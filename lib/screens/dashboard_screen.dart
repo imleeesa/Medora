@@ -387,7 +387,7 @@ class _NextMedicineCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Dose: ${medicine.dose}',
+            'Dose: ${medicine.doseLabel}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
