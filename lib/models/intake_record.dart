@@ -1,8 +1,8 @@
 /// Stato dell'assunzione
 enum IntakeStatus {
+  scheduled, // Prevista
   taken, // Assunta
-  missed, // Saltata
-  skipped, // Dimenticata
+  skipped, // Saltata
 }
 
 /// Modello per il record di assunzione
@@ -31,6 +31,10 @@ class IntakeRecord {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? scheduledDateTime;
 
+  String get doseLabel => medicineDoseSnapshot.trim().isEmpty
+      ? 'Dose non specificata'
+      : medicineDoseSnapshot.trim();
+
   /// Converte in JSON per il database
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -54,9 +58,12 @@ class IntakeRecord {
     actualDateTime: json['actualDateTime'] != null
         ? DateTime.parse(json['actualDateTime'])
         : null,
-    status: IntakeStatus.values.firstWhere(
-      (s) => s.toString().split('.').last == json['status'],
-    ),
+    status: switch (json['status']) {
+      'scheduled' => IntakeStatus.scheduled,
+      'taken' => IntakeStatus.taken,
+      'missed' || 'skipped' => IntakeStatus.skipped,
+      _ => IntakeStatus.scheduled,
+    },
     notes: json['notes'],
     medicineNameSnapshot: json['medicineNameSnapshot'] ?? '',
     medicineDoseSnapshot: json['medicineDoseSnapshot'] ?? '',
@@ -72,6 +79,7 @@ class IntakeRecord {
     String? profileId,
     DateTime? scheduledDateTime,
     DateTime? actualDateTime,
+    bool clearActualDateTime = false,
     IntakeStatus? status,
     String? notes,
     String? medicineNameSnapshot,
@@ -82,7 +90,9 @@ class IntakeRecord {
     medicineId: medicineId ?? this.medicineId,
     profileId: profileId ?? this.profileId,
     scheduledDateTime: scheduledDateTime ?? this.scheduledDateTime,
-    actualDateTime: actualDateTime ?? this.actualDateTime,
+    actualDateTime: clearActualDateTime
+        ? null
+        : actualDateTime ?? this.actualDateTime,
     status: status ?? this.status,
     notes: notes ?? this.notes,
     medicineNameSnapshot: medicineNameSnapshot ?? this.medicineNameSnapshot,

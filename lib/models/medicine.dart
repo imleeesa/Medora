@@ -55,6 +55,16 @@ class Medicine {
   String get doseLabel =>
       dose.trim().isEmpty ? 'Dose non specificata' : dose.trim();
 
+  /// Quantita' intera sicura da sottrarre alla scorta, se presente nella dose.
+  int? get stockConsumptionAmount => stockConsumptionAmountFromDose(dose);
+
+  static int? stockConsumptionAmountFromDose(String dose) {
+    final match = RegExp(r'^(\d+)(?:\s|$)').firstMatch(dose.trim());
+    if (match == null) return null;
+    final amount = int.tryParse(match.group(1)!);
+    return amount == null || amount <= 0 ? null : amount;
+  }
+
   /// Verifica se la medicina deve essere assunta oggi
   bool shouldTakeToday() {
     final today = DateTime.now().weekday;

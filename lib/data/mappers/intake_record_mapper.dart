@@ -45,9 +45,9 @@ class IntakeRecordMapper {
 
   static app.IntakeStatus _statusFromDatabase(String status) {
     return switch (status) {
+      'scheduled' => app.IntakeStatus.scheduled,
       'taken' => app.IntakeStatus.taken,
-      'missed' => app.IntakeStatus.missed,
-      'skipped' => app.IntakeStatus.skipped,
+      'missed' || 'skipped' => app.IntakeStatus.skipped,
       _ => throw ArgumentError.value(
         status,
         'status',
@@ -58,8 +58,8 @@ class IntakeRecordMapper {
 
   static String _statusToDatabase(app.IntakeStatus status) {
     return switch (status) {
+      app.IntakeStatus.scheduled => 'scheduled',
       app.IntakeStatus.taken => 'taken',
-      app.IntakeStatus.missed => 'missed',
       app.IntakeStatus.skipped => 'skipped',
     };
   }

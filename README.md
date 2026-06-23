@@ -42,7 +42,9 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Calcolo della prossima medicina da assumere nella giornata.
 - Rilevamento delle medicine con scorta bassa.
 - Schermata Scorte con indicatore visivo della disponibilita'.
-- Schermata Storico predisposta per le assunzioni future.
+- Dashboard con azioni rapide per segnare le assunzioni di oggi come assunte o saltate.
+- Schermata Storico persistente con stato, snapshot della medicina, dose e data/ora.
+- Decremento automatico della scorta per assunzioni con quantita' intera definita.
 - Profilo utente locale con nome, preferenze tema e notifiche.
 - Persistenza locale di profilo, impostazioni, terapie, medicine, scorte e schedule.
 - Schermata Impostazioni predisposta per backup e report PDF.
@@ -54,8 +56,8 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Evoluzione del sistema Terapie con filtri, ordinamento e stati archiviati piu' chiari.
 - Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' e flussi di modifica completi.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
-- Storico delle assunzioni con conferma, salto, ritardo e note.
-- Gestione avanzata delle scorte con carico/scarico, soglie e promemoria di riacquisto.
+- Evoluzione dello storico con filtri, ritardi, note e statistiche.
+- Gestione avanzata delle scorte con quantita' frazionarie, carico/scarico e promemoria di riacquisto.
 - Notifiche locali integrate con le medicine salvate.
 - Migrazioni schema e test automatici del database locale.
 - Profili multipli per utente, familiari o caregiver.
@@ -219,7 +221,7 @@ flutter run -d <device-id>
 
 Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
-Il codice contiene gia' model serializzabili e un servizio notifiche locali, elementi utili per la prossima evoluzione architetturale. Le schermate Storico, Backup e Report PDF sono predisposte ma non ancora operative.
+Il codice contiene gia' model serializzabili e un servizio notifiche locali, elementi utili per la prossima evoluzione architetturale. Lo storico base e' operativo e persistente; Backup e Report PDF restano predisposti ma non ancora operativi.
 
 ## Roadmap futura
 

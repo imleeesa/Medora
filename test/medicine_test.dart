@@ -44,4 +44,11 @@ void main() {
     expect(movedMedicine.name, medicine.name);
     expect(movedMedicine.schedules, medicine.schedules);
   });
+
+  test('extracts only safe integer quantities for automatic stock updates', () {
+    expect(Medicine.stockConsumptionAmountFromDose('1 compressa'), 1);
+    expect(Medicine.stockConsumptionAmountFromDose('3 gocce'), 3);
+    expect(Medicine.stockConsumptionAmountFromDose('1/2 pastiglia'), isNull);
+    expect(Medicine.stockConsumptionAmountFromDose(''), isNull);
+  });
 }

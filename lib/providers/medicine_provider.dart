@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/app_settings.dart';
+import '../models/intake_record.dart';
 import '../models/medicine.dart';
+import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
 import '../models/user_profile.dart';
+import '../repositories/intake_repository.dart';
 import '../repositories/medicine_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../repositories/therapy_repository.dart';
+
+enum IntakeStockChange { decreased, restored, noQuantity, unchanged }
 
 class MedicineProvider extends ChangeNotifier {
   MedicineProvider({
@@ -16,16 +21,20 @@ class MedicineProvider extends ChangeNotifier {
     SettingsRepository? settingsRepository,
     TherapyRepository? therapyRepository,
     MedicineRepository? medicineRepository,
+    IntakeRepository? intakeRepository,
   }) : _profileRepository = profileRepository ?? ProfileRepository(),
        _settingsRepository = settingsRepository ?? SettingsRepository(),
        _therapyRepository = therapyRepository ?? TherapyRepository(),
-       _medicineRepository = medicineRepository ?? MedicineRepository();
+       _medicineRepository = medicineRepository ?? MedicineRepository(),
+       _intakeRepository = intakeRepository ?? IntakeRepository();
 
   final ProfileRepository _profileRepository;
   final SettingsRepository _settingsRepository;
   final TherapyRepository _therapyRepository;
   final MedicineRepository _medicineRepository;
+  final IntakeRepository _intakeRepository;
   final List<Therapy> _therapies = [];
+  final List<IntakeRecord> _intakeRecords = [];
   UserProfile _currentProfile = UserProfile(
     id: 'local-user',
     name: 'Utente',
@@ -40,6 +49,8 @@ class MedicineProvider extends ChangeNotifier {
 
   List<Medicine> get medicines =>
       _therapies.expand((therapy) => therapy.medicines).toList(growable: false);
+
+  List<IntakeRecord> get intakeHistory => List.unmodifiable(_intakeRecords);
 
   UserProfile get currentProfile => _currentProfile;
 
@@ -56,6 +67,7 @@ class MedicineProvider extends ChangeNotifier {
     try {
       _currentProfile = await _loadOrCreateDefaultProfile();
       await _reloadCache();
+      await _reloadIntakeHistory();
       _isInitialized = true;
     } catch (_) {
       _errorMessage = 'Impossibile caricare i dati salvati.';
@@ -269,6 +281,7 @@ class MedicineProvider extends ChangeNotifier {
     try {
       await _therapyRepository.deleteTherapy(therapy.id);
       await _reloadCache();
+      await _reloadIntakeHistory();
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -419,10 +432,12 @@ class MedicineProvider extends ChangeNotifier {
     try {
       await _medicineRepository.deleteMedicine(id);
       await _reloadCache();
+      await _reloadIntakeHistory();
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
       await _reloadCache();
+      await _reloadIntakeHistory();
       _errorMessage = 'Impossibile eliminare la medicina.';
       notifyListeners();
       rethrow;
@@ -515,12 +530,85 @@ class MedicineProvider extends ChangeNotifier {
     }
   }
 
+  List<Medicine> getTodayScheduledMedicines() => _therapies
+      .where((therapy) => therapy.isActive)
+      .expand((therapy) => therapy.medicines)
+      .where((medicine) => medicine.shouldTakeToday())
+      .toList(growable: false);
+
+  List<IntakeRecord> getIntakeHistory() => intakeHistory;
+
+  List<IntakeRecord> getTodayIntakeRecords() {
+    final now = DateTime.now();
+    return _intakeRecords
+        .where((record) => _isSameDay(record.scheduledDateTime, now))
+        .toList(growable: false);
+  }
+
+  List<ScheduledIntake> getTodayScheduledIntakes({DateTime? date}) {
+    final selectedDate = date ?? DateTime.now();
+    final intakes = <ScheduledIntake>[];
+
+    for (final medicine in getTodayScheduledMedicines()) {
+      for (final schedule in medicine.schedules) {
+        if (!schedule.isActive ||
+            !schedule.daysOfWeek.contains(selectedDate.weekday)) {
+          continue;
+        }
+
+        final scheduledDateTime = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          schedule.time.hour,
+          schedule.time.minute,
+        );
+        final record = _findIntakeRecord(medicine.id, scheduledDateTime);
+        intakes.add(
+          ScheduledIntake(
+            medicine: medicine,
+            scheduledDateTime: scheduledDateTime,
+            record: record,
+          ),
+        );
+      }
+    }
+
+    intakes.sort(
+      (first, second) =>
+          first.scheduledDateTime.compareTo(second.scheduledDateTime),
+    );
+    return intakes;
+  }
+
+  Future<IntakeStockChange> markMedicineAsTaken({
+    required String medicineId,
+    required DateTime scheduledDateTime,
+  }) {
+    return _saveIntakeStatus(
+      medicineId: medicineId,
+      scheduledDateTime: scheduledDateTime,
+      status: IntakeStatus.taken,
+    );
+  }
+
+  Future<IntakeStockChange> markMedicineAsSkipped({
+    required String medicineId,
+    required DateTime scheduledDateTime,
+  }) {
+    return _saveIntakeStatus(
+      medicineId: medicineId,
+      scheduledDateTime: scheduledDateTime,
+      status: IntakeStatus.skipped,
+    );
+  }
+
   List<Medicine> getMedicinesTodayDue() {
     return medicines.where((medicine) => medicine.shouldTakeToday()).toList();
   }
 
   Medicine? getNextMedicine() {
-    final today = getMedicinesTodayDue()
+    final today = getTodayScheduledMedicines()
         .where((medicine) => medicine.getNextIntake() != null)
         .toList();
     if (today.isEmpty) return null;
@@ -547,6 +635,124 @@ class MedicineProvider extends ChangeNotifier {
   int _compareTimeOfDay(TimeOfDay first, TimeOfDay second) {
     if (first.hour != second.hour) return first.hour.compareTo(second.hour);
     return first.minute.compareTo(second.minute);
+  }
+
+  Future<IntakeStockChange> _saveIntakeStatus({
+    required String medicineId,
+    required DateTime scheduledDateTime,
+    required IntakeStatus status,
+  }) async {
+    final medicine = getMedicineById(medicineId);
+    if (medicine == null) {
+      throw StateError('La medicina selezionata non e disponibile.');
+    }
+
+    final existingRecord =
+        _findIntakeRecord(medicineId, scheduledDateTime) ??
+        await _intakeRepository.getIntakeRecordForSchedule(
+          medicineId: medicineId,
+          scheduledDateTime: scheduledDateTime,
+        );
+    final now = DateTime.now();
+    final wasTaken = existingRecord?.status == IntakeStatus.taken;
+    final isTaken = status == IntakeStatus.taken;
+    final shouldDecreaseStock = !wasTaken && isTaken;
+    final shouldRestoreStock = wasTaken && status == IntakeStatus.skipped;
+    final stockAmount = shouldRestoreStock
+        ? Medicine.stockConsumptionAmountFromDose(
+            existingRecord!.medicineDoseSnapshot,
+          )
+        : medicine.stockConsumptionAmount;
+
+    Medicine? updatedMedicine;
+    var stockChange = IntakeStockChange.unchanged;
+    if (shouldDecreaseStock) {
+      if (stockAmount == null) {
+        stockChange = IntakeStockChange.noQuantity;
+      } else {
+        if (medicine.stockQuantity < stockAmount) {
+          throw StateError(
+            'Scorta insufficiente per registrare questa assunzione.',
+          );
+        }
+        updatedMedicine = medicine.copyWith(
+          stockQuantity: medicine.stockQuantity - stockAmount,
+          updatedAt: now,
+        );
+        stockChange = IntakeStockChange.decreased;
+      }
+    } else if (shouldRestoreStock) {
+      if (stockAmount == null) {
+        stockChange = IntakeStockChange.noQuantity;
+      } else {
+        updatedMedicine = medicine.copyWith(
+          stockQuantity: medicine.stockQuantity + stockAmount,
+          updatedAt: now,
+        );
+        stockChange = IntakeStockChange.restored;
+      }
+    }
+
+    final preserveTakenSnapshot = shouldRestoreStock;
+    final record = existingRecord == null
+        ? IntakeRecord(
+            id: const Uuid().v4(),
+            medicineId: medicine.id,
+            profileId: _currentProfile.id,
+            scheduledDateTime: scheduledDateTime,
+            actualDateTime: status == IntakeStatus.taken ? now : null,
+            status: status,
+            medicineNameSnapshot: medicine.name,
+            medicineDoseSnapshot: medicine.dose,
+            createdAt: now,
+          )
+        : existingRecord.copyWith(
+            status: status,
+            actualDateTime: status == IntakeStatus.taken ? now : null,
+            clearActualDateTime: status == IntakeStatus.skipped,
+            medicineNameSnapshot: preserveTakenSnapshot
+                ? existingRecord.medicineNameSnapshot
+                : medicine.name,
+            medicineDoseSnapshot: preserveTakenSnapshot
+                ? existingRecord.medicineDoseSnapshot
+                : medicine.dose,
+          );
+
+    try {
+      await _intakeRepository.saveIntakeRecordWithStock(
+        record: record,
+        updateExistingRecord: existingRecord != null,
+        updatedMedicine: updatedMedicine,
+      );
+      await _reloadCache();
+      await _reloadIntakeHistory();
+      _errorMessage = null;
+      notifyListeners();
+      return stockChange;
+    } catch (_) {
+      _errorMessage = 'Impossibile salvare lo stato dell\'assunzione.';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  IntakeRecord? _findIntakeRecord(
+    String medicineId,
+    DateTime scheduledDateTime,
+  ) {
+    for (final record in _intakeRecords) {
+      if (record.medicineId == medicineId &&
+          record.scheduledDateTime == scheduledDateTime) {
+        return record;
+      }
+    }
+    return null;
+  }
+
+  bool _isSameDay(DateTime first, DateTime second) {
+    return first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
   }
 
   Future<UserProfile> _loadOrCreateDefaultProfile() async {
@@ -606,6 +812,15 @@ class MedicineProvider extends ChangeNotifier {
           ),
         ),
       );
+  }
+
+  Future<void> _reloadIntakeHistory() async {
+    final records = await _intakeRepository.getIntakeRecords(
+      _currentProfile.id,
+    );
+    _intakeRecords
+      ..clear()
+      ..addAll(records);
   }
 
   _MedicineLocation? _findMedicine(String id) {

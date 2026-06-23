@@ -173,30 +173,62 @@ Un redesign completo non rientra nello sprint QA. In questa fase sono state corr
 - test manuali su schermi piccoli e Samsung Z Flip;
 - consolidamento delle card e delle azioni contestuali.
 
-## Storico assunzioni non operativo
+## Storico assunzioni base
 
 ### Categoria
 
-Feature futura da lasciare aperta.
+Funzionalita' incompleta.
 
 ### Stato
 
-Aperto
+Parzialmente risolto
+
+### Data aggiornamento
+
+2026-06-24
 
 ### Cosa e' stato trovato
 
-Il model `IntakeRecord` esiste, ma la schermata Storico mostra solo uno stato vuoto e non registra assunzioni.
+Lo storico base e' ora operativo: Dashboard permette di segnare ogni assunzione prevista per oggi come assunta o saltata, il Provider salva o aggiorna un `IntakeRecord` in Drift e la schermata Storico mostra i record persistiti con snapshot di nome e dose.
 
 ### Motivazione
 
-Lo storico completo richiede azioni di conferma, salto o ritardo assunzione, gestione dei record in memoria e collegamento con le scorte. Sarebbe una feature nuova, quindi non viene implementata in questo sprint.
+Restano fuori dal perimetro le statistiche, i filtri per periodo o terapia, i record previsti creati in anticipo, le assunzioni in ritardo e il collegamento automatico con notifiche e scorte.
 
 ### Possibili soluzioni
 
-- aggiungere gestione in memoria degli `IntakeRecord`;
-- creare azioni rapide dalla dashboard o dal dettaglio medicina;
-- collegare la conferma assunzione al decremento scorte;
-- introdurre persistenza solo in una fase successiva.
+- aggiungere filtri e ricerca dello storico;
+- collegare la conferma assunzione alle notifiche;
+- introdurre statistiche e report basati sui record persistiti;
+- valutare la generazione anticipata dei record `scheduled` per le viste future.
+
+## Decremento automatico delle scorte dopo un'assunzione
+
+### Categoria
+
+Funzionalita' incompleta / limite di modello.
+
+### Stato
+
+Parzialmente risolto
+
+### Data aggiornamento
+
+2026-06-24
+
+### Cosa e' stato risolto
+
+Quando un record passa a `taken`, l'app sottrae dalla scorta la quantita' intera iniziale della dose, ad esempio `1 compressa` o `2 gocce`. La stessa assunzione non viene sottratta due volte. Se un record passa da `taken` a `skipped`, la quantita' intera precedente viene ripristinata. L'aggiornamento di record e medicina e' eseguito nella stessa transazione Drift.
+
+### Limiti aperti
+
+La scorta e' attualmente un intero: frazioni come `1/2` e `1/4`, quantita' decimali e dosi non specificate vengono registrate nello storico ma non aggiornano automaticamente la disponibilita'. Se una quantita' intera nota supera la scorta disponibile, l'azione viene bloccata senza registrare l'assunzione.
+
+### Possibili soluzioni
+
+- migrare `stockQuantity` e `stockWarningThreshold` a valori decimali con una strategia Drift dedicata;
+- separare quantita', unita' e consumo scorte in campi strutturati;
+- aggiungere un flusso manuale per confermare o correggere la quantita' usata.
 
 ## Notifiche locali non integrate nel flusso principale
 

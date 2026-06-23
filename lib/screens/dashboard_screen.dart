@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/medicine.dart';
+import '../models/intake_record.dart';
+import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../widgets/empty_state.dart';
@@ -56,7 +58,7 @@ class _HomeDashboard extends StatelessWidget {
         final therapies = provider.therapies;
         final nextMedicine = provider.getNextMedicine();
         final lowStockMedicines = provider.getLowStockMedicines();
-        final todayMedicines = provider.getMedicinesTodayDue();
+        final todayIntakes = provider.getTodayScheduledIntakes();
 
         return SafeArea(
           child: therapies.isEmpty
@@ -97,6 +99,12 @@ class _HomeDashboard extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
                       sliver: SliverToBoxAdapter(
+                        child: _TodayIntakesSection(intakes: todayIntakes),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+                      sliver: SliverToBoxAdapter(
                         child: _TherapiesSection(therapies: therapies),
                       ),
                     ),
@@ -104,7 +112,7 @@ class _HomeDashboard extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
                       sliver: SliverToBoxAdapter(
                         child: _TodaySummary(
-                          todayCount: todayMedicines.length,
+                          todayCount: todayIntakes.length,
                           activeTherapies: therapies
                               .where((therapy) => therapy.isActive)
                               .length,
@@ -488,6 +496,203 @@ class _NoNextMedicineCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TodayIntakesSection extends StatelessWidget {
+  final List<ScheduledIntake> intakes;
+
+  const _TodayIntakesSection({required this.intakes});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionTitle('Assunzioni di oggi'),
+        const SizedBox(height: 12),
+        if (intakes.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: const Text(
+              'Nessuna assunzione programmata per oggi.',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          )
+        else
+          ...intakes.map(
+            (intake) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _TodayIntakeCard(intake: intake),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _TodayIntakeCard extends StatelessWidget {
+  final ScheduledIntake intake;
+
+  const _TodayIntakeCard({required this.intake});
+
+  @override
+  Widget build(BuildContext context) {
+    final time = TimeOfDay.fromDateTime(
+      intake.scheduledDateTime,
+    ).format(context);
+    final status = intake.status;
+    final isScheduled = status == IntakeStatus.scheduled;
+    final statusColor = switch (status) {
+      IntakeStatus.taken => const Color(0xFF2E7D32),
+      IntakeStatus.skipped => Colors.orange.shade800,
+      IntakeStatus.scheduled => Colors.grey.shade700,
+    };
+    final statusLabel = switch (status) {
+      IntakeStatus.taken => 'Assunta',
+      IntakeStatus.skipped => 'Saltata',
+      IntakeStatus.scheduled => 'Prevista',
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  time,
+                  style: const TextStyle(
+                    color: Color(0xFF2E7D32),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  intake.medicine.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E1E1E),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                statusLabel,
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            intake.medicine.doseLabel,
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+          if (isScheduled) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _mark(context, IntakeStatus.skipped),
+                  icon: const Icon(Icons.skip_next_outlined),
+                  label: const Text('Saltata'),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _mark(context, IntakeStatus.taken),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Assunta'),
+                ),
+              ],
+            ),
+          ] else if (status == IntakeStatus.taken) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _mark(context, IntakeStatus.skipped),
+              icon: const Icon(Icons.undo_outlined),
+              label: const Text('Segna come saltata'),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () => _mark(context, IntakeStatus.taken),
+              icon: const Icon(Icons.check),
+              label: const Text('Segna come assunta'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _mark(BuildContext context, IntakeStatus status) async {
+    final provider = context.read<MedicineProvider>();
+    try {
+      final stockChange = status == IntakeStatus.taken
+          ? await provider.markMedicineAsTaken(
+              medicineId: intake.medicine.id,
+              scheduledDateTime: intake.scheduledDateTime,
+            )
+          : await provider.markMedicineAsSkipped(
+              medicineId: intake.medicine.id,
+              scheduledDateTime: intake.scheduledDateTime,
+            );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_feedbackMessage(status, stockChange))),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  String _feedbackMessage(IntakeStatus status, IntakeStockChange stockChange) {
+    return switch (stockChange) {
+      IntakeStockChange.decreased =>
+        'Assunzione registrata. Scorta aggiornata.',
+      IntakeStockChange.restored => 'Assunzione saltata. Scorta ripristinata.',
+      IntakeStockChange.noQuantity =>
+        status == IntakeStatus.taken
+            ? 'Assunzione registrata. Scorta non aggiornata: quantita non gestibile.'
+            : 'Assunzione segnata come saltata.',
+      IntakeStockChange.unchanged =>
+        status == IntakeStatus.taken
+            ? 'Assunzione gia registrata.'
+            : 'Assunzione segnata come saltata.',
+    };
   }
 }
 

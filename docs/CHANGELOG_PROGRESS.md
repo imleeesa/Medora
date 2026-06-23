@@ -424,6 +424,95 @@ Il progetto ora rispetta il modello `TERAPIE -> MEDICINE`: una terapia puo' esis
 
 Stato finale: completato con verifiche statiche e test Flutter.
 
+## 2026-06-24 - Sprint Scorte automatiche da assunzioni
+
+Tipo modifica: Feature / Bug Fix / Documentation.
+
+Descrizione:
+
+- collegato l'aggiornamento della scorta alla registrazione di un'assunzione `taken`;
+- resa atomica la persistenza di record storico e medicina aggiornata tramite `IntakeRepository`;
+- evitato il doppio decremento per record gia' `taken`;
+- aggiunto il ripristino della scorta quando un record passa da `taken` a `skipped`;
+- bloccata l'assunzione quando una quantita' intera nota supera la scorta disponibile;
+- mantenuto un comportamento sicuro per dose assente, frazionaria o decimale: storico aggiornato, scorta invariata.
+
+File modificati:
+
+- `lib/models/medicine.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/repositories/intake_repository.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `test/medicine_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- scorta invariata dopo un'assunzione registrata;
+- rischio di doppio decremento dello stesso slot;
+- assenza di ripristino per il passaggio da assunta a saltata.
+
+Problemi rimandati:
+
+- quantita' frazionarie e decimali in scorta;
+- carico manuale, correzioni e notifiche di riacquisto;
+- notifiche automatiche, report e backup.
+
+Motivazione:
+
+Lo sprint mantiene separati dose e scorta, senza modificare lo schema Drift a valori decimali.
+
+Stato finale: completato con `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali del flusso su dispositivo.
+
+## 2026-06-24 - Sprint Storico Assunzioni Base
+
+Tipo modifica: Feature / Provider integration / Documentation.
+
+Descrizione:
+
+- collegato `IntakeRepository` a `MedicineProvider` e aggiunta la cache dello storico;
+- allineati gli stati di dominio a `scheduled`, `taken` e `skipped`, mantenendo compatibilita' in lettura con il valore legacy `missed`;
+- aggiunti metodi Provider per ottenere le assunzioni previste di oggi, leggere lo storico e segnare una dose come assunta o saltata;
+- introdotta verifica database per evitare record duplicati della stessa medicina allo stesso orario previsto;
+- aggiunte azioni rapide Dashboard e lista persistente nella schermata Storico;
+- mantenuti gli snapshot di nome e dose per conservare leggibilita' dopo l'eliminazione della medicina.
+
+File modificati:
+
+- `lib/models/intake_record.dart`;
+- `lib/models/scheduled_intake.dart`;
+- `lib/data/mappers/intake_record_mapper.dart`;
+- `lib/repositories/intake_repository.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `lib/screens/history_screen.dart`;
+- `test/intake_record_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- storico assunzioni non operativo;
+- assenza di azioni per assunta e saltata nella dashboard;
+- perdita di leggibilita' dello storico dopo eliminazione della medicina.
+
+Problemi rimandati:
+
+- filtri, statistiche, ritardi e note avanzate;
+- decremento scorte collegato all'assunzione;
+- notifiche automatiche, report e backup.
+
+Motivazione:
+
+Lo sprint rende operativo lo storico minimo senza introdurre notifiche o modifiche allo schema Drift.
+
+Stato finale: completato con verifiche automatiche; restano consigliate le prove manuali di persistenza su dispositivo.
+
 ## 2026-06-24 - Sprint Spostamento medicine e cancellazione terapie
 
 Tipo modifica: Feature / Bug Fix / Documentation.

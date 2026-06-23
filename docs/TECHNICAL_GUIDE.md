@@ -461,7 +461,7 @@ Il Provider mantiene in memoria solo una cache destinata alla UI:
 
 Terapie, medicine, schedule, profilo e impostazioni vengono ora letti e scritti nel database locale tramite repository. Al riavvio l'app ricostruisce la cache dal database, quindi medicine e terapie create dal flusso esistente restano disponibili.
 
-Storico assunzioni, notifiche e backup non sono ancora collegati al flusso persistente.
+Lo storico assunzioni base e' collegato al flusso persistente; notifiche e backup restano fuori dal flusso principale.
 
 ## Introduzione futura del database
 
@@ -572,7 +572,7 @@ Repository creati:
 - `SettingsRepository`: lettura e upsert delle impostazioni per profilo;
 - `TherapyRepository`: stream e lettura delle terapie, creazione, aggiornamento ed eliminazione transazionale con scollegamento delle medicine;
 - `MedicineRepository`: stream e lettura delle medicine, filtro per terapia, gestione scorte, orari e cancellazione transazionale che conserva lo storico;
-- `IntakeRepository`: lettura dello storico per profilo o medicina, creazione e aggiornamento dei record.
+- `IntakeRepository`: lettura dello storico per profilo o medicina, ricerca del record per medicina e orario previsto, creazione e aggiornamento dei record.
 
 I repository non sono ancora collegati a `MedicineProvider`, non eseguono seed automatici e non cambiano il comportamento dell'app.
 
@@ -728,7 +728,7 @@ Motivazione: gli orari e i giorni non dovrebbero restare serializzati dentro `Me
 - `profile_id` TEXT not null, foreign key verso `user_profiles.id`;
 - `scheduled_date_time` TEXT not null;
 - `actual_date_time` TEXT nullable;
-- `status` TEXT not null, valori previsti: `taken`, `missed`, `skipped`;
+- `status` TEXT not null, valori previsti: `scheduled`, `taken`, `skipped`; il valore legacy `missed` viene letto come `skipped`;
 - `notes` TEXT nullable;
 - `medicine_name_snapshot` TEXT nullable;
 - `medicine_dose_snapshot` TEXT nullable;
@@ -959,11 +959,11 @@ Ogni nuova medicina deve essere associata a una terapia esistente. Il form globa
 
 ### Storico
 
-Lo storico dovrebbe usare `IntakeRecord`. Ogni assunzione programmata puo' generare un record, aggiornabile quando l'utente conferma o salta la dose.
+Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la combinazione medicina e orario previsto evita duplicati. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre le azioni rapide e HistoryScreen visualizza stato, terapia se ancora disponibile, dose e data/ora. Statistiche, filtri, ritardi, notifiche e gestione scorte automatica restano sviluppi futuri.
 
 ### Scorte
 
-La quantita' dovrebbe diminuire quando un'assunzione viene confermata. Le scorte dovrebbero supportare anche ricariche manuali.
+Quando un record passa a `taken`, `MedicineProvider` interpreta la quantita' intera iniziale della dose e aggiorna `stockQuantity` insieme al record nella stessa transazione di `IntakeRepository`. Non viene applicata una seconda sottrazione se il record era gia' `taken`; il passaggio da `taken` a `skipped` ripristina la stessa quantita'. Per la sicurezza dello schema corrente, frazioni, decimali e dose non specificata non aggiornano automaticamente la scorta, mentre una quantita' intera superiore alla disponibilita' blocca l'assunzione. Le scorte dovrebbero supportare anche ricariche manuali e valori decimali in uno sprint con migrazione dedicata.
 
 ### Notifiche
 
@@ -992,6 +992,7 @@ Punti solidi:
 - persistenza locale attiva per profilo, terapie e medicine;
 - gestione autonoma delle terapie con dettaglio, archiviazione ed eliminazione persistente;
 - spostamento persistente delle medicine tra terapie attive.
+- storico assunzioni base persistente per stati assunta e saltata.
 
 Limiti attuali:
 
