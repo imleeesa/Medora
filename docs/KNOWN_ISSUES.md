@@ -93,13 +93,13 @@ Lo Sprint Terapie ha introdotto una lista autonoma, form di creazione e modifica
 - aggiunti metodi Provider per creare, modificare, archiviare/eliminare e interrogare terapie;
 - aggiunta associazione medicina a una terapia selezionata;
 - mantenuto il modello `TERAPIE -> MEDICINE` senza esporre Drift alla UI;
-- le terapie con medicine vengono archiviate, mentre quelle vuote possono essere eliminate;
+- le terapie con medicine possono essere archiviate o eliminate insieme alle medicine associate, previa conferma esplicita;
 - eliminare l'ultima medicina non elimina automaticamente la terapia;
 - il vecchio flusso riusa o riattiva la terapia esistente con lo stesso nome.
 
 ### Note
 
-Spostamento di medicine tra terapie e filtri avanzati restano miglioramenti futuri, non bloccanti per la gestione autonoma di base.
+Lo spostamento di medicine tra terapie e' disponibile dal 2026-06-24. Filtri e ordinamenti avanzati restano miglioramenti futuri non bloccanti.
 
 ## Eliminazione medicina non immediata dal dettaglio terapia
 
@@ -113,7 +113,7 @@ Risolto
 
 ### Data risoluzione
 
-2026-06-22
+2026-06-24
 
 ### Come e' stato risolto
 
@@ -328,18 +328,51 @@ Risolto
 
 ### Come e' stato risolto
 
-Il menu della terapia distingue ora archiviazione ed eliminazione definitiva. L'archiviazione mantiene medicine e collegamenti; l'eliminazione definitiva e' consentita solo quando la terapia e' vuota. Se contiene medicine, l'app blocca l'azione e mostra la motivazione.
+Il menu della terapia distingue archiviazione ed eliminazione definitiva. L'archiviazione mantiene medicine e collegamenti; l'eliminazione definitiva e' sempre disponibile. Quando la terapia contiene medicine, l'app chiede una conferma esplicita e il repository elimina in transazione le medicine, i relativi schedule e poi la terapia, senza lasciare medicine orfane.
 
 ### File modificati
 
 - `lib/screens/therapy_detail_screen.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/repositories/therapy_repository.dart`;
 - `docs/KNOWN_ISSUES.md`;
 - `docs/CHANGELOG_PROGRESS.md`;
 - `docs/TECHNICAL_GUIDE.md`.
 
 ### Note
 
-Lo spostamento di medicine tra terapie resta una funzionalita' futura; fino ad allora l'archiviazione e' l'azione sicura per una terapia ancora popolata.
+La cancellazione mantiene eventuali `intake_records` storici, ma rimuove il relativo `medicineId`, coerentemente con la strategia gia' usata per l'eliminazione di una singola medicina.
+
+## Spostamento medicine tra terapie
+
+### Categoria
+
+Funzionalita' incompleta.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-24
+
+### Come e' stato risolto
+
+Nel dettaglio medicina e' disponibile l'azione `Cambia terapia`. La UI mostra solo terapie attive diverse da quella corrente; il Provider valida la destinazione, aggiorna `therapyId` tramite repository, ricarica la cache e notifica subito tutte le schermate interessate.
+
+### File modificati
+
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `README.md`.
+
+### Note
+
+Le terapie archiviate non sono destinazioni disponibili e non vengono riattivate automaticamente durante lo spostamento.
 
 ## Record legacy di medicine senza terapia
 

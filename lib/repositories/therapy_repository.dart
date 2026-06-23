@@ -67,14 +67,22 @@ class TherapyRepository {
 
   Future<void> deleteTherapy(String therapyId) async {
     await _database.transaction(() async {
-      await (_database.update(
-        _database.medicines,
-      )..where((medicine) => medicine.therapyId.equals(therapyId))).write(
-        MedicinesCompanion(
-          therapyId: const Value(null),
-          updatedAt: Value(DateTime.now()),
-        ),
-      );
+      final medicinesQuery = _database.select(_database.medicines)
+        ..where((medicine) => medicine.therapyId.equals(therapyId));
+      final medicines = await medicinesQuery.get();
+
+      for (final medicine in medicines) {
+        await (_database.update(_database.intakeRecords)
+              ..where((record) => record.medicineId.equals(medicine.id)))
+            .write(const IntakeRecordsCompanion(medicineId: Value(null)));
+        await (_database.delete(
+          _database.medicineSchedules,
+        )..where((schedule) => schedule.medicineId.equals(medicine.id))).go();
+        await (_database.delete(
+          _database.medicines,
+        )..where((item) => item.id.equals(medicine.id))).go();
+      }
+
       await (_database.delete(
         _database.therapies,
       )..where((therapy) => therapy.id.equals(therapyId))).go();

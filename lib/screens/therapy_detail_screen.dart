@@ -42,7 +42,7 @@ class TherapyDetailScreen extends StatelessWidget {
                 tooltip: 'Azioni terapia',
                 onSelected: (action) => _handleAction(context, therapy, action),
                 itemBuilder: (_) => [
-                  if (therapy.isActive && medicines.isNotEmpty)
+                  if (therapy.isActive)
                     const PopupMenuItem(
                       value: _TherapyAction.archive,
                       child: _TherapyActionRow(
@@ -173,17 +173,6 @@ class TherapyDetailScreen extends StatelessWidget {
     }
 
     final hasMedicines = therapy.medicines.isNotEmpty;
-    if (action == _TherapyAction.deletePermanently && hasMedicines) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Non puoi eliminare definitivamente una terapia con medicine associate. '
-            'Elimina o sposta prima tutte le medicine, oppure archivia la terapia.',
-          ),
-        ),
-      );
-      return;
-    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -196,7 +185,11 @@ class TherapyDetailScreen extends StatelessWidget {
         content: Text(
           action == _TherapyAction.archive
               ? 'Le medicine resteranno associate, ma la terapia verra archiviata.'
-              : 'La terapia non contiene medicine e verra eliminata definitivamente.',
+              : hasMedicines
+              ? 'Questa terapia contiene ${therapy.medicines.length} medicine. '
+                    'Eliminando la terapia verranno eliminate anche tutte le medicine associate. '
+                    'L\'azione non puo essere annullata.'
+              : 'Vuoi eliminare questa terapia?',
         ),
         actions: [
           TextButton(
@@ -206,7 +199,11 @@ class TherapyDetailScreen extends StatelessWidget {
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
-              action == _TherapyAction.archive ? 'Archivia' : 'Elimina',
+              action == _TherapyAction.archive
+                  ? 'Archivia'
+                  : hasMedicines
+                  ? 'Elimina tutto'
+                  : 'Elimina',
             ),
           ),
         ],
@@ -215,22 +212,26 @@ class TherapyDetailScreen extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      final result = await context
-          .read<MedicineProvider>()
-          .deleteOrArchiveTherapy(therapy.id);
-      if (!context.mounted) return;
-      if (result == TherapyRemovalResult.deleted) {
-        Navigator.pop(context);
+      if (action == _TherapyAction.archive) {
+        await context.read<MedicineProvider>().archiveTherapy(therapy.id);
+      } else {
+        await context.read<MedicineProvider>().deleteTherapy(therapy.id);
       }
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result == TherapyRemovalResult.archived
+            action == _TherapyAction.archive
                 ? 'Terapia archiviata'
+                : hasMedicines
+                ? 'Terapia e medicine eliminate'
                 : 'Terapia eliminata',
           ),
         ),
       );
+      if (action == _TherapyAction.deletePermanently) {
+        Navigator.pop(context);
+      }
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(

@@ -19,6 +19,11 @@ class MedicineDetailScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         actions: [
           IconButton(
+            tooltip: 'Cambia terapia',
+            onPressed: () => _changeTherapy(context, medicine),
+            icon: const Icon(Icons.swap_horiz_outlined),
+          ),
+          IconButton(
             tooltip: 'Elimina medicina',
             onPressed: () => _confirmDelete(context),
             icon: const Icon(Icons.delete_outline),
@@ -89,6 +94,44 @@ class MedicineDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
+
+            Consumer<MedicineProvider>(
+              builder: (context, provider, _) {
+                final currentMedicine =
+                    provider.getMedicineById(medicine.id) ?? medicine;
+                final therapy = currentMedicine.therapyId == null
+                    ? null
+                    : provider.getTherapyById(currentMedicine.therapyId!);
+                return _buildSection(
+                  title: 'Terapia',
+                  icon: Icons.medical_information_outlined,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          therapy?.name ?? 'Terapia non disponibile',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1E1E1E),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      TextButton.icon(
+                        onPressed: () =>
+                            _changeTherapy(context, currentMedicine),
+                        icon: const Icon(Icons.swap_horiz_outlined),
+                        label: const Text('Cambia'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
 
             // Orari
             _buildSection(
@@ -340,6 +383,99 @@ class MedicineDetailScreen extends StatelessWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Medicina eliminata')));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  Future<void> _changeTherapy(
+    BuildContext context,
+    Medicine currentMedicine,
+  ) async {
+    final provider = context.read<MedicineProvider>();
+    final targetTherapies = provider.therapies
+        .where(
+          (therapy) =>
+              therapy.isActive && therapy.id != currentMedicine.therapyId,
+        )
+        .toList(growable: false);
+
+    if (targetTherapies.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Non ci sono altre terapie attive disponibili.'),
+        ),
+      );
+      return;
+    }
+
+    final targetTherapyId = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(
+                  'Scegli una terapia',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+              ),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                  itemCount: targetTherapies.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, index) {
+                    final therapy = targetTherapies[index];
+                    final color = _parseColor(therapy.color);
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: color.withValues(alpha: 0.14),
+                        foregroundColor: color,
+                        child: const Icon(Icons.medical_information_outlined),
+                      ),
+                      title: Text(therapy.name),
+                      subtitle: therapy.description?.isNotEmpty ?? false
+                          ? Text(
+                              therapy.description!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : null,
+                      onTap: () => Navigator.pop(sheetContext, therapy.id),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (targetTherapyId == null || !context.mounted) return;
+
+    try {
+      await context.read<MedicineProvider>().moveMedicineToTherapy(
+        medicineId: currentMedicine.id,
+        targetTherapyId: targetTherapyId,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Terapia aggiornata')));
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(

@@ -426,10 +426,13 @@ Metodi principali:
 - `updateProfile`;
 - `createTherapy`;
 - `updateTherapy`;
-- `deleteOrArchiveTherapy`;
+- `archiveTherapy`;
+- `deleteTherapy`;
 - `reactivateTherapy`;
 - `getMedicinesByTherapy`;
+- `getMedicineById` e `getTherapyById`;
 - `addMedicineToTherapy`;
+- `moveMedicineToTherapy`;
 - `getMedicinesTodayDue`;
 - `getNextMedicine`;
 - `getLowStockMedicines`.
@@ -948,11 +951,11 @@ Aggiornarlo quando si trova un bug, quando un problema viene corretto o quando u
 
 ### Sistema Terapie
 
-Le terapie sono entita' autonome persistite. Possono essere create, modificate, aperte in dettaglio, archiviate e riattivate; una terapia vuota puo' essere eliminata definitivamente. Una terapia con medicine non puo' essere eliminata definitivamente: puo' essere archiviata per preservare i collegamenti esistenti. Eliminare una medicina non elimina mai automaticamente la terapia.
+Le terapie sono entita' autonome persistite. Possono essere create, modificate, aperte in dettaglio, archiviate e riattivate. L'eliminazione definitiva e' disponibile sia per terapie vuote sia per terapie con medicine: nel secondo caso richiede una conferma forte e cancella atomicamente medicine e schedule associati prima della terapia. Gli eventuali record di storico mantengono gli snapshot ma perdono il riferimento alla medicina eliminata. Eliminare una singola medicina non elimina mai automaticamente la terapia.
 
 ### Medicine
 
-Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Le medicine dovrebbero poter essere modificate, spostate tra terapie e collegate alle notifiche. Ogni modifica rilevante deve aggiornare `updatedAt`.
+Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. Dal dettaglio medicina l'utente puo' scegliere `Cambia terapia`: sono proposte solo terapie attive diverse da quella corrente, senza riattivare automaticamente quelle archiviate. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Ogni modifica rilevante deve aggiornare `updatedAt`.
 
 ### Storico
 
@@ -987,7 +990,8 @@ Punti solidi:
 - Provider centralizzato;
 - UI principale gia' navigabile;
 - persistenza locale attiva per profilo, terapie e medicine;
-- gestione autonoma delle terapie con dettaglio e archiviazione sicura.
+- gestione autonoma delle terapie con dettaglio, archiviazione ed eliminazione persistente;
+- spostamento persistente delle medicine tra terapie attive.
 
 Limiti attuali:
 

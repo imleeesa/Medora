@@ -29,15 +29,16 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Dashboard principale con riepilogo della giornata.
 - Navigazione inferiore tra Home, Terapie, Storico e Profilo.
 - Creazione di una medicina associata a una terapia.
-- Creazione, modifica, dettaglio e archiviazione di terapie anche senza medicine.
+- Creazione, modifica, dettaglio, archiviazione ed eliminazione di terapie anche senza medicine.
 - Aggiunta di una medicina direttamente dal dettaglio terapia.
 - Inserimento di nome medicina, dosaggio, note, colore, orari, giorni della settimana, quantita' iniziale e soglia minima.
 - Raggruppamento delle medicine per terapia.
 - Ricerca per nome terapia o nome medicina.
 - Dettaglio della medicina con dosaggio, stato, orari, giorni, scorte e note.
+- Spostamento persistente di una medicina verso un'altra terapia attiva.
 - Attivazione o disattivazione di una medicina.
 - Eliminazione persistente di una medicina senza rimuovere automaticamente la terapia.
-- Archiviazione sicura delle terapie con medicine ed eliminazione delle terapie vuote.
+- Archiviazione delle terapie e cancellazione definitiva, con conferma, di una terapia e delle medicine associate.
 - Calcolo della prossima medicina da assumere nella giornata.
 - Rilevamento delle medicine con scorta bassa.
 - Schermata Scorte con indicatore visivo della disponibilita'.
@@ -50,8 +51,8 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 ## Funzionalita' pianificate
 
 - Miglioramento generale della UI e consolidamento del design system.
-- Evoluzione del sistema Terapie con filtri, riattivazione esplicita e spostamento medicine.
-- Associazione piu' strutturata Medicine -> Terapie con eventuale spostamento tra terapie.
+- Evoluzione del sistema Terapie con filtri, ordinamento e stati archiviati piu' chiari.
+- Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' e flussi di modifica completi.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
 - Storico delle assunzioni con conferma, salto, ritardo e note.
 - Gestione avanzata delle scorte con carico/scarico, soglie e promemoria di riacquisto.
@@ -232,13 +233,11 @@ Il codice contiene gia' model serializzabili e un servizio notifiche locali, ele
 ### Fase 2 - Evoluzione Terapie
 
 - Aggiungere riattivazione esplicita, filtri e ordinamento.
-- Consentire lo spostamento delle medicine tra terapie.
 - Rifinire gli stati archiviati e le azioni di gestione.
 
 ### Fase 3 - Associazione Medicine -> Terapie
 
 - Separare in modo piu' netto la gestione delle medicine dalla gestione delle terapie.
-- Consentire lo spostamento di una medicina tra terapie.
 - Supportare piu' medicine nella stessa terapia con regole chiare.
 - Preparare relazioni compatibili con database.
 

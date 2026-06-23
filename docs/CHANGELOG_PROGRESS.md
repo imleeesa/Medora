@@ -424,6 +424,47 @@ Il progetto ora rispetta il modello `TERAPIE -> MEDICINE`: una terapia puo' esis
 
 Stato finale: completato con verifiche statiche e test Flutter.
 
+## 2026-06-24 - Sprint Spostamento medicine e cancellazione terapie
+
+Tipo modifica: Feature / Bug Fix / Documentation.
+
+Descrizione:
+
+- aggiunta l'azione `Cambia terapia` nel dettaglio medicina;
+- rese disponibili come destinazione solo le terapie attive diverse da quella corrente;
+- aggiunto al Provider `moveMedicineToTherapy`, che valida la destinazione, aggiorna `therapyId` con il repository e ricarica la cache UI;
+- resa sempre disponibile l'eliminazione definitiva della terapia, con conferma rafforzata quando contiene medicine;
+- aggiornata la cancellazione repository per eliminare in transazione schedule, medicine e terapia, evitando record medicine orfani.
+
+File modificati:
+
+- `lib/providers/medicine_provider.dart`;
+- `lib/repositories/therapy_repository.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+- `test/medicine_test.dart`.
+
+Problemi risolti:
+
+- impossibilita' di spostare una medicina tra terapie;
+- eliminazione terapia con medicine bloccata dalla UI;
+- rischio di medicine senza terapia durante l'eliminazione diretta.
+
+Problemi rimandati:
+
+- gestione guidata di record legacy eventualmente privi di terapia;
+- storico, notifiche, report e backup.
+
+Motivazione:
+
+Lo sprint completa le due azioni di gestione richieste senza cambiare lo schema Drift o introdurre funzionalita' fuori perimetro.
+
+Stato finale: completato con `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali del flusso su dispositivo.
+
 ## 2026-06-22 - Sprint Rifinitura funzionale Terapie e Medicine
 
 Tipo modifica: Bug Fix / Refactor leggero / Documentation.

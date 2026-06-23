@@ -10,8 +10,6 @@ import '../repositories/profile_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../repositories/therapy_repository.dart';
 
-enum TherapyRemovalResult { archived, deleted }
-
 class MedicineProvider extends ChangeNotifier {
   MedicineProvider({
     ProfileRepository? profileRepository,
@@ -238,7 +236,7 @@ class MedicineProvider extends ChangeNotifier {
     }
   }
 
-  Future<TherapyRemovalResult> deleteOrArchiveTherapy(String therapyId) async {
+  Future<void> archiveTherapy(String therapyId) async {
     final therapy = _therapies
         .where((item) => item.id == therapyId)
         .firstOrNull;
@@ -247,23 +245,34 @@ class MedicineProvider extends ChangeNotifier {
     }
 
     try {
-      if (therapy.medicines.isNotEmpty) {
-        await _therapyRepository.updateTherapy(
-          therapy.copyWith(isActive: false, updatedAt: DateTime.now()),
-        );
-        await _reloadCache();
-        _errorMessage = null;
-        notifyListeners();
-        return TherapyRemovalResult.archived;
-      }
+      await _therapyRepository.updateTherapy(
+        therapy.copyWith(isActive: false, updatedAt: DateTime.now()),
+      );
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile aggiornare la terapia.';
+      notifyListeners();
+      rethrow;
+    }
+  }
 
+  Future<void> deleteTherapy(String therapyId) async {
+    final therapy = _therapies
+        .where((item) => item.id == therapyId)
+        .firstOrNull;
+    if (therapy == null) {
+      throw StateError('La terapia selezionata non e disponibile.');
+    }
+
+    try {
       await _therapyRepository.deleteTherapy(therapy.id);
       await _reloadCache();
       _errorMessage = null;
       notifyListeners();
-      return TherapyRemovalResult.deleted;
     } catch (_) {
-      _errorMessage = 'Impossibile aggiornare la terapia.';
+      _errorMessage = 'Impossibile eliminare la terapia.';
       notifyListeners();
       rethrow;
     }
@@ -298,6 +307,65 @@ class MedicineProvider extends ChangeNotifier {
         .where((therapy) => therapy.id == therapyId)
         .expand((therapy) => therapy.medicines)
         .toList(growable: false);
+  }
+
+  Medicine? getMedicineById(String medicineId) {
+    for (final therapy in _therapies) {
+      for (final medicine in therapy.medicines) {
+        if (medicine.id == medicineId) return medicine;
+      }
+    }
+    return null;
+  }
+
+  Therapy? getTherapyById(String therapyId) {
+    for (final therapy in _therapies) {
+      if (therapy.id == therapyId) return therapy;
+    }
+    return null;
+  }
+
+  Future<void> moveMedicineToTherapy({
+    required String medicineId,
+    required String targetTherapyId,
+  }) async {
+    final location = _findMedicine(medicineId);
+    if (location == null) {
+      throw StateError('La medicina selezionata non e disponibile.');
+    }
+
+    final targetTherapy = getTherapyById(targetTherapyId);
+    if (targetTherapy == null) {
+      throw StateError('La terapia selezionata non e disponibile.');
+    }
+    if (!targetTherapy.isActive) {
+      throw StateError(
+        'Non puoi spostare una medicina in una terapia archiviata.',
+      );
+    }
+
+    final sourceTherapy = _therapies[location.therapyIndex];
+    final medicine = sourceTherapy.medicines[location.medicineIndex];
+    if (medicine.therapyId == targetTherapyId) return;
+
+    try {
+      final updated = await _medicineRepository.updateMedicine(
+        medicine.copyWith(
+          therapyId: targetTherapyId,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      if (!updated) {
+        throw StateError('Impossibile aggiornare la terapia della medicina.');
+      }
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile spostare la medicina.';
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> updateMedicine({
