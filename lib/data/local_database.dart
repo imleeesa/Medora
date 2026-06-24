@@ -27,8 +27,32 @@ part 'local_database.g.dart';
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(_openConnection());
 
+  LocalDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) async => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.alterTable(
+          TableMigration(
+            medicines,
+            columnTransformer: {
+              medicines.stockQuantity: const CustomExpression<double>(
+                'CAST(stock_quantity AS REAL)',
+              ),
+              medicines.stockWarningThreshold: const CustomExpression<double>(
+                'CAST(stock_warning_threshold AS REAL)',
+              ),
+            },
+          ),
+        );
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

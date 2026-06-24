@@ -194,7 +194,7 @@ class MedicineCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Stock: ${medicine.stockQuantity}',
+                        'Stock: ${Medicine.formatQuantity(medicine.stockQuantity)}',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,

@@ -284,7 +284,6 @@ File modificati:
 - `lib/repositories/settings_repository.dart`;
 - `lib/repositories/therapy_repository.dart`;
 - `lib/repositories/medicine_repository.dart`;
-- `lib/repositories/intake_repository.dart`;
 - `docs/TECHNICAL_GUIDE.md`;
 - `docs/CHANGELOG_PROGRESS.md`;
 - `docs/KNOWN_ISSUES.md`.
@@ -466,6 +465,56 @@ Motivazione:
 Lo sprint mantiene separati dose e scorta, senza modificare lo schema Drift a valori decimali.
 
 Stato finale: completato con `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali del flusso su dispositivo.
+
+## 2026-06-24 - Sprint Scorte decimali e ricarica manuale
+
+Tipo modifica: Feature / Database migration / Documentation.
+
+Descrizione:
+
+- migrato lo schema Drift alla versione 2 con colonne `REAL` per quantita' e soglia delle scorte;
+- preservati i dati v1 convertendo i valori interi esistenti in valori reali tramite `TableMigration`;
+- esteso il parser dose a interi, frazioni e decimali con virgola o punto;
+- aggiornati decremento, ripristino e controllo scorta insufficiente per quantità decimali;
+- aggiunta ricarica manuale persistente dalla schermata Scorte;
+- uniformata la visualizzazione delle quantita' senza decimali inutili.
+
+File modificati:
+
+- `lib/data/tables/medicines_table.dart`;
+- `lib/data/local_database.dart`;
+- `lib/data/local_database.g.dart`;
+- `lib/models/medicine.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/repositories/intake_repository.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/screens/stock_screen.dart`;
+- `lib/widgets/medicine_card.dart`;
+- `test/database_migration_test.dart`;
+- `test/medicine_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- mancato decremento per dose frazionaria o decimale;
+- assenza di ricarica manuale delle scorte;
+- visualizzazione di valori come `10.0`.
+
+Problemi rimandati:
+
+- registro separato per ricariche e correzioni manuali;
+- quantita' e unita' come campi strutturati invece di testo dose;
+- notifiche di riacquisto, report e backup.
+
+Motivazione:
+
+La migrazione consente una gestione precisa delle scorte mantenendo compatibilita' con i dati locali gia' salvati.
+
+Stato finale: completato con migrazione Drift, `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali su dispositivo.
 
 ## 2026-06-24 - Sprint Storico Assunzioni Base
 

@@ -963,7 +963,7 @@ Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le a
 
 ### Scorte
 
-Quando un record passa a `taken`, `MedicineProvider` interpreta la quantita' intera iniziale della dose e aggiorna `stockQuantity` insieme al record nella stessa transazione di `IntakeRepository`. Non viene applicata una seconda sottrazione se il record era gia' `taken`; il passaggio da `taken` a `skipped` ripristina la stessa quantita'. Per la sicurezza dello schema corrente, frazioni, decimali e dose non specificata non aggiornano automaticamente la scorta, mentre una quantita' intera superiore alla disponibilita' blocca l'assunzione. Le scorte dovrebbero supportare anche ricariche manuali e valori decimali in uno sprint con migrazione dedicata.
+Lo schema Drift e' alla versione 2: `medicines.stockQuantity` e `medicines.stockWarningThreshold` sono colonne `REAL`, migrate dai precedenti interi con `TableMigration`. `Medicine.stockConsumptionAmount` interpreta la quantita' iniziale della dose: interi, frazioni `1/2` e `1/4`, e decimali con punto o virgola. Quando un record passa a `taken`, `MedicineProvider` aggiorna `stockQuantity` insieme al record nella stessa transazione di `IntakeRepository`; un record gia' `taken` non viene sottratto una seconda volta e il passaggio a `skipped` ripristina la stessa quantita'. Dose assente o testo non interpretabile registrano lo storico ma non cambiano la disponibilita'; una quantita' superiore alla scorta blocca l'azione. `StockScreen` permette una ricarica manuale decimale persistente tramite `addStock`.
 
 ### Notifiche
 

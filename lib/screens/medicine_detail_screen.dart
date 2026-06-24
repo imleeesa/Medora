@@ -233,7 +233,7 @@ class MedicineDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${medicine.stockQuantity}',
+                          Medicine.formatQuantity(medicine.stockQuantity),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -278,7 +278,9 @@ class MedicineDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${medicine.stockWarningThreshold}',
+                          Medicine.formatQuantity(
+                            medicine.stockWarningThreshold,
+                          ),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,

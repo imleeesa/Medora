@@ -85,8 +85,8 @@ class MedicineProvider extends ChangeNotifier {
     required String dose,
     required List<TimeOfDay> times,
     required List<int> daysOfWeek,
-    required int stockQuantity,
-    required int stockWarningThreshold,
+    required double stockQuantity,
+    required double stockWarningThreshold,
     String? notes,
     String color = '#2E7D32',
     String? icon,
@@ -140,8 +140,8 @@ class MedicineProvider extends ChangeNotifier {
     required String dose,
     required List<TimeOfDay> times,
     required List<int> daysOfWeek,
-    required int stockQuantity,
-    required int stockWarningThreshold,
+    required double stockQuantity,
+    required double stockWarningThreshold,
     String? notes,
     String color = '#2E7D32',
     String? icon,
@@ -387,8 +387,8 @@ class MedicineProvider extends ChangeNotifier {
     required String dose,
     required List<TimeOfDay> times,
     required List<int> daysOfWeek,
-    required int stockQuantity,
-    required int stockWarningThreshold,
+    required double stockQuantity,
+    required double stockWarningThreshold,
     String? notes,
     String color = '#2E7D32',
     String? icon,
@@ -477,7 +477,7 @@ class MedicineProvider extends ChangeNotifier {
     if (medicine.stockQuantity <= 0) return;
 
     final updatedMedicine = medicine.copyWith(
-      stockQuantity: medicine.stockQuantity - 1,
+      stockQuantity: medicine.stockQuantity - 1.0,
       updatedAt: DateTime.now(),
     );
 
@@ -489,6 +489,45 @@ class MedicineProvider extends ChangeNotifier {
       notifyListeners();
     } catch (_) {
       _errorMessage = 'Impossibile aggiornare la scorta.';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> addStock({
+    required String medicineId,
+    required double quantity,
+  }) async {
+    if (quantity <= 0) {
+      throw ArgumentError.value(
+        quantity,
+        'quantity',
+        'La quantita da aggiungere deve essere maggiore di zero.',
+      );
+    }
+
+    final location = _findMedicine(medicineId);
+    if (location == null) {
+      throw StateError('La medicina selezionata non e disponibile.');
+    }
+
+    final therapy = _therapies[location.therapyIndex];
+    final medicine = therapy.medicines[location.medicineIndex];
+    final updatedMedicine = medicine.copyWith(
+      stockQuantity: medicine.stockQuantity + quantity,
+      updatedAt: DateTime.now(),
+    );
+
+    try {
+      final updated = await _medicineRepository.updateMedicine(updatedMedicine);
+      if (!updated) {
+        throw StateError('Impossibile aggiornare la scorta della medicina.');
+      }
+      await _reloadCache();
+      _errorMessage = null;
+      notifyListeners();
+    } catch (_) {
+      _errorMessage = 'Impossibile ricaricare la scorta.';
       notifyListeners();
       rethrow;
     }
@@ -670,13 +709,15 @@ class MedicineProvider extends ChangeNotifier {
       if (stockAmount == null) {
         stockChange = IntakeStockChange.noQuantity;
       } else {
-        if (medicine.stockQuantity < stockAmount) {
+        if (medicine.stockQuantity + 0.000001 < stockAmount) {
           throw StateError(
             'Scorta insufficiente per registrare questa assunzione.',
           );
         }
         updatedMedicine = medicine.copyWith(
-          stockQuantity: medicine.stockQuantity - stockAmount,
+          stockQuantity: Medicine.normalizeQuantity(
+            medicine.stockQuantity - stockAmount,
+          ),
           updatedAt: now,
         );
         stockChange = IntakeStockChange.decreased;
@@ -686,7 +727,9 @@ class MedicineProvider extends ChangeNotifier {
         stockChange = IntakeStockChange.noQuantity;
       } else {
         updatedMedicine = medicine.copyWith(
-          stockQuantity: medicine.stockQuantity + stockAmount,
+          stockQuantity: Medicine.normalizeQuantity(
+            medicine.stockQuantity + stockAmount,
+          ),
           updatedAt: now,
         );
         stockChange = IntakeStockChange.restored;

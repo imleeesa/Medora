@@ -42,9 +42,11 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Calcolo della prossima medicina da assumere nella giornata.
 - Rilevamento delle medicine con scorta bassa.
 - Schermata Scorte con indicatore visivo della disponibilita'.
+- Quantita' di scorta e consumo per dose supportano interi, frazioni e decimali.
+- Ricarica manuale persistente delle scorte dalla schermata Scorte.
 - Dashboard con azioni rapide per segnare le assunzioni di oggi come assunte o saltate.
 - Schermata Storico persistente con stato, snapshot della medicina, dose e data/ora.
-- Decremento automatico della scorta per assunzioni con quantita' intera definita.
+- Decremento automatico della scorta per assunzioni con quantita' intera, frazionaria o decimale definita.
 - Profilo utente locale con nome, preferenze tema e notifiche.
 - Persistenza locale di profilo, impostazioni, terapie, medicine, scorte e schedule.
 - Schermata Impostazioni predisposta per backup e report PDF.
@@ -57,7 +59,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' e flussi di modifica completi.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
 - Evoluzione dello storico con filtri, ritardi, note e statistiche.
-- Gestione avanzata delle scorte con quantita' frazionarie, carico/scarico e promemoria di riacquisto.
+- Gestione avanzata delle scorte con registro carico/scarico e promemoria di riacquisto.
 - Notifiche locali integrate con le medicine salvate.
 - Migrazioni schema e test automatici del database locale.
 - Profili multipli per utente, familiari o caregiver.

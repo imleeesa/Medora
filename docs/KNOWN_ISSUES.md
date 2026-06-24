@@ -206,11 +206,11 @@ Restano fuori dal perimetro le statistiche, i filtri per periodo o terapia, i re
 
 ### Categoria
 
-Funzionalita' incompleta / limite di modello.
+Funzionalita' completata.
 
 ### Stato
 
-Parzialmente risolto
+Risolto
 
 ### Data aggiornamento
 
@@ -218,17 +218,17 @@ Parzialmente risolto
 
 ### Cosa e' stato risolto
 
-Quando un record passa a `taken`, l'app sottrae dalla scorta la quantita' intera iniziale della dose, ad esempio `1 compressa` o `2 gocce`. La stessa assunzione non viene sottratta due volte. Se un record passa da `taken` a `skipped`, la quantita' intera precedente viene ripristinata. L'aggiornamento di record e medicina e' eseguito nella stessa transazione Drift.
+Lo schema Drift e' stato migrato alla versione 2: `stockQuantity` e `stockWarningThreshold` usano ora valori reali e i dati interi esistenti vengono convertiti preservandone il valore. Quando un record passa a `taken`, l'app interpreta `1`, `1/2`, `1/4` e valori decimali come `2.5`, sottrae la quantita' una sola volta e impedisce scorte negative. Il passaggio da `taken` a `skipped` ripristina esattamente la stessa quantita'. L'aggiornamento di record e medicina e' eseguito nella stessa transazione Drift. La schermata Scorte consente anche una ricarica manuale persistente.
 
 ### Limiti aperti
 
-La scorta e' attualmente un intero: frazioni come `1/2` e `1/4`, quantita' decimali e dosi non specificate vengono registrate nello storico ma non aggiornano automaticamente la disponibilita'. Se una quantita' intera nota supera la scorta disponibile, l'azione viene bloccata senza registrare l'assunzione.
+La dose resta testo libero: il decremento interpreta soltanto la quantita' iniziale in forma intera, frazionaria o decimale. Dose assente o testo non interpretabile non aggiornano automaticamente la scorta, ma l'assunzione viene registrata. Le ricariche manuali non generano ancora un record storico dedicato.
 
 ### Possibili soluzioni
 
-- migrare `stockQuantity` e `stockWarningThreshold` a valori decimali con una strategia Drift dedicata;
 - separare quantita', unita' e consumo scorte in campi strutturati;
-- aggiungere un flusso manuale per confermare o correggere la quantita' usata.
+- aggiungere un registro di ricariche e correzioni manuali;
+- collegare le scorte a promemoria di riacquisto in uno sprint notifiche dedicato.
 
 ## Notifiche locali non integrate nel flusso principale
 

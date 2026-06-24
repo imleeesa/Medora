@@ -11,8 +11,8 @@ void main() {
       dose: '',
       times: const [TimeOfDay(hour: 8, minute: 0)],
       daysOfWeek: const [1],
-      stockQuantity: 10,
-      stockWarningThreshold: 2,
+      stockQuantity: 10.0,
+      stockWarningThreshold: 2.0,
       createdAt: now,
       updatedAt: now,
     );
@@ -29,8 +29,8 @@ void main() {
       dose: '1 compressa',
       times: const [TimeOfDay(hour: 8, minute: 0)],
       daysOfWeek: const [1],
-      stockQuantity: 10,
-      stockWarningThreshold: 2,
+      stockQuantity: 10.0,
+      stockWarningThreshold: 2.0,
       createdAt: now,
       updatedAt: now,
     );
@@ -45,10 +45,19 @@ void main() {
     expect(movedMedicine.schedules, medicine.schedules);
   });
 
-  test('extracts only safe integer quantities for automatic stock updates', () {
-    expect(Medicine.stockConsumptionAmountFromDose('1 compressa'), 1);
-    expect(Medicine.stockConsumptionAmountFromDose('3 gocce'), 3);
-    expect(Medicine.stockConsumptionAmountFromDose('1/2 pastiglia'), isNull);
+  test('extracts integer, fractional and decimal quantities from doses', () {
+    expect(Medicine.stockConsumptionAmountFromDose('1 compressa'), 1.0);
+    expect(Medicine.stockConsumptionAmountFromDose('1/2 pastiglia'), 0.5);
+    expect(Medicine.stockConsumptionAmountFromDose('1/4 pastiglia'), 0.25);
+    expect(Medicine.stockConsumptionAmountFromDose('2.5 ml'), 2.5);
+    expect(Medicine.stockConsumptionAmountFromDose('0,5 ml'), 0.5);
     expect(Medicine.stockConsumptionAmountFromDose(''), isNull);
+  });
+
+  test('formats stock quantities without unnecessary decimals', () {
+    expect(Medicine.formatQuantity(10.0), '10');
+    expect(Medicine.formatQuantity(2.5), '2.5');
+    expect(Medicine.formatQuantity(0.25), '0.25');
+    expect(Medicine.normalizeQuantity(0.3 - 0.1 - 0.2), 0.0);
   });
 }

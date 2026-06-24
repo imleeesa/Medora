@@ -1561,23 +1561,24 @@ class $MedicinesTable extends Medicines
     'stockQuantity',
   );
   @override
-  late final GeneratedColumn<int> stockQuantity = GeneratedColumn<int>(
+  late final GeneratedColumn<double> stockQuantity = GeneratedColumn<double>(
     'stock_quantity',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _stockWarningThresholdMeta =
       const VerificationMeta('stockWarningThreshold');
   @override
-  late final GeneratedColumn<int> stockWarningThreshold = GeneratedColumn<int>(
-    'stock_warning_threshold',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
+  late final GeneratedColumn<double> stockWarningThreshold =
+      GeneratedColumn<double>(
+        'stock_warning_threshold',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: true,
+      );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
   );
@@ -1790,11 +1791,11 @@ class $MedicinesTable extends Medicines
         data['${effectivePrefix}icon_code_point'],
       )!,
       stockQuantity: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}stock_quantity'],
       )!,
       stockWarningThreshold: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}stock_warning_threshold'],
       )!,
       isActive: attachedDatabase.typeMapping.read(
@@ -1827,8 +1828,8 @@ class Medicine extends DataClass implements Insertable<Medicine> {
   final String? notes;
   final int colorValue;
   final int iconCodePoint;
-  final int stockQuantity;
-  final int stockWarningThreshold;
+  final double stockQuantity;
+  final double stockWarningThreshold;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1862,8 +1863,8 @@ class Medicine extends DataClass implements Insertable<Medicine> {
     }
     map['color_value'] = Variable<int>(colorValue);
     map['icon_code_point'] = Variable<int>(iconCodePoint);
-    map['stock_quantity'] = Variable<int>(stockQuantity);
-    map['stock_warning_threshold'] = Variable<int>(stockWarningThreshold);
+    map['stock_quantity'] = Variable<double>(stockQuantity);
+    map['stock_warning_threshold'] = Variable<double>(stockWarningThreshold);
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -1906,8 +1907,8 @@ class Medicine extends DataClass implements Insertable<Medicine> {
       notes: serializer.fromJson<String?>(json['notes']),
       colorValue: serializer.fromJson<int>(json['colorValue']),
       iconCodePoint: serializer.fromJson<int>(json['iconCodePoint']),
-      stockQuantity: serializer.fromJson<int>(json['stockQuantity']),
-      stockWarningThreshold: serializer.fromJson<int>(
+      stockQuantity: serializer.fromJson<double>(json['stockQuantity']),
+      stockWarningThreshold: serializer.fromJson<double>(
         json['stockWarningThreshold'],
       ),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -1927,8 +1928,8 @@ class Medicine extends DataClass implements Insertable<Medicine> {
       'notes': serializer.toJson<String?>(notes),
       'colorValue': serializer.toJson<int>(colorValue),
       'iconCodePoint': serializer.toJson<int>(iconCodePoint),
-      'stockQuantity': serializer.toJson<int>(stockQuantity),
-      'stockWarningThreshold': serializer.toJson<int>(stockWarningThreshold),
+      'stockQuantity': serializer.toJson<double>(stockQuantity),
+      'stockWarningThreshold': serializer.toJson<double>(stockWarningThreshold),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -1944,8 +1945,8 @@ class Medicine extends DataClass implements Insertable<Medicine> {
     Value<String?> notes = const Value.absent(),
     int? colorValue,
     int? iconCodePoint,
-    int? stockQuantity,
-    int? stockWarningThreshold,
+    double? stockQuantity,
+    double? stockWarningThreshold,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -2054,8 +2055,8 @@ class MedicinesCompanion extends UpdateCompanion<Medicine> {
   final Value<String?> notes;
   final Value<int> colorValue;
   final Value<int> iconCodePoint;
-  final Value<int> stockQuantity;
-  final Value<int> stockWarningThreshold;
+  final Value<double> stockQuantity;
+  final Value<double> stockWarningThreshold;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -2085,8 +2086,8 @@ class MedicinesCompanion extends UpdateCompanion<Medicine> {
     this.notes = const Value.absent(),
     required int colorValue,
     required int iconCodePoint,
-    required int stockQuantity,
-    required int stockWarningThreshold,
+    required double stockQuantity,
+    required double stockWarningThreshold,
     required bool isActive,
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -2111,8 +2112,8 @@ class MedicinesCompanion extends UpdateCompanion<Medicine> {
     Expression<String>? notes,
     Expression<int>? colorValue,
     Expression<int>? iconCodePoint,
-    Expression<int>? stockQuantity,
-    Expression<int>? stockWarningThreshold,
+    Expression<double>? stockQuantity,
+    Expression<double>? stockWarningThreshold,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -2146,8 +2147,8 @@ class MedicinesCompanion extends UpdateCompanion<Medicine> {
     Value<String?>? notes,
     Value<int>? colorValue,
     Value<int>? iconCodePoint,
-    Value<int>? stockQuantity,
-    Value<int>? stockWarningThreshold,
+    Value<double>? stockQuantity,
+    Value<double>? stockWarningThreshold,
     Value<bool>? isActive,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -2200,10 +2201,10 @@ class MedicinesCompanion extends UpdateCompanion<Medicine> {
       map['icon_code_point'] = Variable<int>(iconCodePoint.value);
     }
     if (stockQuantity.present) {
-      map['stock_quantity'] = Variable<int>(stockQuantity.value);
+      map['stock_quantity'] = Variable<double>(stockQuantity.value);
     }
     if (stockWarningThreshold.present) {
-      map['stock_warning_threshold'] = Variable<int>(
+      map['stock_warning_threshold'] = Variable<double>(
         stockWarningThreshold.value,
       );
     }
@@ -4912,8 +4913,8 @@ typedef $$MedicinesTableCreateCompanionBuilder =
       Value<String?> notes,
       required int colorValue,
       required int iconCodePoint,
-      required int stockQuantity,
-      required int stockWarningThreshold,
+      required double stockQuantity,
+      required double stockWarningThreshold,
       required bool isActive,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -4929,8 +4930,8 @@ typedef $$MedicinesTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<int> colorValue,
       Value<int> iconCodePoint,
-      Value<int> stockQuantity,
-      Value<int> stockWarningThreshold,
+      Value<double> stockQuantity,
+      Value<double> stockWarningThreshold,
       Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -5064,12 +5065,12 @@ class $$MedicinesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get stockQuantity => $composableBuilder(
+  ColumnFilters<double> get stockQuantity => $composableBuilder(
     column: $table.stockQuantity,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get stockWarningThreshold => $composableBuilder(
+  ColumnFilters<double> get stockWarningThreshold => $composableBuilder(
     column: $table.stockWarningThreshold,
     builder: (column) => ColumnFilters(column),
   );
@@ -5225,12 +5226,12 @@ class $$MedicinesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get stockQuantity => $composableBuilder(
+  ColumnOrderings<double> get stockQuantity => $composableBuilder(
     column: $table.stockQuantity,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get stockWarningThreshold => $composableBuilder(
+  ColumnOrderings<double> get stockWarningThreshold => $composableBuilder(
     column: $table.stockWarningThreshold,
     builder: (column) => ColumnOrderings(column),
   );
@@ -5328,12 +5329,12 @@ class $$MedicinesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get stockQuantity => $composableBuilder(
+  GeneratedColumn<double> get stockQuantity => $composableBuilder(
     column: $table.stockQuantity,
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get stockWarningThreshold => $composableBuilder(
+  GeneratedColumn<double> get stockWarningThreshold => $composableBuilder(
     column: $table.stockWarningThreshold,
     builder: (column) => column,
   );
@@ -5486,8 +5487,8 @@ class $$MedicinesTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<int> colorValue = const Value.absent(),
                 Value<int> iconCodePoint = const Value.absent(),
-                Value<int> stockQuantity = const Value.absent(),
-                Value<int> stockWarningThreshold = const Value.absent(),
+                Value<double> stockQuantity = const Value.absent(),
+                Value<double> stockWarningThreshold = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -5518,8 +5519,8 @@ class $$MedicinesTableTableManager
                 Value<String?> notes = const Value.absent(),
                 required int colorValue,
                 required int iconCodePoint,
-                required int stockQuantity,
-                required int stockWarningThreshold,
+                required double stockQuantity,
+                required double stockWarningThreshold,
                 required bool isActive,
                 required DateTime createdAt,
                 required DateTime updatedAt,

@@ -98,8 +98,8 @@ class _StockCard extends StatelessWidget {
                     ),
                     Text(
                       isLow
-                          ? 'Restano solo ${medicine.stockQuantity} unit\u00E0'
-                          : '${medicine.stockQuantity} unit\u00E0 disponibili',
+                          ? 'Restano solo ${Medicine.formatQuantity(medicine.stockQuantity)} unita'
+                          : '${Medicine.formatQuantity(medicine.stockQuantity)} unita disponibili',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -111,6 +111,12 @@ class _StockCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Ricarica scorta',
+                onPressed: () => _showRestockDialog(context, medicine),
+                icon: const Icon(Icons.add),
               ),
             ],
           ),
@@ -128,11 +134,78 @@ class _StockCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Soglia minima: ${medicine.stockWarningThreshold}',
+            'Soglia minima: ${Medicine.formatQuantity(medicine.stockWarningThreshold)}',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showRestockDialog(
+    BuildContext context,
+    Medicine medicine,
+  ) async {
+    final controller = TextEditingController();
+    String? errorMessage;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogBuildContext, setDialogState) => AlertDialog(
+          title: const Text('Ricarica scorta'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Quantita da aggiungere',
+              hintText: 'Es. 10 o 2.5',
+              errorText: errorMessage,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final quantity = double.tryParse(
+                  controller.text.trim().replaceAll(',', '.'),
+                );
+                if (quantity == null || quantity <= 0) {
+                  setDialogState(
+                    () => errorMessage =
+                        'Inserisci una quantita maggiore di zero',
+                  );
+                  return;
+                }
+
+                try {
+                  await context.read<MedicineProvider>().addStock(
+                    medicineId: medicine.id,
+                    quantity: quantity,
+                  );
+                  if (!context.mounted || !dialogContext.mounted) return;
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Scorta aggiornata di ${Medicine.formatQuantity(quantity)} unita',
+                      ),
+                    ),
+                  );
+                } catch (error) {
+                  setDialogState(() => errorMessage = '$error');
+                }
+              },
+              child: const Text('Aggiungi'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
   }
 }

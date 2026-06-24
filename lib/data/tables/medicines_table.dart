@@ -12,8 +12,8 @@ class Medicines extends Table {
   TextColumn get notes => text().nullable()();
   IntColumn get colorValue => integer()();
   IntColumn get iconCodePoint => integer()();
-  IntColumn get stockQuantity => integer()();
-  IntColumn get stockWarningThreshold => integer()();
+  RealColumn get stockQuantity => real()();
+  RealColumn get stockWarningThreshold => real()();
   BoolColumn get isActive => boolean()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

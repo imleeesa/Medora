@@ -538,8 +538,8 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         dose: _buildDose(),
         times: _times,
         daysOfWeek: _daysOfWeek,
-        stockQuantity: int.parse(_stockController.text),
-        stockWarningThreshold: int.parse(_warningController.text),
+        stockQuantity: _parseQuantity(_stockController.text),
+        stockWarningThreshold: _parseQuantity(_warningController.text),
         notes: _notesController.text,
         color: _selectedColor,
       );
@@ -566,12 +566,15 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   }
 
   String? _validatePositiveNumber(String? value) {
-    final parsed = int.tryParse(value ?? '');
+    final parsed = double.tryParse((value ?? '').trim().replaceAll(',', '.'));
     if (parsed == null || parsed < 0) {
       return 'Inserisci un numero valido';
     }
     return null;
   }
+
+  double _parseQuantity(String value) =>
+      double.parse(value.trim().replaceAll(',', '.'));
 
   Color _parseColor(String colorHex) {
     final value = colorHex.replaceFirst('#', '');
@@ -649,7 +652,7 @@ class _StockNumberField extends StatelessWidget {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          keyboardType: TextInputType.number,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             filled: true,
             fillColor: Colors.white,

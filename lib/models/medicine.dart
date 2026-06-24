@@ -10,8 +10,8 @@ class Medicine {
   final String? notes;
   final List<TimeOfDay> times; // Orari di assunzione
   final List<int> daysOfWeek; // 1=lunedì, 7=domenica
-  final int stockQuantity; // Quantità attuale
-  final int stockWarningThreshold; // Soglia minima
+  final double stockQuantity; // Quantità attuale
+  final double stockWarningThreshold; // Soglia minima
   final bool isActive;
   final String color; // Codice colore hex
   final String? icon; // Nome icona
@@ -55,15 +55,44 @@ class Medicine {
   String get doseLabel =>
       dose.trim().isEmpty ? 'Dose non specificata' : dose.trim();
 
-  /// Quantita' intera sicura da sottrarre alla scorta, se presente nella dose.
-  int? get stockConsumptionAmount => stockConsumptionAmountFromDose(dose);
+  /// Quantita' per assunzione, interpretata dalla parte iniziale della dose.
+  double? get stockConsumptionAmount => stockConsumptionAmountFromDose(dose);
 
-  static int? stockConsumptionAmountFromDose(String dose) {
-    final match = RegExp(r'^(\d+)(?:\s|$)').firstMatch(dose.trim());
-    if (match == null) return null;
-    final amount = int.tryParse(match.group(1)!);
+  static double? stockConsumptionAmountFromDose(String dose) {
+    final normalized = dose.trim().replaceAll(',', '.');
+    if (normalized.isEmpty) return null;
+
+    final fraction = RegExp(
+      r'^(\d+)\s*/\s*(\d+)(?:\s|$)',
+    ).firstMatch(normalized);
+    if (fraction != null) {
+      final numerator = double.tryParse(fraction.group(1)!);
+      final denominator = double.tryParse(fraction.group(2)!);
+      if (numerator == null || denominator == null || denominator == 0) {
+        return null;
+      }
+      final amount = numerator / denominator;
+      return amount > 0 ? amount : null;
+    }
+
+    final decimal = RegExp(r'^(\d+(?:\.\d+)?)(?:\s|$)').firstMatch(normalized);
+    final amount = decimal == null ? null : double.tryParse(decimal.group(1)!);
     return amount == null || amount <= 0 ? null : amount;
   }
+
+  static String formatQuantity(double value) {
+    final normalized = normalizeQuantity(value);
+    if (normalized == normalized.roundToDouble()) {
+      return normalized.toInt().toString();
+    }
+    return normalized
+        .toStringAsFixed(3)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  static double normalizeQuantity(double value) =>
+      value.abs() < 0.000001 ? 0.0 : value;
 
   /// Verifica se la medicina deve essere assunta oggi
   bool shouldTakeToday() {
@@ -156,8 +185,8 @@ class Medicine {
       notes: json['notes'],
       times: times,
       daysOfWeek: daysOfWeek,
-      stockQuantity: json['stockQuantity'],
-      stockWarningThreshold: json['stockWarningThreshold'],
+      stockQuantity: (json['stockQuantity'] as num).toDouble(),
+      stockWarningThreshold: (json['stockWarningThreshold'] as num).toDouble(),
       isActive: json['isActive'] == 1,
       color: json['color'] ?? '#2E7D32',
       icon: json['icon'],
@@ -178,8 +207,8 @@ class Medicine {
     String? notes,
     List<TimeOfDay>? times,
     List<int>? daysOfWeek,
-    int? stockQuantity,
-    int? stockWarningThreshold,
+    double? stockQuantity,
+    double? stockWarningThreshold,
     bool? isActive,
     String? color,
     String? icon,
