@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meditrack/models/intake_record.dart';
 import 'package:meditrack/models/medicine.dart';
 import 'package:meditrack/models/medicine_schedule.dart';
+import 'package:meditrack/models/therapy.dart';
 import 'package:meditrack/models/user_profile.dart';
 import 'package:meditrack/repositories/intake_repository.dart';
 import 'package:meditrack/repositories/medicine_repository.dart';
 import 'package:meditrack/repositories/profile_repository.dart';
+import 'package:meditrack/repositories/therapy_repository.dart';
 import 'package:meditrack/services/intake_action_service.dart';
 import 'package:meditrack/services/notification_action_handler.dart';
 import 'package:meditrack/services/notification_service.dart';
@@ -41,7 +43,7 @@ void main() {
         fixture.intakeRepository.records.single.scheduledDateTime,
         DateTime(2026, 6, 22, 8),
       );
-      expect(fixture.medicineRepository.medicine.stockQuantity, 9.5);
+      expect(fixture.medicineRepository.medicine?.stockQuantity, 9.5);
     });
 
     test(
@@ -63,7 +65,7 @@ void main() {
           fixture.intakeRepository.records.single.status,
           IntakeStatus.skipped,
         );
-        expect(fixture.medicineRepository.medicine.stockQuantity, 10);
+        expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
       },
     );
 
@@ -91,7 +93,7 @@ void main() {
           fixture.intakeRepository.records.single.status,
           IntakeStatus.taken,
         );
-        expect(fixture.medicineRepository.medicine.stockQuantity, 9);
+        expect(fixture.medicineRepository.medicine?.stockQuantity, 9);
       },
     );
 
@@ -117,7 +119,7 @@ void main() {
         fixture.intakeRepository.records.single.status,
         IntakeStatus.skipped,
       );
-      expect(fixture.medicineRepository.medicine.stockQuantity, 10);
+      expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
     });
 
     test('insufficient stock returns false without partial updates', () async {
@@ -133,8 +135,99 @@ void main() {
 
       expect(result, isFalse);
       expect(fixture.intakeRepository.records, isEmpty);
-      expect(fixture.medicineRepository.medicine.stockQuantity, 0.25);
+      expect(fixture.medicineRepository.medicine?.stockQuantity, 0.25);
     });
+
+    test('old notification payload is ignored without stock changes', () async {
+      final fixture = _ActionFixture(
+        medicine: _medicine(dose: '1 compressa', stockQuantity: 10),
+      );
+
+      final result = await fixture.handler.handle(
+        actionId: NotificationActionIds.taken,
+        payload: _payload(),
+        referenceDate: DateTime(2026, 6, 24, 8, 5),
+      );
+
+      expect(result, isTrue);
+      expect(fixture.intakeRepository.records, isEmpty);
+      expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
+    });
+
+    test('future notification slot is ignored safely', () async {
+      final fixture = _ActionFixture(
+        medicine: _medicine(dose: '1 compressa', stockQuantity: 10),
+      );
+
+      final result = await fixture.handler.handle(
+        actionId: NotificationActionIds.taken,
+        payload: _payload(),
+        referenceDate: DateTime(2026, 6, 22, 7, 30),
+      );
+
+      expect(result, isTrue);
+      expect(fixture.intakeRepository.records, isEmpty);
+      expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
+    });
+
+    test(
+      'notification is ignored when schedule changed after scheduling',
+      () async {
+        final fixture = _ActionFixture(
+          medicine: _medicine(
+            dose: '1 compressa',
+            stockQuantity: 10,
+            times: const [TimeOfDay(hour: 9, minute: 0)],
+          ),
+        );
+
+        final result = await fixture.handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: _payload(),
+          referenceDate: DateTime(2026, 6, 22, 8, 5),
+        );
+
+        expect(result, isTrue);
+        expect(fixture.intakeRepository.records, isEmpty);
+        expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
+      },
+    );
+
+    test(
+      'notification is ignored when medicine was deleted before tap',
+      () async {
+        final fixture = _ActionFixture(medicine: null);
+
+        final result = await fixture.handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: _payload(),
+          referenceDate: DateTime(2026, 6, 22, 8, 5),
+        );
+
+        expect(result, isFalse);
+        expect(fixture.intakeRepository.records, isEmpty);
+      },
+    );
+
+    test(
+      'notification is ignored when therapy was archived before tap',
+      () async {
+        final fixture = _ActionFixture(
+          medicine: _medicine(dose: '1 compressa', stockQuantity: 10),
+          therapyIsActive: false,
+        );
+
+        final result = await fixture.handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: _payload(),
+          referenceDate: DateTime(2026, 6, 22, 8, 5),
+        );
+
+        expect(result, isTrue);
+        expect(fixture.intakeRepository.records, isEmpty);
+        expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
+      },
+    );
 
     test('invalid action or payload is ignored safely', () async {
       final fixture = _ActionFixture(
@@ -163,9 +256,10 @@ void main() {
 }
 
 class _ActionFixture {
-  _ActionFixture({required Medicine medicine})
+  _ActionFixture({required Medicine? medicine, bool therapyIsActive = true})
     : profileRepository = _FakeProfileRepository(),
       medicineRepository = _FakeMedicineRepository(medicine),
+      therapyRepository = _FakeTherapyRepository(isActive: therapyIsActive),
       intakeRepository = _FakeIntakeRepository() {
     intakeRepository.onUpdateMedicine = (medicine) {
       medicineRepository.medicine = medicine;
@@ -175,12 +269,14 @@ class _ActionFixture {
         profileRepository: profileRepository,
         medicineRepository: medicineRepository,
         intakeRepository: intakeRepository,
+        therapyRepository: therapyRepository,
       ),
     );
   }
 
   final _FakeProfileRepository profileRepository;
   final _FakeMedicineRepository medicineRepository;
+  final _FakeTherapyRepository therapyRepository;
   final _FakeIntakeRepository intakeRepository;
   late final NotificationActionHandler handler;
 }
@@ -210,7 +306,7 @@ class _FakeProfileRepository implements ProfileRepository {
 class _FakeMedicineRepository implements MedicineRepository {
   _FakeMedicineRepository(this.medicine);
 
-  Medicine medicine;
+  Medicine? medicine;
 
   @override
   Future<void> createMedicine(Medicine medicine) async {
@@ -222,28 +318,33 @@ class _FakeMedicineRepository implements MedicineRepository {
 
   @override
   Future<List<Medicine>> getLowStockMedicines(String profileId) async =>
-      medicine.stockQuantity <= medicine.stockWarningThreshold
-      ? [medicine]
+      medicine != null &&
+          medicine!.stockQuantity <= medicine!.stockWarningThreshold
+      ? [medicine!]
       : const [];
 
   @override
-  Future<List<Medicine>> getMedicines(String profileId) async => [medicine];
+  Future<List<Medicine>> getMedicines(String profileId) async =>
+      medicine == null ? const [] : [medicine!];
 
   @override
   Future<List<Medicine>> getMedicinesByTherapy(String therapyId) async =>
-      medicine.therapyId == therapyId ? [medicine] : const [];
+      medicine?.therapyId == therapyId ? [medicine!] : const [];
 
   @override
   Future<List<MedicineSchedule>> getSchedulesForMedicine(
     String medicineId,
-  ) async => medicine.schedules;
+  ) async => medicine?.schedules ?? const [];
 
   @override
   Future<void> replaceSchedules(
     String medicineId,
     List<MedicineSchedule> schedules,
   ) async {
-    medicine = medicine.copyWith(schedules: schedules);
+    final current = medicine;
+    if (current != null) {
+      medicine = current.copyWith(schedules: schedules);
+    }
   }
 
   @override
@@ -254,7 +355,44 @@ class _FakeMedicineRepository implements MedicineRepository {
 
   @override
   Stream<List<Medicine>> watchMedicines(String profileId) =>
-      Stream.value([medicine]);
+      Stream.value(medicine == null ? const [] : [medicine!]);
+}
+
+class _FakeTherapyRepository implements TherapyRepository {
+  _FakeTherapyRepository({required this.isActive});
+
+  final bool isActive;
+
+  @override
+  Future<void> createTherapy(Therapy therapy) async {}
+
+  @override
+  Future<void> createTherapyWithMedicine(
+    Therapy therapy,
+    Medicine medicine,
+  ) async {}
+
+  @override
+  Future<void> deleteTherapy(String therapyId) async {}
+
+  @override
+  Future<List<Therapy>> getTherapies(String profileId) async => [
+    Therapy(
+      id: 'therapy-1',
+      profileId: profileId,
+      name: 'Terapia',
+      color: '#2E7D32',
+      medicines: const [],
+      isActive: isActive,
+    ),
+  ];
+
+  @override
+  Future<bool> updateTherapy(Therapy therapy) async => true;
+
+  @override
+  Stream<List<Therapy>> watchTherapies(String profileId) =>
+      Stream.fromFuture(getTherapies(profileId));
 }
 
 class _FakeIntakeRepository implements IntakeRepository {
@@ -332,7 +470,11 @@ String _payload() {
   );
 }
 
-Medicine _medicine({required String dose, required double stockQuantity}) {
+Medicine _medicine({
+  required String dose,
+  required double stockQuantity,
+  List<TimeOfDay> times = const [TimeOfDay(hour: 8, minute: 0)],
+}) {
   final now = DateTime(2026, 6, 22);
   return Medicine(
     id: 'medicine-1',
@@ -340,7 +482,7 @@ Medicine _medicine({required String dose, required double stockQuantity}) {
     therapyId: 'therapy-1',
     name: 'Aspirina',
     dose: dose,
-    times: const [TimeOfDay(hour: 8, minute: 0)],
+    times: times,
     daysOfWeek: const [DateTime.monday],
     stockQuantity: stockQuantity,
     stockWarningThreshold: 2,

@@ -41,6 +41,7 @@ class MedicineProvider extends ChangeNotifier {
              profileRepository: profileRepository ?? ProfileRepository(),
              medicineRepository: medicineRepository ?? MedicineRepository(),
              intakeRepository: intakeRepository ?? IntakeRepository(),
+             therapyRepository: therapyRepository ?? TherapyRepository(),
            );
 
   final ProfileRepository _profileRepository;

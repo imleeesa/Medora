@@ -94,14 +94,22 @@ class NotificationActionHandler {
         referenceDate: referenceDate,
       );
       if (status == IntakeStatus.taken) {
-        await _intakeActionService.markTaken(
+        await _intakeActionService.markTakenFromNotification(
           medicineId: decodedPayload.medicineId,
           scheduledDateTime: scheduledDateTime,
+          dayOfWeek: decodedPayload.dayOfWeek,
+          hour: decodedPayload.hour,
+          minute: decodedPayload.minute,
+          referenceDate: referenceDate,
         );
       } else {
-        await _intakeActionService.markSkipped(
+        await _intakeActionService.markSkippedFromNotification(
           medicineId: decodedPayload.medicineId,
           scheduledDateTime: scheduledDateTime,
+          dayOfWeek: decodedPayload.dayOfWeek,
+          hour: decodedPayload.hour,
+          minute: decodedPayload.minute,
+          referenceDate: referenceDate,
         );
       }
       NotificationActionEvents.instance.notifyCompleted();

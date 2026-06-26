@@ -589,6 +589,46 @@ Le notification actions Android senza UI possono essere eseguite su un isolate s
 
 Stato finale: completato con test automatici verdi; restano richieste verifiche manuali su dispositivo reale per foreground, background e app terminata.
 
+## 2026-06-26 - Stabilizzazione notifiche vecchie
+
+Tipo modifica: Bug Fix / Stabilizzazione / Test / Documentation.
+
+Descrizione:
+
+- aggiunta una protezione per evitare che una vecchia notifica rimasta nel drawer modifichi uno slot ambiguo;
+- mantenuto il payload ricorrente con `medicineId`, `dayOfWeek`, `hour` e `minute`, documentando che non puo' contenere uno `scheduledDateTime` assoluto affidabile per tutte le ricorrenze;
+- accettate le azioni notifica solo per slot ricostruiti di oggi o ieri;
+- ignorate senza effetti le azioni quando lo slot sarebbe futuro, troppo vecchio, non compatibile con lo schedule attuale, riferito a medicina eliminata o terapia archiviata;
+- mantenute invariate le regole anti-duplicato, decremento scorte e ripristino scorte;
+- aggiunti test per notifiche valide, troppo vecchie, future, con schedule cambiato, medicina eliminata e terapia archiviata.
+
+File modificati:
+
+- `lib/services/intake_action_service.dart`;
+- `lib/services/notification_action_handler.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `test/notification_action_handler_test.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- una vecchia notifica poteva ricostruire uno slot recente diverso da quello inteso dall'utente e quindi modificare storico/scorte in modo ambiguo.
+
+Problemi rimandati:
+
+- deep link verso dettaglio medicina o storico;
+- flusso UI guidato per correggere manualmente notifiche troppo vecchie;
+- stato UI dedicato per permessi negati, exact alarm non disponibile e battery optimization.
+
+Motivazione:
+
+Le notifiche locali ricorrenti usano un payload statico. Senza un controllo temporale e di compatibilita' con lo schedule corrente, un tap tardivo poteva diventare ambiguo.
+
+Stato finale: completato con test automatici verdi; restano consigliate verifiche manuali su dispositivo reale e Samsung Z Flip.
+
 ## 2026-06-24 - Bug fix mirato storico e ricarica scorte
 
 Tipo modifica: Bug Fix / Documentation.

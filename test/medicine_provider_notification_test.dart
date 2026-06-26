@@ -288,6 +288,7 @@ void main() {
             profileRepository: fixture.profileRepository,
             medicineRepository: fixture.medicineRepository,
             intakeRepository: fixture.intakeRepository,
+            therapyRepository: fixture.therapyRepository,
           ),
         );
 
