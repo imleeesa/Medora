@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -10,12 +12,51 @@ class NotificationActionEvents {
   NotificationActionEvents._();
 
   static final instance = NotificationActionEvents._();
+  static const _portName = 'meditrack_notification_action_events';
 
   final _controller = StreamController<void>.broadcast();
+  ReceivePort? _receivePort;
 
-  Stream<void> get completed => _controller.stream;
+  Stream<void> get completed {
+    ensureMainIsolatePort();
+    return _controller.stream;
+  }
 
   void notifyCompleted() {
+    if (_receivePort != null) {
+      _emit();
+      return;
+    }
+
+    final mainPort = IsolateNameServer.lookupPortByName(_portName);
+    if (mainPort != null) {
+      mainPort.send(null);
+      return;
+    }
+
+    _emit();
+  }
+
+  void ensureMainIsolatePort() {
+    if (_receivePort != null) return;
+
+    IsolateNameServer.removePortNameMapping(_portName);
+    _receivePort = ReceivePort()
+      ..listen((_) {
+        _emit();
+      });
+    IsolateNameServer.registerPortWithName(_receivePort!.sendPort, _portName);
+  }
+
+  void disposeMainIsolatePort() {
+    if (_receivePort == null) return;
+
+    IsolateNameServer.removePortNameMapping(_portName);
+    _receivePort?.close();
+    _receivePort = null;
+  }
+
+  void _emit() {
     if (!_controller.isClosed) {
       _controller.add(null);
     }

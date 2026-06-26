@@ -12,6 +12,8 @@ import 'package:meditrack/repositories/medicine_repository.dart';
 import 'package:meditrack/repositories/profile_repository.dart';
 import 'package:meditrack/repositories/settings_repository.dart';
 import 'package:meditrack/repositories/therapy_repository.dart';
+import 'package:meditrack/services/intake_action_service.dart';
+import 'package:meditrack/services/notification_action_handler.dart';
 import 'package:meditrack/services/notification_service.dart';
 
 void main() {
@@ -261,6 +263,63 @@ void main() {
         expect(fixture.provider.medicines, hasLength(1));
       },
     );
+
+    test(
+      'external notification action reloads provider history and stock without restart',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  dose: '1/2 pastiglia',
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+
+        final handler = NotificationActionHandler(
+          intakeActionService: IntakeActionService(
+            profileRepository: fixture.profileRepository,
+            medicineRepository: fixture.medicineRepository,
+            intakeRepository: fixture.intakeRepository,
+          ),
+        );
+
+        final handled = await handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: NotificationService.payloadFor(
+            medicineId: 'medicine-1',
+            dayOfWeek: DateTime.monday,
+            hour: 8,
+            minute: 0,
+          ),
+          referenceDate: DateTime(2026, 6, 22, 8, 5),
+        );
+        await _waitFor(
+          () =>
+              fixture.provider.intakeHistory.isNotEmpty &&
+              fixture.provider.getMedicineById('medicine-1')?.stockQuantity ==
+                  9.5,
+        );
+
+        expect(handled, isTrue);
+        expect(fixture.provider.intakeHistory, hasLength(1));
+        expect(
+          fixture.provider.intakeHistory.single.status,
+          IntakeStatus.taken,
+        );
+        expect(
+          fixture.provider.getMedicineById('medicine-1')?.stockQuantity,
+          9.5,
+        );
+      },
+    );
   });
 }
 
@@ -279,6 +338,9 @@ class _ProviderFixture {
        therapyRepository = _FakeTherapyRepository(therapies),
        medicineRepository = _FakeMedicineRepository.fromTherapies(therapies),
        intakeRepository = _FakeIntakeRepository() {
+    intakeRepository.onUpdateMedicine = (medicine) {
+      medicineRepository.medicines[medicine.id] = medicine;
+    };
     provider = MedicineProvider(
       profileRepository: profileRepository,
       settingsRepository: settingsRepository,
@@ -509,6 +571,7 @@ class _FakeMedicineRepository implements MedicineRepository {
 
 class _FakeIntakeRepository implements IntakeRepository {
   final records = <IntakeRecord>[];
+  void Function(Medicine medicine)? onUpdateMedicine;
 
   @override
   Future<void> createIntakeRecord(IntakeRecord record) async {
@@ -550,6 +613,9 @@ class _FakeIntakeRepository implements IntakeRepository {
     required bool updateExistingRecord,
     Medicine? updatedMedicine,
   }) async {
+    if (updatedMedicine != null) {
+      onUpdateMedicine?.call(updatedMedicine);
+    }
     if (updateExistingRecord) {
       final index = records.indexWhere((item) => item.id == record.id);
       if (index == -1) throw StateError('Record not found');
@@ -589,6 +655,7 @@ Therapy _therapy({
 Medicine _medicine({
   required String id,
   required String therapyId,
+  String dose = '1 compressa',
   bool isActive = true,
 }) {
   final now = DateTime.now();
@@ -597,7 +664,7 @@ Medicine _medicine({
     profileId: 'profile-1',
     therapyId: therapyId,
     name: id,
-    dose: '1 compressa',
+    dose: dose,
     times: const [TimeOfDay(hour: 8, minute: 0)],
     daysOfWeek: const [DateTime.monday],
     stockQuantity: 10,
@@ -606,6 +673,19 @@ Medicine _medicine({
     createdAt: now,
     updatedAt: now,
   );
+}
+
+Future<void> _waitFor(
+  bool Function() predicate, {
+  Duration timeout = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (!predicate()) {
+    if (DateTime.now().isAfter(deadline)) {
+      throw StateError('Condition not reached before timeout.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
 }
 
 UserProfile _profile({required bool notificationsEnabled}) {

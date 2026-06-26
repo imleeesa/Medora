@@ -744,6 +744,7 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   void _listenForNotificationActions() {
+    NotificationActionEvents.instance.ensureMainIsolatePort();
     _notificationActionSubscription ??= NotificationActionEvents
         .instance
         .completed
@@ -763,6 +764,7 @@ class MedicineProvider extends ChangeNotifier {
   @override
   void dispose() {
     _notificationActionSubscription?.cancel();
+    NotificationActionEvents.instance.disposeMainIsolatePort();
     super.dispose();
   }
 

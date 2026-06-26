@@ -552,6 +552,43 @@ Lo sprint rende le notifiche locali utili nel flusso quotidiano, mantenendo sepa
 
 Stato finale: completato con test automatici verdi; restano richieste verifiche manuali su dispositivo Android reale per background, app chiusa e permessi.
 
+## 2026-06-26 - Bug fix live UI azioni notifica
+
+Tipo modifica: Bug Fix / Test / Documentation.
+
+Descrizione:
+
+- corretto il mancato refresh live della UI dopo pressione di `Assunta` o `Saltata` dalla notifica locale;
+- aggiunto un ponte tramite `IsolateNameServer` in `NotificationActionEvents`, cosi' il background isolate puo' notificare il main isolate quando l'app e' viva;
+- il Provider registra la porta eventi durante l'inizializzazione e la rimuove in `dispose`;
+- quando riceve l'evento, il Provider ricarica cache medicine/terapie, storico, scorte e assunzioni programmate e poi chiama `notifyListeners`;
+- aggiunto un test Provider che simula un'azione notifica esterna e verifica aggiornamento immediato di storico e scorta senza riavvio.
+
+File modificati:
+
+- `lib/services/notification_action_handler.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- Dashboard, Storico e Scorte non si aggiornavano subito quando l'azione notifica veniva gestita in un background isolate mentre l'app era gia' aperta o ancora viva in background.
+
+Problemi rimandati:
+
+- deep link verso dettaglio medicina o storico;
+- UI dedicata per permessi negati, exact alarm non disponibile e battery optimization;
+- comportamento live non applicabile ad app completamente terminata: in quel caso la cache viene caricata correttamente al successivo avvio.
+
+Motivazione:
+
+Le notification actions Android senza UI possono essere eseguite su un isolate separato. Lo stream statico precedente funzionava solo nello stesso isolate e quindi non raggiungeva il Provider vivo.
+
+Stato finale: completato con test automatici verdi; restano richieste verifiche manuali su dispositivo reale per foreground, background e app terminata.
+
 ## 2026-06-24 - Bug fix mirato storico e ricarica scorte
 
 Tipo modifica: Bug Fix / Documentation.
