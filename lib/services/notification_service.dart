@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/medicine.dart';
+import 'notification_action_handler.dart';
+import 'notification_payload.dart';
 
 abstract interface class MedicineNotificationScheduler {
   Future<void> initialize();
@@ -33,6 +37,7 @@ class NotificationService implements MedicineNotificationScheduler {
   static const _channelName = 'Promemoria medicine';
   static const _channelDescription =
       'Promemoria per l assunzione delle medicine';
+  static const _darwinReminderCategoryId = 'meditrack_medicine_reminder';
 
   bool get _supportsLocalNotifications =>
       defaultTargetPlatform == TargetPlatform.android ||
@@ -49,24 +54,41 @@ class NotificationService implements MedicineNotificationScheduler {
     tz.setLocalLocation(tz.getLocation('Europe/Rome'));
 
     final plugin = FlutterLocalNotificationsPlugin();
-    const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    final settings = InitializationSettings(
+      android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
+        notificationCategories: [
+          DarwinNotificationCategory(
+            _darwinReminderCategoryId,
+            actions: [
+              DarwinNotificationAction.plain(
+                NotificationActionIds.taken,
+                'Assunta',
+              ),
+              DarwinNotificationAction.plain(
+                NotificationActionIds.skipped,
+                'Saltata',
+              ),
+            ],
+          ),
+        ],
       ),
     );
 
     await plugin.initialize(
       settings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
+      onDidReceiveBackgroundNotificationResponse:
+          meditrackNotificationTapBackground,
     );
     _plugin = plugin;
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
-    // Le azioni rapide e il deep link allo storico saranno uno sprint futuro.
+  void _onNotificationTapped(NotificationResponse response) async {
+    await NotificationActionHandler().handleResponse(response);
   }
 
   @override
@@ -189,8 +211,23 @@ class NotificationService implements MedicineNotificationScheduler {
               enableVibration: true,
               playSound: true,
               visibility: NotificationVisibility.public,
+              actions: [
+                AndroidNotificationAction(
+                  NotificationActionIds.taken,
+                  'Assunta',
+                  showsUserInterface: false,
+                  cancelNotification: true,
+                ),
+                AndroidNotificationAction(
+                  NotificationActionIds.skipped,
+                  'Saltata',
+                  showsUserInterface: false,
+                  cancelNotification: true,
+                ),
+              ],
             ),
             iOS: DarwinNotificationDetails(
+              categoryIdentifier: _darwinReminderCategoryId,
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
@@ -198,7 +235,12 @@ class NotificationService implements MedicineNotificationScheduler {
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-          payload: medicine.id,
+          payload: payloadFor(
+            medicineId: medicine.id,
+            dayOfWeek: dayOfWeek,
+            hour: schedule.time.hour,
+            minute: schedule.time.minute,
+          ),
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
@@ -252,4 +294,24 @@ class NotificationService implements MedicineNotificationScheduler {
         ? 'E ora di prendere ${medicine.name}'
         : 'E ora di prendere ${medicine.name} - $dose';
   }
+
+  static String payloadFor({
+    required String medicineId,
+    required int dayOfWeek,
+    required int hour,
+    required int minute,
+  }) {
+    return MedicineNotificationPayload(
+      medicineId: medicineId,
+      dayOfWeek: dayOfWeek,
+      hour: hour,
+      minute: minute,
+    ).encode();
+  }
+}
+
+@pragma('vm:entry-point')
+void meditrackNotificationTapBackground(NotificationResponse response) async {
+  DartPluginRegistrant.ensureInitialized();
+  await NotificationActionHandler().handleResponse(response);
 }

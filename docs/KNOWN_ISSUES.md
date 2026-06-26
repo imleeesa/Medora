@@ -303,7 +303,7 @@ La dose resta testo libero: il decremento interpreta soltanto la quantita' inizi
 - aggiungere un registro di ricariche e correzioni manuali;
 - collegare le scorte a promemoria di riacquisto in uno sprint notifiche dedicato.
 
-## Notifiche locali non integrate nel flusso principale
+## Notifiche locali avanzate e limiti piattaforma
 
 ### Categoria
 
@@ -319,19 +319,20 @@ Parzialmente risolto
 
 ### Cosa e' stato risolto
 
-`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm e ripristino al boot. Lo sprint QA del 2026-06-26 ha aggiunto test Provider con scheduler finto per coprire startup, modifica medicina, cancellazione, disattivazione/riattivazione, archiviazione/eliminazione terapia, toggle notifiche e failure best-effort per permessi o exact alarm negati.
+`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm, azioni e ripristino al boot. Lo sprint QA del 2026-06-26 ha aggiunto test Provider con scheduler finto per coprire startup, modifica medicina, cancellazione, disattivazione/riattivazione, archiviazione/eliminazione terapia, toggle notifiche e failure best-effort per permessi o exact alarm negati. Lo Sprint Notifiche Locali 2 ha aggiunto azioni rapide Assunta/Saltata con payload stabile e handler senza `BuildContext`: l'azione aggiorna `IntakeRecord` e scorte tramite repository, evita duplicati sequenziali e non crea aggiornamenti parziali se la scorta e' insufficiente.
 
 ### Limiti aperti
 
-- nessuna azione rapida Assunta/Saltata dalla notifica;
 - nessun promemoria automatico di scorta bassa;
+- nessun deep link verso dettaglio medicina o storico dopo il tap sulla notifica;
 - i sistemi Android possono ritardare notifiche per battery optimization o negare exact alarm;
 - i permessi negati non bloccano l'app ma richiedono l'intervento dell'utente nelle impostazioni del sistema;
+- un tap su una vecchia notifica rimasta nel drawer ricostruisce lo slot programmato piu' recente per giorno/orario, non uno slot arbitrariamente vecchio;
 - il timezone e' impostato su `Europe/Rome`, adatto al contesto attuale ma non ancora configurabile per profilo.
 
 ### Possibili soluzioni
 
-- aggiungere deep link e azioni rapide verso lo storico;
+- aggiungere deep link verso dettaglio medicina o storico;
 - aggiungere stato UI dedicato a permessi negati o exact alarm non disponibile;
 - usare un timezone configurabile o rilevato dal dispositivo;
 - introdurre promemoria separati per il riacquisto delle scorte.

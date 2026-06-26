@@ -501,6 +501,57 @@ Prima di aggiungere azioni rapide o notifiche piu' avanzate, era necessario stab
 
 Stato finale: completato con test automatici verdi; restano richieste le verifiche manuali su dispositivo Android per ricezione reale, permessi ed exact alarm.
 
+## 2026-06-26 - Sprint Notifiche Locali 2
+
+Tipo modifica: Feature / Refactor leggero / Test / Documentation.
+
+Descrizione:
+
+- aggiunte azioni rapide `Assunta` e `Saltata` alle notifiche locali delle medicine;
+- introdotto un payload JSON versionato con `medicineId`, giorno della settimana, ora e minuto;
+- aggiunto `NotificationActionHandler` per gestire le azioni senza `BuildContext`, anche da background isolate quando supportato dal plugin;
+- estratta la logica di registrazione assunzione e aggiornamento scorte in `IntakeActionService`, riusata sia dal Provider sia dalle notifiche;
+- aggiunto listener Provider sugli eventi di azione notifica per ricaricare cache e storico quando l'app e' gia' aperta;
+- registrato `ActionBroadcastReceiver` nel Manifest Android;
+- aggiunti test per payload, azione Assunta, azione Saltata, anti-duplicato, decremento/ripristino scorte e scorta insufficiente.
+
+File modificati:
+
+- `android/app/src/main/AndroidManifest.xml`;
+- `lib/models/intake_stock_change.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `lib/services/intake_action_service.dart`;
+- `lib/services/notification_action_handler.dart`;
+- `lib/services/notification_payload.dart`;
+- `lib/services/notification_service.dart`;
+- `test/notification_action_handler_test.dart`;
+- `test/notification_service_test.dart`;
+- `README.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- notifiche locali senza azioni rapide Assunta/Saltata;
+- logica assunzione/scorte vincolata al Provider e quindi non riutilizzabile dal callback notifica;
+- assenza di payload sufficiente a ricostruire lo slot notificato;
+- assenza del receiver Android richiesto dal plugin per le notification actions.
+
+Problemi rimandati:
+
+- deep link verso dettaglio medicina o storico;
+- UI dedicata per permessi negati, exact alarm non disponibile e battery optimization;
+- promemoria automatici per scorte basse;
+- gestione perfetta di notifiche molto vecchie rimaste nel drawer: oggi viene ricostruito lo slot programmato piu' recente per giorno/orario.
+
+Motivazione:
+
+Lo sprint rende le notifiche locali utili nel flusso quotidiano, mantenendo separata la logica applicativa da UI e plugin nativo e riusando le regole gia' testate per storico e scorte.
+
+Stato finale: completato con test automatici verdi; restano richieste verifiche manuali su dispositivo Android reale per background, app chiusa e permessi.
+
 ## 2026-06-24 - Bug fix mirato storico e ricarica scorte
 
 Tipo modifica: Bug Fix / Documentation.

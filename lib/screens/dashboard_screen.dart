@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/medicine.dart';
 import '../models/intake_record.dart';
+import '../models/intake_stock_change.dart';
 import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/app_settings.dart';
 import '../models/intake_record.dart';
+import '../models/intake_stock_change.dart';
 import '../models/medicine.dart';
 import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
@@ -12,10 +15,10 @@ import '../repositories/medicine_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../repositories/therapy_repository.dart';
+import '../services/intake_action_service.dart';
 import '../services/missed_intake_planner.dart';
+import '../services/notification_action_handler.dart';
 import '../services/notification_service.dart';
-
-enum IntakeStockChange { decreased, restored, noQuantity, unchanged }
 
 class MedicineProvider extends ChangeNotifier {
   MedicineProvider({
@@ -25,12 +28,20 @@ class MedicineProvider extends ChangeNotifier {
     MedicineRepository? medicineRepository,
     IntakeRepository? intakeRepository,
     MedicineNotificationScheduler? notificationService,
+    IntakeActionService? intakeActionService,
   }) : _profileRepository = profileRepository ?? ProfileRepository(),
        _settingsRepository = settingsRepository ?? SettingsRepository(),
        _therapyRepository = therapyRepository ?? TherapyRepository(),
        _medicineRepository = medicineRepository ?? MedicineRepository(),
        _intakeRepository = intakeRepository ?? IntakeRepository(),
-       _notificationService = notificationService ?? NotificationService();
+       _notificationService = notificationService ?? NotificationService(),
+       _intakeActionService =
+           intakeActionService ??
+           IntakeActionService(
+             profileRepository: profileRepository ?? ProfileRepository(),
+             medicineRepository: medicineRepository ?? MedicineRepository(),
+             intakeRepository: intakeRepository ?? IntakeRepository(),
+           );
 
   final ProfileRepository _profileRepository;
   final SettingsRepository _settingsRepository;
@@ -38,8 +49,10 @@ class MedicineProvider extends ChangeNotifier {
   final MedicineRepository _medicineRepository;
   final IntakeRepository _intakeRepository;
   final MedicineNotificationScheduler _notificationService;
+  final IntakeActionService _intakeActionService;
   final List<Therapy> _therapies = [];
   final List<IntakeRecord> _intakeRecords = [];
+  StreamSubscription<void>? _notificationActionSubscription;
   UserProfile _currentProfile = UserProfile(
     id: 'local-user',
     name: 'Utente',
@@ -65,6 +78,7 @@ class MedicineProvider extends ChangeNotifier {
   Future<void> initialize() async {
     if (_isInitialized || _isLoading) return;
 
+    _listenForNotificationActions();
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -657,22 +671,24 @@ class MedicineProvider extends ChangeNotifier {
   Future<IntakeStockChange> markMedicineAsTaken({
     required String medicineId,
     required DateTime scheduledDateTime,
-  }) {
+  }) async {
     return _saveIntakeStatus(
-      medicineId: medicineId,
-      scheduledDateTime: scheduledDateTime,
-      status: IntakeStatus.taken,
+      () => _intakeActionService.markTaken(
+        medicineId: medicineId,
+        scheduledDateTime: scheduledDateTime,
+      ),
     );
   }
 
   Future<IntakeStockChange> markMedicineAsSkipped({
     required String medicineId,
     required DateTime scheduledDateTime,
-  }) {
+  }) async {
     return _saveIntakeStatus(
-      medicineId: medicineId,
-      scheduledDateTime: scheduledDateTime,
-      status: IntakeStatus.skipped,
+      () => _intakeActionService.markSkipped(
+        medicineId: medicineId,
+        scheduledDateTime: scheduledDateTime,
+      ),
     );
   }
 
@@ -710,97 +726,11 @@ class MedicineProvider extends ChangeNotifier {
     return first.minute.compareTo(second.minute);
   }
 
-  Future<IntakeStockChange> _saveIntakeStatus({
-    required String medicineId,
-    required DateTime scheduledDateTime,
-    required IntakeStatus status,
-  }) async {
-    final medicine = getMedicineById(medicineId);
-    if (medicine == null) {
-      throw StateError('La medicina selezionata non e disponibile.');
-    }
-
-    final existingRecord =
-        _findIntakeRecord(medicineId, scheduledDateTime) ??
-        await _intakeRepository.getIntakeRecordForSchedule(
-          medicineId: medicineId,
-          scheduledDateTime: scheduledDateTime,
-        );
-    final now = DateTime.now();
-    final wasTaken = existingRecord?.status == IntakeStatus.taken;
-    final isTaken = status == IntakeStatus.taken;
-    final shouldDecreaseStock = !wasTaken && isTaken;
-    final shouldRestoreStock = wasTaken && status == IntakeStatus.skipped;
-    final stockAmount = shouldRestoreStock
-        ? Medicine.stockConsumptionAmountFromDose(
-            existingRecord!.medicineDoseSnapshot,
-          )
-        : medicine.stockConsumptionAmount;
-
-    Medicine? updatedMedicine;
-    var stockChange = IntakeStockChange.unchanged;
-    if (shouldDecreaseStock) {
-      if (stockAmount == null) {
-        stockChange = IntakeStockChange.noQuantity;
-      } else {
-        if (medicine.stockQuantity + 0.000001 < stockAmount) {
-          throw StateError(
-            'Scorta insufficiente per registrare questa assunzione.',
-          );
-        }
-        updatedMedicine = medicine.copyWith(
-          stockQuantity: Medicine.normalizeQuantity(
-            medicine.stockQuantity - stockAmount,
-          ),
-          updatedAt: now,
-        );
-        stockChange = IntakeStockChange.decreased;
-      }
-    } else if (shouldRestoreStock) {
-      if (stockAmount == null) {
-        stockChange = IntakeStockChange.noQuantity;
-      } else {
-        updatedMedicine = medicine.copyWith(
-          stockQuantity: Medicine.normalizeQuantity(
-            medicine.stockQuantity + stockAmount,
-          ),
-          updatedAt: now,
-        );
-        stockChange = IntakeStockChange.restored;
-      }
-    }
-
-    final preserveTakenSnapshot = shouldRestoreStock;
-    final record = existingRecord == null
-        ? IntakeRecord(
-            id: const Uuid().v4(),
-            medicineId: medicine.id,
-            profileId: _currentProfile.id,
-            scheduledDateTime: scheduledDateTime,
-            actualDateTime: status == IntakeStatus.taken ? now : null,
-            status: status,
-            medicineNameSnapshot: medicine.name,
-            medicineDoseSnapshot: medicine.dose,
-            createdAt: now,
-          )
-        : existingRecord.copyWith(
-            status: status,
-            actualDateTime: status == IntakeStatus.taken ? now : null,
-            clearActualDateTime: status == IntakeStatus.skipped,
-            medicineNameSnapshot: preserveTakenSnapshot
-                ? existingRecord.medicineNameSnapshot
-                : medicine.name,
-            medicineDoseSnapshot: preserveTakenSnapshot
-                ? existingRecord.medicineDoseSnapshot
-                : medicine.dose,
-          );
-
+  Future<IntakeStockChange> _saveIntakeStatus(
+    Future<IntakeStockChange> Function() action,
+  ) async {
     try {
-      await _intakeRepository.saveIntakeRecordWithStock(
-        record: record,
-        updateExistingRecord: existingRecord != null,
-        updatedMedicine: updatedMedicine,
-      );
+      final stockChange = await action();
       await _reloadCache();
       await _reloadIntakeHistory();
       _errorMessage = null;
@@ -811,6 +741,29 @@ class MedicineProvider extends ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+  }
+
+  void _listenForNotificationActions() {
+    _notificationActionSubscription ??= NotificationActionEvents
+        .instance
+        .completed
+        .listen((_) async {
+          try {
+            await _reloadCache();
+            await _reloadIntakeHistory();
+            _errorMessage = null;
+            notifyListeners();
+          } catch (_) {
+            _errorMessage = 'Impossibile aggiornare i dati dopo la notifica.';
+            notifyListeners();
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _notificationActionSubscription?.cancel();
+    super.dispose();
   }
 
   IntakeRecord? _findIntakeRecord(
