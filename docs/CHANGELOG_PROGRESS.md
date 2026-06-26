@@ -423,6 +423,88 @@ Il progetto ora rispetta il modello `TERAPIE -> MEDICINE`: una terapia puo' esis
 
 Stato finale: completato con verifiche statiche e test Flutter.
 
+## 2026-06-24 - Sprint Notifiche Locali 1
+
+Tipo modifica: Feature / Provider integration / Documentation.
+
+Descrizione:
+
+- completato `NotificationService` con inizializzazione idempotente, timezone, richiesta permessi e pianificazione ricorrente;
+- introdotti ID deterministici basati su medicina, giorno e orario;
+- collegata la sincronizzazione a inizializzazione app, creazione, modifica, attivazione, disattivazione, archiviazione ed eliminazione di medicine e terapie;
+- il toggle notifiche del profilo cancella tutti i reminder quando viene disabilitato e li ricrea quando viene riabilitato;
+- aggiunti test per stabilita' degli ID e contenuto del promemoria;
+- confermati permessi Android e receiver di boot gia' presenti nel manifest.
+
+File modificati:
+
+- `lib/services/notification_service.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `test/notification_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- notifiche locali non inizializzate e non collegate al flusso medicine;
+- assenza di una strategia idempotente per ID, cancellazione e ripianificazione.
+
+Problemi rimandati:
+
+- azioni rapide Assunta/Saltata e deep link dalla notifica;
+- avvisi di scorta bassa;
+- stato UI avanzato per permessi negati, timezone configurabile e battery optimization Android.
+
+Motivazione:
+
+Lo sprint introduce promemoria persistenti e ricorrenti senza far dipendere UI o storico dal plugin notifiche.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, test Flutter e build APK debug superati; restano consigliate le verifiche manuali su dispositivo Android.
+
+## 2026-06-24 - Bug fix mirato storico e ricarica scorte
+
+Tipo modifica: Bug Fix / Documentation.
+
+Descrizione:
+
+- corretto il rollover delle assunzioni Dimenticate: gli slot precedenti alla creazione della medicina, dello schedule o alla data di inizio terapia non vengono piu' creati;
+- mantenuti limite di sette giorni, esclusione della giornata corrente e protezione dai record duplicati;
+- reso sicuro il dialog di ricarica scorte: raccoglie il valore, si chiude e solo dopo aggiorna Provider, database e cache;
+- spostata la proprieta' del `TextEditingController` nel dialog, cosi' viene disposto solo dopo la sua rimozione effettiva;
+- rimosso il listener non necessario dal root `MaterialApp` e stabilizzate le card scorte con chiavi per ID medicina;
+- resa esplicita la soglia minima come avviso visivo: una ricarica valida non viene bloccata se la quantita' finale resta sotto soglia;
+- evitato l'uso del contesto del dialog dopo una scrittura asincrona e la conseguente schermata rossa Flutter.
+
+File modificati:
+
+- `lib/services/missed_intake_planner.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `lib/screens/stock_screen.dart`;
+- `lib/app.dart`;
+- `test/stock_screen_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- record `missed` falsi per slot antecedenti alla creazione di medicina o schedule;
+- assert Flutter `_dependents.isEmpty` durante la ricarica manuale delle scorte, anche quando la scorta resta sotto soglia.
+
+Problemi rimandati:
+
+- filtri e statistiche storico;
+- registro dedicato per ricariche e correzioni manuali delle scorte;
+- notifiche locali, report, backup e cloud.
+
+Motivazione:
+
+Le correzioni eliminano due regressioni emerse dai test manuali senza alterare il dominio, lo schema Drift o i flussi UI esistenti.
+
+Stato finale: completato con `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali su dispositivo.
+
 ## 2026-06-24 - Sprint Scorte automatiche da assunzioni
 
 Tipo modifica: Feature / Bug Fix / Documentation.
@@ -515,6 +597,53 @@ Motivazione:
 La migrazione consente una gestione precisa delle scorte mantenendo compatibilita' con i dati locali gia' salvati.
 
 Stato finale: completato con migrazione Drift, `dart analyze`, `flutter analyze` e test Flutter superati; restano consigliate le verifiche manuali su dispositivo.
+
+## 2026-06-24 - Sprint Assunzioni dimenticate al cambio giorno
+
+Tipo modifica: Feature / Provider integration / Documentation.
+
+Descrizione:
+
+- introdotto lo stato `missed` per rappresentare una dose dimenticata;
+- aggiunto il rollover all'inizializzazione del Provider;
+- creati record `missed` solo per slot programmati dei sette giorni precedenti senza record esistente;
+- mantenuti snapshot di nome e dose e nessuna modifica alle scorte;
+- aggiunta visualizzazione Dimenticata nello storico;
+- mantenuto invariato il comportamento della Dashboard per le assunzioni della giornata corrente.
+
+File modificati:
+
+- `lib/models/intake_record.dart`;
+- `lib/data/mappers/intake_record_mapper.dart`;
+- `lib/repositories/intake_repository.dart`;
+- `lib/services/missed_intake_planner.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `lib/screens/history_screen.dart`;
+- `test/intake_record_test.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- assunzioni passate non registrate e assenti dallo storico;
+- assenza di uno stato dedicato per una dose dimenticata;
+- rischio di duplicare record al riavvio, mitigato dal controllo medicina e orario previsto.
+
+Problemi rimandati:
+
+- recupero automatico di slot piu' vecchi di sette giorni;
+- gestione delle assunzioni in ritardo;
+- filtri, statistiche, notifiche, report e backup.
+
+Motivazione:
+
+Lo sprint completa il cambio giorno senza anticipare notifiche o modificare le assunzioni ancora recuperabili nella giornata corrente.
+
+Stato finale: implementato, verifiche automatiche e manuali da completare.
 
 ## 2026-06-24 - Sprint Storico Assunzioni Base
 

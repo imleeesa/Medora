@@ -34,7 +34,8 @@ class StockScreen extends StatelessWidget {
             itemCount: medicines.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              return _StockCard(medicine: medicines[index]);
+              final medicine = medicines[index];
+              return _StockCard(key: ValueKey(medicine.id), medicine: medicine);
             },
           );
         },
@@ -46,7 +47,7 @@ class StockScreen extends StatelessWidget {
 class _StockCard extends StatelessWidget {
   final Medicine medicine;
 
-  const _StockCard({required this.medicine});
+  const _StockCard({super.key, required this.medicine});
 
   @override
   Widget build(BuildContext context) {
@@ -146,66 +147,85 @@ class _StockCard extends StatelessWidget {
     BuildContext context,
     Medicine medicine,
   ) async {
-    final controller = TextEditingController();
-    String? errorMessage;
+    final provider = context.read<MedicineProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogBuildContext, setDialogState) => AlertDialog(
-          title: const Text('Ricarica scorta'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: 'Quantita da aggiungere',
-              hintText: 'Es. 10 o 2.5',
-              errorText: errorMessage,
-            ),
+    try {
+      final quantity = await showDialog<double>(
+        context: context,
+        builder: (_) => const _RestockDialog(),
+      );
+
+      if (quantity == null) return;
+
+      await provider.addStock(medicineId: medicine.id, quantity: quantity);
+      if (!messenger.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Scorta aggiornata di ${Medicine.formatQuantity(quantity)} unita',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Annulla'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final quantity = double.tryParse(
-                  controller.text.trim().replaceAll(',', '.'),
-                );
-                if (quantity == null || quantity <= 0) {
-                  setDialogState(
-                    () => errorMessage =
-                        'Inserisci una quantita maggiore di zero',
-                  );
-                  return;
-                }
+        ),
+      );
+    } catch (_) {
+      if (!messenger.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Impossibile ricaricare la scorta.')),
+      );
+    }
+  }
+}
 
-                try {
-                  await context.read<MedicineProvider>().addStock(
-                    medicineId: medicine.id,
-                    quantity: quantity,
-                  );
-                  if (!context.mounted || !dialogContext.mounted) return;
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Scorta aggiornata di ${Medicine.formatQuantity(quantity)} unita',
-                      ),
-                    ),
-                  );
-                } catch (error) {
-                  setDialogState(() => errorMessage = '$error');
-                }
-              },
-              child: const Text('Aggiungi'),
-            ),
-          ],
+class _RestockDialog extends StatefulWidget {
+  const _RestockDialog();
+
+  @override
+  State<_RestockDialog> createState() => _RestockDialogState();
+}
+
+class _RestockDialogState extends State<_RestockDialog> {
+  final TextEditingController _controller = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final quantity = double.tryParse(
+      _controller.text.trim().replaceAll(',', '.'),
+    );
+    if (quantity == null || quantity <= 0) {
+      setState(() => _errorMessage = 'Inserisci una quantita maggiore di zero');
+      return;
+    }
+
+    Navigator.pop(context, quantity);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Ricarica scorta'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: 'Quantita da aggiungere',
+          hintText: 'Es. 10 o 2.5',
+          errorText: _errorMessage,
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Aggiungi')),
+      ],
     );
-    controller.dispose();
   }
 }

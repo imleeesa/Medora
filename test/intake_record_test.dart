@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meditrack/models/intake_record.dart';
 
 void main() {
-  test('maps legacy missed records to skipped', () {
+  test('preserves legacy missed records as missed', () {
     final record = IntakeRecord.fromJson({
       'id': 'record-1',
       'medicineId': 'medicine-1',
@@ -14,7 +14,7 @@ void main() {
       'medicineDoseSnapshot': '',
     });
 
-    expect(record.status, IntakeStatus.skipped);
+    expect(record.status, IntakeStatus.missed);
     expect(record.doseLabel, 'Dose non specificata');
   });
 

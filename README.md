@@ -45,12 +45,12 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Quantita' di scorta e consumo per dose supportano interi, frazioni e decimali.
 - Ricarica manuale persistente delle scorte dalla schermata Scorte.
 - Dashboard con azioni rapide per segnare le assunzioni di oggi come assunte o saltate.
-- Schermata Storico persistente con stato, snapshot della medicina, dose e data/ora.
+- Schermata Storico persistente con stati assunta, saltata e dimenticata, snapshot della medicina, dose e data/ora.
 - Decremento automatico della scorta per assunzioni con quantita' intera, frazionaria o decimale definita.
 - Profilo utente locale con nome, preferenze tema e notifiche.
 - Persistenza locale di profilo, impostazioni, terapie, medicine, scorte e schedule.
 - Schermata Impostazioni predisposta per backup e report PDF.
-- Servizio notifiche locali presente nel codice e pronto per integrazione nel flusso applicativo.
+- Promemoria locali ricorrenti per medicine attive, basati su giorni e orari programmati.
 
 ## Funzionalita' pianificate
 
@@ -58,9 +58,9 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Evoluzione del sistema Terapie con filtri, ordinamento e stati archiviati piu' chiari.
 - Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' e flussi di modifica completi.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
-- Evoluzione dello storico con filtri, ritardi, note e statistiche.
+- Evoluzione dello storico con filtri, ritardi, note e statistiche avanzate.
 - Gestione avanzata delle scorte con registro carico/scarico e promemoria di riacquisto.
-- Notifiche locali integrate con le medicine salvate.
+- Notifiche locali avanzate con azioni rapide, gestione permessi e avvisi scorte.
 - Migrazioni schema e test automatici del database locale.
 - Profili multipli per utente, familiari o caregiver.
 - Report PDF esportabile per medico o uso personale.
@@ -223,7 +223,7 @@ flutter run -d <device-id>
 
 Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
-Il codice contiene gia' model serializzabili e un servizio notifiche locali, elementi utili per la prossima evoluzione architetturale. Lo storico base e' operativo e persistente; Backup e Report PDF restano predisposti ma non ancora operativi.
+Lo storico base e' operativo e persistente. Le notifiche locali base vengono pianificate per le medicine attive quando il sistema concede i permessi; Backup e Report PDF restano predisposti ma non ancora operativi.
 
 ## Roadmap futura
 
@@ -255,7 +255,7 @@ Il codice contiene gia' model serializzabili e un servizio notifiche locali, ele
 ### Fase 5 - Storico
 
 - Registrare ogni assunzione programmata.
-- Gestire stati: assunta, saltata, dimenticata o in ritardo.
+- Gestire stati avanzati come ritardata, note e correzioni dello storico.
 - Aggiungere filtri per periodo, terapia e medicina.
 - Preparare statistiche e dati per report.
 
@@ -268,10 +268,9 @@ Il codice contiene gia' model serializzabili e un servizio notifiche locali, ele
 
 ### Fase 7 - Notifiche
 
-- Integrare `NotificationService` con creazione, modifica e cancellazione delle medicine.
-- Pianificare promemoria ricorrenti per giorni e orari selezionati.
-- Gestire permessi Android e iOS in modo guidato.
+- Consolidare i test dei promemoria locali su dispositivi reali e le eccezioni di battery optimization Android.
 - Aggiungere azioni da notifica, se supportate.
+- Aggiungere promemoria dedicati per scorte basse.
 
 ### Fase 8 - Database
 

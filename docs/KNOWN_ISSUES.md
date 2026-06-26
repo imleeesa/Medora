@@ -189,11 +189,11 @@ Parzialmente risolto
 
 ### Cosa e' stato trovato
 
-Lo storico base e' ora operativo: Dashboard permette di segnare ogni assunzione prevista per oggi come assunta o saltata, il Provider salva o aggiorna un `IntakeRecord` in Drift e la schermata Storico mostra i record persistiti con snapshot di nome e dose.
+Lo storico base e' ora operativo: Dashboard permette di segnare ogni assunzione prevista per oggi come assunta o saltata, il Provider salva o aggiorna un `IntakeRecord` in Drift e la schermata Storico mostra i record persistiti con snapshot di nome e dose. All'avvio, gli slot degli ultimi sette giorni senza record vengono salvati come `missed` / Dimenticata, senza modificare le scorte.
 
 ### Motivazione
 
-Restano fuori dal perimetro le statistiche, i filtri per periodo o terapia, i record previsti creati in anticipo, le assunzioni in ritardo e il collegamento automatico con notifiche e scorte.
+Restano fuori dal perimetro le statistiche, i filtri per periodo o terapia, i record previsti creati in anticipo, le assunzioni in ritardo e il collegamento automatico con notifiche.
 
 ### Possibili soluzioni
 
@@ -201,6 +201,79 @@ Restano fuori dal perimetro le statistiche, i filtri per periodo o terapia, i re
 - collegare la conferma assunzione alle notifiche;
 - introdurre statistiche e report basati sui record persistiti;
 - valutare la generazione anticipata dei record `scheduled` per le viste future.
+
+### Limite di recupero
+
+Per evitare di generare molti record dopo un lungo periodo di inattivita', il rollover controlla al massimo i sette giorni precedenti. Gli slot piu' vecchi non vengono ricostruiti automaticamente.
+
+## Assunzioni dimenticate anteriori alla creazione della medicina
+
+### Categoria
+
+Bug.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-24
+
+### Causa
+
+Il planner controllava gli schedule dei sette giorni precedenti senza verificare se medicina o schedule esistessero gia' alla data e ora dello slot. Una programmazione creata oggi poteva quindi produrre una falsa assunzione Dimenticata per un giorno passato.
+
+### Come e' stato risolto
+
+`MissedIntakePlanner` considera uno slot solo quando e' uguale o successivo al momento piu' recente tra `medicine.createdAt`, `schedule.createdAt` e `therapy.startDate`, quando disponibile. Restano invariati il limite di sette giorni, l'esclusione della giornata corrente e il controllo anti-duplicato.
+
+### File modificati
+
+- `lib/services/missed_intake_planner.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+### Note
+
+I test coprono medicina o schedule creati dopo lo slot, slot valido precedente, record gia' presenti e riavvio successivo.
+
+## Schermata rossa durante la ricarica delle scorte
+
+### Categoria
+
+Bug UI/state.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-06-24
+
+### Causa
+
+Il `TextEditingController` del dialog veniva disposto subito dopo `Navigator.pop`, mentre il `TextField` poteva essere ancora montato durante l'animazione di chiusura della route. Questo errore di lifecycle generava ricostruzioni incoerenti e l'assert Flutter `_dependents.isEmpty`. Inoltre `MyApp` ascoltava `MedicineProvider` senza usare alcun dato, ricostruendo inutilmente l'intero `MaterialApp` a ogni aggiornamento.
+
+### Come e' stato risolto
+
+Il dialog ora valida e restituisce soltanto la quantita'. Il suo `TextEditingController` e' posseduto da uno `StatefulWidget` dedicato e viene disposto solo nel suo `dispose`, dopo la rimozione effettiva della route. Il dialog si chiude prima della scrittura asincrona; Provider e `ScaffoldMessengerState` vengono acquisiti dal contesto della schermata prima dell'attesa, cosi' l'aggiornamento e il messaggio finale non usano il contesto del dialog chiuso. `MyApp` non ascolta piu' il Provider, quindi `MaterialApp`, Navigator e ScaffoldMessenger restano stabili durante gli aggiornamenti. Le card scorte hanno una chiave basata sull'ID medicina. La soglia minima resta solo un avviso visivo e non blocca mai una ricarica valida.
+
+### File modificati
+
+- `lib/screens/stock_screen.dart`;
+- `lib/app.dart`;
+- `test/stock_screen_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+### Note
+
+La ricarica resta persistente e accetta quantita' intere o decimali positive, anche quando il totale resta sotto soglia.
 
 ## Decremento automatico delle scorte dopo un'assunzione
 
@@ -234,26 +307,34 @@ La dose resta testo libero: il decremento interpreta soltanto la quantita' inizi
 
 ### Categoria
 
-Feature futura da lasciare aperta.
+Funzionalita' parzialmente implementata.
 
 ### Stato
 
-Aperto
+Parzialmente risolto
 
-### Cosa e' stato trovato
+### Data aggiornamento
 
-`NotificationService` e' presente, ma non viene inizializzato all'avvio e non viene usato quando una medicina viene creata, modificata, disattivata o cancellata.
+2026-06-24
 
-### Motivazione
+### Cosa e' stato risolto
 
-L'integrazione completa delle notifiche richiede una strategia stabile per ID notifica, permessi, scheduling ricorrente e cancellazione. Non va introdotta come fix rapido.
+`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm e ripristino al boot.
+
+### Limiti aperti
+
+- nessuna azione rapida Assunta/Saltata dalla notifica;
+- nessun promemoria automatico di scorta bassa;
+- i sistemi Android possono ritardare notifiche per battery optimization o negare exact alarm;
+- i permessi negati non bloccano l'app ma richiedono l'intervento dell'utente nelle impostazioni del sistema;
+- il timezone e' impostato su `Europe/Rome`, adatto al contesto attuale ma non ancora configurabile per profilo.
 
 ### Possibili soluzioni
 
-- inizializzare il servizio in fase di avvio;
-- pianificare notifiche alla creazione/modifica medicina;
-- cancellare notifiche quando una medicina viene disattivata o rimossa;
-- verificare permessi Android e iOS.
+- aggiungere deep link e azioni rapide verso lo storico;
+- aggiungere stato UI dedicato a permessi negati o exact alarm non disponibile;
+- usare un timezone configurabile o rilevato dal dispositivo;
+- introdurre promemoria separati per il riacquisto delle scorte.
 
 ## Backup e report PDF sono voci non operative
 

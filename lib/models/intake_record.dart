@@ -3,6 +3,7 @@ enum IntakeStatus {
   scheduled, // Prevista
   taken, // Assunta
   skipped, // Saltata
+  missed, // Dimenticata
 }
 
 /// Modello per il record di assunzione
@@ -61,7 +62,8 @@ class IntakeRecord {
     status: switch (json['status']) {
       'scheduled' => IntakeStatus.scheduled,
       'taken' => IntakeStatus.taken,
-      'missed' || 'skipped' => IntakeStatus.skipped,
+      'missed' => IntakeStatus.missed,
+      'skipped' => IntakeStatus.skipped,
       _ => IntakeStatus.scheduled,
     },
     notes: json['notes'],

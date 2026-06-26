@@ -47,7 +47,8 @@ class IntakeRecordMapper {
     return switch (status) {
       'scheduled' => app.IntakeStatus.scheduled,
       'taken' => app.IntakeStatus.taken,
-      'missed' || 'skipped' => app.IntakeStatus.skipped,
+      'missed' => app.IntakeStatus.missed,
+      'skipped' => app.IntakeStatus.skipped,
       _ => throw ArgumentError.value(
         status,
         'status',
@@ -61,6 +62,7 @@ class IntakeRecordMapper {
       app.IntakeStatus.scheduled => 'scheduled',
       app.IntakeStatus.taken => 'taken',
       app.IntakeStatus.skipped => 'skipped',
+      app.IntakeStatus.missed => 'missed',
     };
   }
 }

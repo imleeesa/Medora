@@ -12,6 +12,8 @@ import '../repositories/medicine_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../repositories/therapy_repository.dart';
+import '../services/missed_intake_planner.dart';
+import '../services/notification_service.dart';
 
 enum IntakeStockChange { decreased, restored, noQuantity, unchanged }
 
@@ -22,17 +24,20 @@ class MedicineProvider extends ChangeNotifier {
     TherapyRepository? therapyRepository,
     MedicineRepository? medicineRepository,
     IntakeRepository? intakeRepository,
+    MedicineNotificationScheduler? notificationService,
   }) : _profileRepository = profileRepository ?? ProfileRepository(),
        _settingsRepository = settingsRepository ?? SettingsRepository(),
        _therapyRepository = therapyRepository ?? TherapyRepository(),
        _medicineRepository = medicineRepository ?? MedicineRepository(),
-       _intakeRepository = intakeRepository ?? IntakeRepository();
+       _intakeRepository = intakeRepository ?? IntakeRepository(),
+       _notificationService = notificationService ?? NotificationService();
 
   final ProfileRepository _profileRepository;
   final SettingsRepository _settingsRepository;
   final TherapyRepository _therapyRepository;
   final MedicineRepository _medicineRepository;
   final IntakeRepository _intakeRepository;
+  final MedicineNotificationScheduler _notificationService;
   final List<Therapy> _therapies = [];
   final List<IntakeRecord> _intakeRecords = [];
   UserProfile _currentProfile = UserProfile(
@@ -68,6 +73,8 @@ class MedicineProvider extends ChangeNotifier {
       _currentProfile = await _loadOrCreateDefaultProfile();
       await _reloadCache();
       await _reloadIntakeHistory();
+      await _rolloverMissedIntakes();
+      await _initializeNotifications();
       _isInitialized = true;
     } catch (_) {
       _errorMessage = 'Impossibile caricare i dati salvati.';
@@ -125,6 +132,7 @@ class MedicineProvider extends ChangeNotifier {
       }
       await _medicineRepository.createMedicine(medicine);
       await _reloadCache();
+      await _scheduleMedicineNotifications(medicine);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -213,6 +221,7 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<bool> updateTherapy(Therapy therapy) async {
+    final currentTherapy = getTherapyById(therapy.id);
     final cleanedName = therapy.name.trim();
     if (cleanedName.isEmpty) {
       throw ArgumentError.value(
@@ -238,6 +247,11 @@ class MedicineProvider extends ChangeNotifier {
       final updated = await _therapyRepository.updateTherapy(updatedTherapy);
       if (!updated) return false;
       await _reloadCache();
+      if (currentTherapy?.isActive == true && !updatedTherapy.isActive) {
+        await _cancelMedicineNotifications(currentTherapy!.medicines);
+      } else if (currentTherapy?.isActive == false && updatedTherapy.isActive) {
+        await _scheduleTherapyMedicineNotifications(updatedTherapy.id);
+      }
       _errorMessage = null;
       notifyListeners();
       return true;
@@ -261,6 +275,7 @@ class MedicineProvider extends ChangeNotifier {
         therapy.copyWith(isActive: false, updatedAt: DateTime.now()),
       );
       await _reloadCache();
+      await _cancelMedicineNotifications(therapy.medicines);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -282,6 +297,7 @@ class MedicineProvider extends ChangeNotifier {
       await _therapyRepository.deleteTherapy(therapy.id);
       await _reloadCache();
       await _reloadIntakeHistory();
+      await _cancelMedicineNotifications(therapy.medicines);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -306,6 +322,7 @@ class MedicineProvider extends ChangeNotifier {
       );
       if (!updated) return;
       await _reloadCache();
+      await _scheduleTherapyMedicineNotifications(therapy.id);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -416,6 +433,8 @@ class MedicineProvider extends ChangeNotifier {
       final updated = await _medicineRepository.updateMedicine(updatedMedicine);
       if (!updated) return;
       await _reloadCache();
+      await _cancelMedicineNotifications([medicine]);
+      await _scheduleMedicineNotifications(updatedMedicine);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -428,11 +447,14 @@ class MedicineProvider extends ChangeNotifier {
   Future<void> deleteMedicine(String id) async {
     final location = _findMedicine(id);
     if (location == null) return;
+    final medicine =
+        _therapies[location.therapyIndex].medicines[location.medicineIndex];
 
     try {
       await _medicineRepository.deleteMedicine(id);
       await _reloadCache();
       await _reloadIntakeHistory();
+      await _cancelMedicineNotifications([medicine]);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -459,6 +481,11 @@ class MedicineProvider extends ChangeNotifier {
       final updated = await _medicineRepository.updateMedicine(updatedMedicine);
       if (!updated) return;
       await _reloadCache();
+      if (updatedMedicine.isActive) {
+        await _scheduleMedicineNotifications(updatedMedicine);
+      } else {
+        await _cancelMedicineNotifications([medicine]);
+      }
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -560,6 +587,13 @@ class MedicineProvider extends ChangeNotifier {
       await _profileRepository.updateProfile(updatedProfile);
       await _settingsRepository.updateSettings(settings);
       _currentProfile = updatedProfile;
+      if (notificationsEnabled != null) {
+        if (notificationsEnabled) {
+          await _rescheduleAllMedicineNotifications();
+        } else {
+          await _cancelAllMedicineNotifications();
+        }
+      }
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -821,6 +855,74 @@ class MedicineProvider extends ChangeNotifier {
     return await _profileRepository.getProfileById(profile.id) ?? profile;
   }
 
+  Future<void> _initializeNotifications() async {
+    try {
+      await _notificationService.initialize();
+      await _rescheduleAllMedicineNotifications();
+    } catch (_) {
+      // I promemoria non devono rendere non disponibile la cache locale.
+    }
+  }
+
+  Future<void> _rescheduleAllMedicineNotifications() async {
+    if (!_currentProfile.notificationsEnabled) return;
+
+    final activeMedicines = _therapies
+        .where((therapy) => therapy.isActive)
+        .expand((therapy) => therapy.medicines)
+        .where((medicine) => medicine.isActive)
+        .toList(growable: false);
+    try {
+      await _notificationService.rescheduleActiveMedicines(activeMedicines);
+    } catch (_) {
+      // Il salvataggio delle medicine resta valido anche se il sistema nega
+      // permessi o non supporta le notifiche locali.
+    }
+  }
+
+  Future<void> _scheduleMedicineNotifications(Medicine medicine) async {
+    if (!_currentProfile.notificationsEnabled || !medicine.isActive) return;
+
+    final therapyId = medicine.therapyId;
+    final therapy = therapyId == null ? null : getTherapyById(therapyId);
+    if (therapy == null || !therapy.isActive) return;
+
+    try {
+      await _notificationService.scheduleMedicineNotifications(medicine);
+    } catch (_) {
+      // Una mancata pianificazione non deve annullare una modifica persistita.
+    }
+  }
+
+  Future<void> _scheduleTherapyMedicineNotifications(String therapyId) async {
+    final therapy = getTherapyById(therapyId);
+    if (therapy == null || !therapy.isActive) return;
+
+    for (final medicine in therapy.medicines) {
+      await _scheduleMedicineNotifications(medicine);
+    }
+  }
+
+  Future<void> _cancelMedicineNotifications(
+    Iterable<Medicine> medicines,
+  ) async {
+    for (final medicine in medicines) {
+      try {
+        await _notificationService.cancelMedicineNotifications(medicine);
+      } catch (_) {
+        // La cancellazione dal database non dipende dal canale notifiche.
+      }
+    }
+  }
+
+  Future<void> _cancelAllMedicineNotifications() async {
+    try {
+      await _notificationService.cancelAllNotifications();
+    } catch (_) {
+      // Il toggle preferenze deve restare salvabile anche senza supporto OS.
+    }
+  }
+
   AppSettings _defaultSettings(String profileId) {
     final now = DateTime.now();
     return AppSettings(
@@ -864,6 +966,33 @@ class MedicineProvider extends ChangeNotifier {
     _intakeRecords
       ..clear()
       ..addAll(records);
+  }
+
+  Future<void> _rolloverMissedIntakes() async {
+    final now = DateTime.now();
+    final candidates = MissedIntakePlanner.findCandidates(
+      therapies: _therapies,
+      records: _intakeRecords,
+      referenceDate: now,
+    );
+    if (candidates.isEmpty) return;
+
+    final records = candidates
+        .map(
+          (candidate) => IntakeRecord(
+            id: const Uuid().v4(),
+            medicineId: candidate.medicine.id,
+            profileId: _currentProfile.id,
+            scheduledDateTime: candidate.scheduledDateTime,
+            status: IntakeStatus.missed,
+            medicineNameSnapshot: candidate.medicine.name,
+            medicineDoseSnapshot: candidate.medicine.dose,
+            createdAt: now,
+          ),
+        )
+        .toList(growable: false);
+    await _intakeRepository.createIntakeRecords(records);
+    await _reloadIntakeHistory();
   }
 
   _MedicineLocation? _findMedicine(String id) {

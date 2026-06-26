@@ -552,11 +552,13 @@ class _TodayIntakeCard extends StatelessWidget {
     final statusColor = switch (status) {
       IntakeStatus.taken => const Color(0xFF2E7D32),
       IntakeStatus.skipped => Colors.orange.shade800,
+      IntakeStatus.missed => Colors.red.shade700,
       IntakeStatus.scheduled => Colors.grey.shade700,
     };
     final statusLabel = switch (status) {
       IntakeStatus.taken => 'Assunta',
       IntakeStatus.skipped => 'Saltata',
+      IntakeStatus.missed => 'Dimenticata',
       IntakeStatus.scheduled => 'Prevista',
     };
 

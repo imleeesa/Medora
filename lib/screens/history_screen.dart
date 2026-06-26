@@ -118,6 +118,11 @@ class _IntakeHistoryCard extends StatelessWidget {
         Colors.orange.shade800,
         Icons.skip_next_outlined,
       ),
+      IntakeStatus.missed => (
+        'Dimenticata',
+        Colors.red.shade700,
+        Icons.error_outline,
+      ),
       IntakeStatus.scheduled => (
         'Prevista',
         Colors.grey.shade700,

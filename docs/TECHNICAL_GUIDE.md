@@ -160,7 +160,7 @@ File attuale:
 
 - `notification_service.dart`
 
-Il servizio notifiche inizializza `flutter_local_notifications`, gestisce permessi e pianificazione di promemoria locali. Al momento e' presente ma non ancora collegato in modo completo alla creazione e modifica delle medicine.
+Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `Europe/Rome`, richiede i permessi solo quando il profilo abilita i promemoria e pianifica reminder ricorrenti. Espone l'interfaccia `MedicineNotificationScheduler`, cosi' `MedicineProvider` non dipende dal plugin e il comportamento puo' essere verificato con test di dominio.
 
 ## Responsabilita' dei model
 
@@ -461,7 +461,7 @@ Il Provider mantiene in memoria solo una cache destinata alla UI:
 
 Terapie, medicine, schedule, profilo e impostazioni vengono ora letti e scritti nel database locale tramite repository. Al riavvio l'app ricostruisce la cache dal database, quindi medicine e terapie create dal flusso esistente restano disponibili.
 
-Lo storico assunzioni base e' collegato al flusso persistente; notifiche e backup restano fuori dal flusso principale.
+Lo storico assunzioni base e' collegato al flusso persistente. Le notifiche locali base sono sincronizzate dal Provider senza modificare lo storico; backup resta fuori dal flusso principale.
 
 ## Introduzione futura del database
 
@@ -728,7 +728,7 @@ Motivazione: gli orari e i giorni non dovrebbero restare serializzati dentro `Me
 - `profile_id` TEXT not null, foreign key verso `user_profiles.id`;
 - `scheduled_date_time` TEXT not null;
 - `actual_date_time` TEXT nullable;
-- `status` TEXT not null, valori previsti: `scheduled`, `taken`, `skipped`; il valore legacy `missed` viene letto come `skipped`;
+- `status` TEXT not null, valori previsti: `scheduled`, `taken`, `skipped`, `missed`;
 - `notes` TEXT nullable;
 - `medicine_name_snapshot` TEXT nullable;
 - `medicine_dose_snapshot` TEXT nullable;
@@ -959,15 +959,15 @@ Ogni nuova medicina deve essere associata a una terapia esistente. Il form globa
 
 ### Storico
 
-Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la combinazione medicina e orario previsto evita duplicati. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre le azioni rapide e HistoryScreen visualizza stato, terapia se ancora disponibile, dose e data/ora. Statistiche, filtri, ritardi, notifiche e gestione scorte automatica restano sviluppi futuri.
+Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la combinazione medicina e orario previsto evita duplicati. Durante `initialize`, `MissedIntakePlanner` controlla al massimo i sette giorni precedenti e salva gli slot senza record come `missed`, senza aggiornare le scorte. Uno slot e' idoneo solo dal momento piu' recente tra creazione della medicina, creazione dello schedule e data di inizio della terapia, quando presente: in questo modo non vengono ricostruite dimenticanze anteriori alla programmazione effettiva. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre le azioni rapide solo per la data corrente e HistoryScreen visualizza anche lo stato Dimenticata. Statistiche, filtri, ritardi e notifiche restano sviluppi futuri.
 
 ### Scorte
 
-Lo schema Drift e' alla versione 2: `medicines.stockQuantity` e `medicines.stockWarningThreshold` sono colonne `REAL`, migrate dai precedenti interi con `TableMigration`. `Medicine.stockConsumptionAmount` interpreta la quantita' iniziale della dose: interi, frazioni `1/2` e `1/4`, e decimali con punto o virgola. Quando un record passa a `taken`, `MedicineProvider` aggiorna `stockQuantity` insieme al record nella stessa transazione di `IntakeRepository`; un record gia' `taken` non viene sottratto una seconda volta e il passaggio a `skipped` ripristina la stessa quantita'. Dose assente o testo non interpretabile registrano lo storico ma non cambiano la disponibilita'; una quantita' superiore alla scorta blocca l'azione. `StockScreen` permette una ricarica manuale decimale persistente tramite `addStock`.
+Lo schema Drift e' alla versione 2: `medicines.stockQuantity` e `medicines.stockWarningThreshold` sono colonne `REAL`, migrate dai precedenti interi con `TableMigration`. `Medicine.stockConsumptionAmount` interpreta la quantita' iniziale della dose: interi, frazioni `1/2` e `1/4`, e decimali con punto o virgola. Quando un record passa a `taken`, `MedicineProvider` aggiorna `stockQuantity` insieme al record nella stessa transazione di `IntakeRepository`; un record gia' `taken` non viene sottratto una seconda volta e il passaggio a `skipped` ripristina la stessa quantita'. Dose assente o testo non interpretabile registrano lo storico ma non cambiano la disponibilita'; una quantita' superiore alla scorta blocca l'azione. `StockScreen` permette una ricarica manuale decimale persistente tramite `addStock`: il dialog raccoglie e valida soltanto la quantita', quindi viene chiuso prima dell'aggiornamento asincrono del Provider. Il controller del campo e' posseduto dal dialog e viene disposto solo con la sua route, mai subito dopo il pop. La soglia minima serve solo a determinare lo stato visivo di avviso: una ricarica valida resta consentita anche quando la quantita' finale e' ancora sotto soglia. `MaterialApp` non deve ascoltare cambiamenti ordinari del Provider; mantenerlo stabile evita di ricreare Navigator e ScaffoldMessenger durante aggiornamenti delle schermate.
 
 ### Notifiche
 
-`NotificationService` dovrebbe essere inizializzato all'avvio e usato quando una medicina viene creata, aggiornata, disattivata o cancellata.
+`NotificationService` viene inizializzato durante `MedicineProvider.initialize` dopo il caricamento della cache. Se `notificationsEnabled` e' attivo, il Provider cancella e ripianifica i reminder delle medicine attive appartenenti a terapie attive. Gli ID sono deterministici e derivano da `medicineId`, giorno della settimana, ora e minuto; questo permette di annullare lo slot corretto senza dipendere da ID Drift nella UI. Creazione e modifica medicina cancellano prima i reminder precedenti e poi pianificano quelli nuovi; disattivazione, archiviazione o eliminazione cancellano i reminder coinvolti; riattivazione e toggle impostazioni li ripianificano. Il consenso negato o un sistema non supportato non interrompono persistenza e UI. Le notifiche non aggiornano ancora `IntakeRecord`, non offrono azioni rapide e non gestiscono avvisi di scorta bassa.
 
 ### Profili
 
@@ -998,7 +998,7 @@ Limiti attuali:
 
 - dati non persistenti;
 - storico non ancora operativo;
-- notifiche non ancora integrate nel flusso principale;
+- notifiche locali base senza azioni rapide, avvisi scorte o gestione avanzata permessi;
 - alcune componenti UI sono duplicate localmente nelle schermate;
 - tema scuro predisposto nel profilo ma non ancora applicato all'interfaccia.
 

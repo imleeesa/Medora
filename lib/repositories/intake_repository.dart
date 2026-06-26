@@ -52,6 +52,18 @@ class IntakeRepository {
         .insert(IntakeRecordMapper.toCompanion(record));
   }
 
+  Future<void> createIntakeRecords(List<app.IntakeRecord> records) async {
+    if (records.isEmpty) return;
+    await _database.transaction(() async {
+      await _database.batch((batch) {
+        batch.insertAll(
+          _database.intakeRecords,
+          records.map(IntakeRecordMapper.toCompanion).toList(growable: false),
+        );
+      });
+    });
+  }
+
   Future<bool> updateIntakeRecord(app.IntakeRecord record) {
     return _database
         .update(_database.intakeRecords)
