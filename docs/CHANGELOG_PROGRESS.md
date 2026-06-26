@@ -463,6 +463,44 @@ Lo sprint introduce promemoria persistenti e ricorrenti senza far dipendere UI o
 
 Stato finale: completato con `dart analyze`, `flutter analyze`, test Flutter e build APK debug superati; restano consigliate le verifiche manuali su dispositivo Android.
 
+## 2026-06-26 - QA stabilizzazione notifiche locali
+
+Tipo modifica: QA / Test / Documentation.
+
+Descrizione:
+
+- aggiunta una suite di test sul contratto tra `MedicineProvider` e `MedicineNotificationScheduler`;
+- verificato che l'inizializzazione non ripianifichi piu' volte nello stesso lifecycle del Provider;
+- verificati cancellazione e ripianificazione per modifica medicina, eliminazione, disattivazione e riattivazione;
+- verificati archiviazione, riattivazione ed eliminazione terapia rispetto ai reminder delle medicine associate;
+- verificato il toggle notifiche profilo: off cancella tutti i reminder, on ripianifica solo quelli attivi;
+- verificato che errori o permessi negati del layer notifiche non blocchino salvataggi, startup o cache UI;
+- confermati ID e testo notifica con dose e senza dose tramite i test esistenti di `NotificationService`.
+
+File modificati:
+
+- `test/medicine_provider_notification_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- assenza di copertura automatica sulle regole anti-duplicato e cancellazione/ripianificazione delle notifiche.
+
+Problemi rimandati:
+
+- azioni rapide Assunta/Saltata dalla notifica;
+- deep link dalla notifica verso dettaglio o storico;
+- UI dedicata per permessi negati, exact alarm non disponibile e battery optimization;
+- promemoria automatici per scorte basse.
+
+Motivazione:
+
+Prima di aggiungere azioni rapide o notifiche piu' avanzate, era necessario stabilizzare il comportamento base e renderlo verificabile senza dipendere dal plugin nativo o da un dispositivo reale.
+
+Stato finale: completato con test automatici verdi; restano richieste le verifiche manuali su dispositivo Android per ricezione reale, permessi ed exact alarm.
+
 ## 2026-06-24 - Bug fix mirato storico e ricarica scorte
 
 Tipo modifica: Bug Fix / Documentation.

@@ -315,11 +315,11 @@ Parzialmente risolto
 
 ### Data aggiornamento
 
-2026-06-24
+2026-06-26
 
 ### Cosa e' stato risolto
 
-`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm e ripristino al boot.
+`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm e ripristino al boot. Lo sprint QA del 2026-06-26 ha aggiunto test Provider con scheduler finto per coprire startup, modifica medicina, cancellazione, disattivazione/riattivazione, archiviazione/eliminazione terapia, toggle notifiche e failure best-effort per permessi o exact alarm negati.
 
 ### Limiti aperti
 
