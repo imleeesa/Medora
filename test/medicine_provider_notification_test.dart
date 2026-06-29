@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:meditrack/app.dart';
 import 'package:meditrack/models/app_settings.dart';
 import 'package:meditrack/models/intake_record.dart';
 import 'package:meditrack/models/medicine.dart';
 import 'package:meditrack/models/medicine_schedule.dart';
+import 'package:meditrack/models/notification_permission_status.dart';
 import 'package:meditrack/models/therapy.dart';
 import 'package:meditrack/models/user_profile.dart';
 import 'package:meditrack/providers/medicine_provider.dart';
@@ -12,8 +15,10 @@ import 'package:meditrack/repositories/medicine_repository.dart';
 import 'package:meditrack/repositories/profile_repository.dart';
 import 'package:meditrack/repositories/settings_repository.dart';
 import 'package:meditrack/repositories/therapy_repository.dart';
+import 'package:meditrack/screens/settings_screen.dart';
 import 'package:meditrack/services/intake_action_service.dart';
 import 'package:meditrack/services/notification_action_handler.dart';
+import 'package:meditrack/services/notification_navigation_service.dart';
 import 'package:meditrack/services/notification_service.dart';
 
 void main() {
@@ -265,6 +270,161 @@ void main() {
     );
 
     test(
+      'notification permission status can be refreshed and requested safely',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [_medicine(id: 'medicine-1', therapyId: 'therapy-1')],
+            ),
+          ],
+          notifications: _FakeNotificationScheduler(
+            permissionStatus: const NotificationPermissionStatus(
+              localNotificationsSupported: true,
+              notificationsAllowed: false,
+              exactAlarmsAllowed: false,
+              exactAlarmsCanBeChecked: true,
+            ),
+            requestedNotificationStatus: const NotificationPermissionStatus(
+              localNotificationsSupported: true,
+              notificationsAllowed: true,
+              exactAlarmsAllowed: false,
+              exactAlarmsCanBeChecked: true,
+            ),
+            requestedExactAlarmStatus: const NotificationPermissionStatus(
+              localNotificationsSupported: true,
+              notificationsAllowed: true,
+              exactAlarmsAllowed: true,
+              exactAlarmsCanBeChecked: true,
+            ),
+          ),
+        );
+
+        await fixture.provider.initialize();
+        expect(
+          fixture.provider.notificationPermissionStatus.notificationsAllowed,
+          isFalse,
+        );
+
+        await fixture.provider.requestNotificationPermission();
+        expect(
+          fixture.provider.notificationPermissionStatus.notificationsAllowed,
+          isTrue,
+        );
+        expect(
+          fixture.provider.notificationPermissionStatus.exactAlarmsAllowed,
+          isFalse,
+        );
+
+        await fixture.provider.requestExactAlarmPermission();
+        expect(
+          fixture.provider.notificationPermissionStatus.remindersCanBeScheduled,
+          isTrue,
+        );
+        expect(fixture.notifications.rescheduledBatches, [
+          ['medicine-1'],
+          ['medicine-1'],
+          ['medicine-1'],
+        ]);
+      },
+    );
+
+    testWidgets(
+      'settings screen shows notification permission and exact alarm status',
+      (tester) async {
+        final fixture = _ProviderFixture(
+          therapies: const [],
+          notifications: _FakeNotificationScheduler(
+            permissionStatus: const NotificationPermissionStatus(
+              localNotificationsSupported: true,
+              notificationsAllowed: false,
+              exactAlarmsAllowed: false,
+              exactAlarmsCanBeChecked: true,
+            ),
+          ),
+        );
+        await fixture.provider.initialize();
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: fixture.provider,
+            child: const MaterialApp(home: SettingsScreen()),
+          ),
+        );
+
+        expect(find.text('Notifiche'), findsOneWidget);
+        expect(find.text('Promemoria app'), findsOneWidget);
+        expect(find.text('Permesso notifiche Android'), findsOneWidget);
+        expect(find.text('Exact alarm'), findsNWidgets(2));
+        expect(find.text('Non concesso'), findsOneWidget);
+        expect(find.text('Non disponibile'), findsOneWidget);
+        expect(
+          find.textContaining('I promemoria potrebbero non arrivare'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('ottimizzata per la batteria'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('notification body tap opens the medicine detail screen', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [_medicine(id: 'medicine-1', therapyId: 'therapy-1')],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: const MyApp(),
+        ),
+      );
+      await tester.pump();
+
+      NotificationNavigationEvents.instance.requestNavigation(
+        const NotificationNavigationRequest(medicineId: 'medicine-1'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dettagli Medicina'), findsOneWidget);
+      expect(find.text('medicine-1'), findsWidgets);
+    });
+
+    testWidgets(
+      'notification body tap with missing medicine keeps the dashboard stable',
+      (tester) async {
+        final fixture = _ProviderFixture(therapies: const []);
+        await fixture.provider.initialize();
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: fixture.provider,
+            child: const MyApp(),
+          ),
+        );
+        await tester.pump();
+
+        NotificationNavigationEvents.instance.requestNavigation(
+          const NotificationNavigationRequest(medicineId: 'missing-medicine'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dettagli Medicina'), findsNothing);
+        expect(find.text('Non hai ancora aggiunto terapie'), findsOneWidget);
+      },
+    );
+
+    test(
       'external notification action reloads provider history and stock without restart',
       () async {
         final fixture = _ProviderFixture(
@@ -371,11 +531,26 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
     this.throwOnInitialize = false,
     this.throwOnSchedule = false,
     this.throwOnReschedule = false,
-  });
+    NotificationPermissionStatus? permissionStatus,
+    NotificationPermissionStatus? requestedNotificationStatus,
+    NotificationPermissionStatus? requestedExactAlarmStatus,
+  }) : permissionStatus =
+           permissionStatus ?? const NotificationPermissionStatus.unknown(),
+       requestedNotificationStatus =
+           requestedNotificationStatus ??
+           permissionStatus ??
+           const NotificationPermissionStatus.unknown(),
+       requestedExactAlarmStatus =
+           requestedExactAlarmStatus ??
+           permissionStatus ??
+           const NotificationPermissionStatus.unknown();
 
   final bool throwOnInitialize;
   final bool throwOnSchedule;
   final bool throwOnReschedule;
+  NotificationPermissionStatus permissionStatus;
+  final NotificationPermissionStatus requestedNotificationStatus;
+  final NotificationPermissionStatus requestedExactAlarmStatus;
   int initializeCount = 0;
   int cancelAllCount = 0;
   final scheduledMedicineIds = <String>[];
@@ -386,6 +561,22 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
   Future<void> initialize() async {
     initializeCount++;
     if (throwOnInitialize) throw StateError('Notifications unavailable');
+  }
+
+  @override
+  Future<NotificationPermissionStatus> getPermissionStatus() async =>
+      permissionStatus;
+
+  @override
+  Future<NotificationPermissionStatus> requestNotificationPermission() async {
+    permissionStatus = requestedNotificationStatus;
+    return permissionStatus;
+  }
+
+  @override
+  Future<NotificationPermissionStatus> requestExactAlarmPermission() async {
+    permissionStatus = requestedExactAlarmStatus;
+    return permissionStatus;
   }
 
   @override

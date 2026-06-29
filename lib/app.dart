@@ -1,12 +1,74 @@
-import 'package:flutter/material.dart';
-import 'screens/dashboard_screen.dart';
+import 'dart:async';
 
-class MyApp extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'providers/medicine_provider.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/medicine_detail_screen.dart';
+import 'services/notification_navigation_service.dart';
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  StreamSubscription<NotificationNavigationRequest>? _notificationSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationSubscription = NotificationNavigationEvents.instance.requests
+        .listen(_handleNotificationNavigation);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pendingRequest = NotificationNavigationEvents.instance
+          .takePendingRequest();
+      if (pendingRequest != null) {
+        _handleNotificationNavigation(pendingRequest);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleNotificationNavigation(
+    NotificationNavigationRequest request,
+  ) async {
+    NotificationNavigationEvents.instance.clearPendingRequest(request);
+    final navigator = _navigatorKey.currentState;
+    final context = navigator?.context;
+    if (navigator == null || context == null) return;
+
+    try {
+      final provider = context.read<MedicineProvider>();
+      await provider.ensureInitialized();
+
+      final medicine = provider.getMedicineById(request.medicineId);
+      if (medicine == null || !mounted) return;
+
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => MedicineDetailScreen(medicine: medicine),
+        ),
+      );
+    } catch (_) {
+      // Un payload non piu' valido non deve bloccare l'apertura dell'app.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Meditrack',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

@@ -315,25 +315,25 @@ Parzialmente risolto
 
 ### Data aggiornamento
 
-2026-06-26
+2026-06-29
 
 ### Cosa e' stato risolto
 
-`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm, azioni e ripristino al boot. Lo sprint QA del 2026-06-26 ha aggiunto test Provider con scheduler finto per coprire startup, modifica medicina, cancellazione, disattivazione/riattivazione, archiviazione/eliminazione terapia, toggle notifiche e failure best-effort per permessi o exact alarm negati. Lo Sprint Notifiche Locali 2 ha aggiunto azioni rapide Assunta/Saltata con payload stabile e handler senza `BuildContext`: l'azione aggiorna `IntakeRecord` e scorte tramite repository, evita duplicati sequenziali e non crea aggiornamenti parziali se la scorta e' insufficiente. Il bug "UI non aggiornata live dopo azione notifica" e' stato risolto usando `IsolateNameServer` per notificare il Provider vivo anche quando l'azione arriva da background isolate. Il limite delle notifiche vecchie nel drawer e' stato mitigato: l'azione viene accettata solo per slot di oggi o ieri, compatibili con schedule corrente, medicina attiva e terapia attiva; altrimenti viene ignorata senza modificare storico o scorte.
+`NotificationService` viene inizializzato all'avvio e, se il toggle profilo e' attivo, ripianifica i promemoria delle medicine attive. Creazione, modifica, attivazione e riattivazione pianificano reminder ricorrenti per ogni combinazione giorno-orario; disattivazione, archiviazione ed eliminazione li cancellano. Gli ID sono deterministici e il ripristino all'avvio pulisce le notifiche locali dell'app prima della pianificazione, evitando duplicati. AndroidManifest dichiara i permessi richiesti per notifiche, exact alarm, azioni e ripristino al boot. Lo sprint QA del 2026-06-26 ha aggiunto test Provider con scheduler finto per coprire startup, modifica medicina, cancellazione, disattivazione/riattivazione, archiviazione/eliminazione terapia, toggle notifiche e failure best-effort per permessi o exact alarm negati. Lo Sprint Notifiche Locali 2 ha aggiunto azioni rapide Assunta/Saltata con payload stabile e handler senza `BuildContext`: l'azione aggiorna `IntakeRecord` e scorte tramite repository, evita duplicati sequenziali e non crea aggiornamenti parziali se la scorta e' insufficiente. Il bug "UI non aggiornata live dopo azione notifica" e' stato risolto usando `IsolateNameServer` per notificare il Provider vivo anche quando l'azione arriva da background isolate. Il limite delle notifiche vecchie nel drawer e' stato mitigato: l'azione viene accettata solo per slot di oggi o ieri, compatibili con schedule corrente, medicina attiva e terapia attiva; altrimenti viene ignorata senza modificare storico o scorte. Lo sprint UX permessi del 2026-06-26 ha aggiunto in Impostazioni una sezione Notifiche con toggle app, stato del permesso notifiche Android, stato exact alarm quando verificabile, richiesta permesso e guida breve su ottimizzazione batteria. Lo Sprint Deep Link Notifiche del 2026-06-29 ha separato il tap normale sul corpo della notifica dalle azioni rapide: il tap emette una richiesta di navigazione verso il dettaglio medicina, mentre `Assunta` e `Saltata` continuano a passare da `NotificationActionHandler`.
 
 ### Limiti aperti
 
 - nessun promemoria automatico di scorta bassa;
-- nessun deep link verso dettaglio medicina o storico dopo il tap sulla notifica;
+- nessun deep link verso storico; il tap sul corpo notifica apre il dettaglio medicina quando il record esiste ancora;
 - i sistemi Android possono ritardare notifiche per battery optimization o negare exact alarm;
-- i permessi negati non bloccano l'app ma richiedono l'intervento dell'utente nelle impostazioni del sistema;
+- i permessi negati non bloccano l'app e ora sono visibili in Impostazioni, ma possono comunque richiedere intervento dell'utente nelle impostazioni del sistema;
 - un tap su una vecchia notifica troppo lontana dallo slot previsto viene ignorato invece di aprire un flusso di correzione guidata;
 - il timezone e' impostato su `Europe/Rome`, adatto al contesto attuale ma non ancora configurabile per profilo.
 
 ### Possibili soluzioni
 
-- aggiungere deep link verso dettaglio medicina o storico;
-- aggiungere stato UI dedicato a permessi negati o exact alarm non disponibile;
+- aggiungere deep link verso storico o flussi di correzione guidata;
+- valutare deep link verso le impostazioni Android specifiche se verra' introdotta una dipendenza dedicata;
 - usare un timezone configurabile o rilevato dal dispositivo;
 - introdurre promemoria separati per il riacquisto delle scorte.
 

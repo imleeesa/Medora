@@ -52,6 +52,8 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Schermata Impostazioni predisposta per backup e report PDF.
 - Promemoria locali ricorrenti per medicine attive, basati su giorni e orari programmati.
 - Azioni rapide dalle notifiche locali per segnare una dose come assunta o saltata, con aggiornamento di storico e scorte.
+- Apertura del dettaglio medicina quando l'utente tocca il corpo di una notifica.
+- Sezione Impostazioni per mostrare stato permesso notifiche Android, exact alarm e guida su ottimizzazione batteria.
 
 ## Funzionalita' pianificate
 
@@ -61,7 +63,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
 - Evoluzione dello storico con filtri, ritardi, note e statistiche avanzate.
 - Gestione avanzata delle scorte con registro carico/scarico e promemoria di riacquisto.
-- Notifiche locali avanzate con gestione permessi, deep link e avvisi scorte.
+- Notifiche locali avanzate con deep link verso storico, avvisi scorte e controlli piattaforma piu' completi.
 - Migrazioni schema e test automatici del database locale.
 - Profili multipli per utente, familiari o caregiver.
 - Report PDF esportabile per medico o uso personale.
@@ -224,7 +226,7 @@ flutter run -d <device-id>
 
 Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
-Lo storico base e' operativo e persistente. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi e includono azioni rapide Assunta/Saltata; Backup e Report PDF restano predisposti ma non ancora operativi.
+Lo storico base e' operativo e persistente. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi, includono azioni rapide Assunta/Saltata, aprono il dettaglio medicina dal tap sul corpo della notifica e mostrano in Impostazioni lo stato dei permessi Android; Backup e Report PDF restano predisposti ma non ancora operativi.
 
 ## Roadmap futura
 
@@ -270,7 +272,7 @@ Lo storico base e' operativo e persistente. Le notifiche locali vengono pianific
 ### Fase 7 - Notifiche
 
 - Consolidare i test dei promemoria locali su dispositivi reali e le eccezioni di battery optimization Android.
-- Aggiungere deep link e gestione UI per permessi negati, se supportati.
+- Aggiungere deep link verso storico e controlli piu' avanzati per battery optimization Android, se supportati.
 - Aggiungere promemoria dedicati per scorte basse.
 
 ### Fase 8 - Database

@@ -74,6 +74,7 @@ File attuali:
 - `therapy.dart`
 - `intake_record.dart`
 - `user_profile.dart`
+- `notification_permission_status.dart`
 
 ### `lib/data/`
 
@@ -159,8 +160,9 @@ Contiene servizi applicativi che non dovrebbero dipendere direttamente dalla UI.
 File attuale:
 
 - `notification_service.dart`
+- `notification_navigation_service.dart`
 
-Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `Europe/Rome`, richiede i permessi solo quando il profilo abilita i promemoria e pianifica reminder ricorrenti. Espone l'interfaccia `MedicineNotificationScheduler`, cosi' `MedicineProvider` non dipende dal plugin e il comportamento puo' essere verificato con test di dominio.
+Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `Europe/Rome`, richiede i permessi solo quando il profilo abilita i promemoria e pianifica reminder ricorrenti. Espone l'interfaccia `MedicineNotificationScheduler`, cosi' `MedicineProvider` non dipende dal plugin e il comportamento puo' essere verificato con test di dominio. `NotificationNavigationEvents` trasforma il tap normale su una notifica in una richiesta di navigazione verso il dettaglio medicina, senza usare `BuildContext` dentro il servizio notifiche.
 
 ## Responsabilita' dei model
 
@@ -342,6 +344,8 @@ Schermata impostazioni.
 Responsabilita':
 
 - gestire preferenza notifiche;
+- mostrare stato del permesso notifiche Android e exact alarm quando verificabile;
+- permettere richiesta del permesso notifiche e aggiornamento dello stato;
 - mostrare il tema scuro come funzionalita' pianificata ma non ancora attivabile;
 - mostrare voci predisposte per backup e report PDF con feedback utente, senza implementare ancora le feature.
 
@@ -969,7 +973,11 @@ Lo schema Drift e' alla versione 2: `medicines.stockQuantity` e `medicines.stock
 
 `NotificationService` viene inizializzato durante `MedicineProvider.initialize` dopo il caricamento della cache. Se `notificationsEnabled` e' attivo, il Provider cancella e ripianifica i reminder delle medicine attive appartenenti a terapie attive. Gli ID sono deterministici e derivano da `medicineId`, giorno della settimana, ora e minuto; questo permette di annullare lo slot corretto senza dipendere da ID Drift nella UI. Creazione e modifica medicina cancellano prima i reminder precedenti e poi pianificano quelli nuovi; disattivazione, archiviazione o eliminazione cancellano i reminder coinvolti; riattivazione e toggle impostazioni li ripianificano. Il consenso negato, exact alarm non disponibile o un sistema non supportato non interrompono persistenza e UI. Il contratto Provider -> scheduler e' coperto da test con fake scheduler per evitare duplicati all'avvio, verificare cancellazioni/ripianificazioni e simulare errori del layer notifiche senza plugin nativo.
 
-Le notifiche includono le azioni Android/iOS `Assunta` e `Saltata`. Il payload e' JSON versionato con `medicineId`, `dayOfWeek`, `hour` e `minute`; essendo una notifica ricorrente, il payload non contiene uno `scheduledDateTime` assoluto. Quando l'utente preme un'azione, `NotificationActionHandler` ricostruisce lo slot programmato piu' recente rispetto al momento del tap e chiama `IntakeActionService`, senza usare `BuildContext` o classi Drift nella UI. Per evitare record ambigui da vecchie notifiche nel drawer, le azioni da notifica sono accettate solo se lo slot ricostruito e' oggi o ieri, non futuro, la medicina esiste ed e' attiva, la terapia collegata e' ancora attiva e lo schedule attuale contiene ancora lo stesso giorno/orario. In caso contrario l'azione viene ignorata senza modificare storico o scorte. Su Android il Manifest registra `ActionBroadcastReceiver`; le azioni senza UI possono essere elaborate da un background isolate tramite `meditrackNotificationTapBackground`, che richiama `DartPluginRegistrant.ensureInitialized()`. Se l'app e' gia' aperta o il main isolate e' ancora vivo in background, `NotificationActionEvents` registra una porta con `IsolateNameServer`: il background isolate invia un segnale al main isolate e il Provider ricarica cache, storico, assunzioni programmate e scorte prima di chiamare `notifyListeners`. Restano futuri deep link verso dettaglio/storico, stato UI per permessi negati e promemoria di scorta bassa.
+`MedicineNotificationScheduler` espone anche lo stato operativo dei permessi tramite `NotificationPermissionStatus`: supporto notifiche locali, permesso notifiche Android e exact alarm quando il sistema permette di verificarlo. `MedicineProvider` mantiene questo stato in cache e `SettingsScreen` lo mostra in una sezione Notifiche con azioni per aggiornare lo stato, richiedere il permesso notifiche e richiedere exact alarm quando disponibile. Il toggle dell'app resta separato dai permessi Android: disattivarlo cancella i reminder, riattivarlo prova a ripianificarli, ma non blocca la creazione di terapie o medicine se il sistema nega i permessi. La batteria Android/Samsung resta una guida informativa perche' il controllo puntuale dipende dalle impostazioni del dispositivo.
+
+Le notifiche includono le azioni Android/iOS `Assunta` e `Saltata`. Il payload e' JSON versionato con `medicineId`, `dayOfWeek`, `hour` e `minute`; essendo una notifica ricorrente, il payload non contiene uno `scheduledDateTime` assoluto. Quando l'utente preme un'azione, `NotificationActionHandler` ricostruisce lo slot programmato piu' recente rispetto al momento del tap e chiama `IntakeActionService`, senza usare `BuildContext` o classi Drift nella UI. Per evitare record ambigui da vecchie notifiche nel drawer, le azioni da notifica sono accettate solo se lo slot ricostruito e' oggi o ieri, non futuro, la medicina esiste ed e' attiva, la terapia collegata e' ancora attiva e lo schedule attuale contiene ancora lo stesso giorno/orario. In caso contrario l'azione viene ignorata senza modificare storico o scorte. Su Android il Manifest registra `ActionBroadcastReceiver`; le azioni senza UI possono essere elaborate da un background isolate tramite `meditrackNotificationTapBackground`, che richiama `DartPluginRegistrant.ensureInitialized()`. Se l'app e' gia' aperta o il main isolate e' ancora vivo in background, `NotificationActionEvents` registra una porta con `IsolateNameServer`: il background isolate invia un segnale al main isolate e il Provider ricarica cache, storico, assunzioni programmate e scorte prima di chiamare `notifyListeners`.
+
+Il tap normale sul corpo della notifica segue un flusso separato dalle azioni. `NotificationService` controlla `NotificationResponseType`: `selectedNotificationAction` resta nel flusso `NotificationActionHandler`, mentre `selectedNotification` viene convertito da `NotificationNavigationEvents` in `NotificationNavigationRequest(medicineId)`. `MyApp` possiede una `GlobalKey<NavigatorState>`, ascolta queste richieste, chiama `MedicineProvider.ensureInitialized()` e apre `MedicineDetailScreen` solo se la medicina e' ancora presente nella cache persistente. Payload invalidi, medicine eliminate o terapie eliminate non generano errori visibili: l'app resta sulla Dashboard. Restano futuri deep link verso storico, flussi guidati per notifiche troppo vecchie e promemoria di scorta bassa.
 
 ### Profili
 
@@ -995,12 +1003,12 @@ Punti solidi:
 - gestione autonoma delle terapie con dettaglio, archiviazione ed eliminazione persistente;
 - spostamento persistente delle medicine tra terapie attive.
 - storico assunzioni base persistente per stati assunta e saltata.
+- notifiche locali con stato permessi visibile in Impostazioni.
 
 Limiti attuali:
 
-- dati non persistenti;
-- storico non ancora operativo;
-- notifiche locali senza deep link, avvisi scorte o gestione avanzata permessi;
+- deep link notifiche non ancora disponibili;
+- promemoria automatici per scorte basse non ancora disponibili;
 - alcune componenti UI sono duplicate localmente nelle schermate;
 - tema scuro predisposto nel profilo ma non ancora applicato all'interfaccia.
 

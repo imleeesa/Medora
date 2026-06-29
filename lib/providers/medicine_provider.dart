@@ -7,6 +7,7 @@ import '../models/app_settings.dart';
 import '../models/intake_record.dart';
 import '../models/intake_stock_change.dart';
 import '../models/medicine.dart';
+import '../models/notification_permission_status.dart';
 import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
 import '../models/user_profile.dart';
@@ -63,6 +64,8 @@ class MedicineProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isInitialized = false;
   String? _errorMessage;
+  NotificationPermissionStatus _notificationPermissionStatus =
+      const NotificationPermissionStatus.unknown();
 
   List<Therapy> get therapies => List.unmodifiable(_therapies);
 
@@ -73,7 +76,11 @@ class MedicineProvider extends ChangeNotifier {
 
   UserProfile get currentProfile => _currentProfile;
 
+  NotificationPermissionStatus get notificationPermissionStatus =>
+      _notificationPermissionStatus;
+
   bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
   String? get errorMessage => _errorMessage;
 
   Future<void> initialize() async {
@@ -90,6 +97,7 @@ class MedicineProvider extends ChangeNotifier {
       await _reloadIntakeHistory();
       await _rolloverMissedIntakes();
       await _initializeNotifications();
+      await _refreshNotificationPermissionStatus(notify: false);
       _isInitialized = true;
     } catch (_) {
       _errorMessage = 'Impossibile caricare i dati salvati.';
@@ -100,6 +108,17 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<void> init() => initialize();
+
+  Future<void> ensureInitialized() async {
+    if (_isInitialized) return;
+    if (_isLoading) {
+      while (_isLoading && !_isInitialized) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+      return;
+    }
+    await initialize();
+  }
 
   Future<void> addMedicine({
     required String therapyId,
@@ -608,6 +627,7 @@ class MedicineProvider extends ChangeNotifier {
         } else {
           await _cancelAllMedicineNotifications();
         }
+        await _refreshNotificationPermissionStatus(notify: false);
       }
       _errorMessage = null;
       notifyListeners();
@@ -623,6 +643,40 @@ class MedicineProvider extends ChangeNotifier {
       .expand((therapy) => therapy.medicines)
       .where((medicine) => medicine.shouldTakeToday())
       .toList(growable: false);
+
+  Future<void> refreshNotificationPermissionStatus() {
+    return _refreshNotificationPermissionStatus();
+  }
+
+  Future<void> requestNotificationPermission() async {
+    try {
+      _notificationPermissionStatus = await _notificationService
+          .requestNotificationPermission();
+      if (_currentProfile.notificationsEnabled) {
+        await _rescheduleAllMedicineNotifications();
+      }
+      _errorMessage = null;
+    } catch (_) {
+      await _refreshNotificationPermissionStatus(notify: false);
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> requestExactAlarmPermission() async {
+    try {
+      _notificationPermissionStatus = await _notificationService
+          .requestExactAlarmPermission();
+      if (_currentProfile.notificationsEnabled) {
+        await _rescheduleAllMedicineNotifications();
+      }
+      _errorMessage = null;
+    } catch (_) {
+      await _refreshNotificationPermissionStatus(notify: false);
+    } finally {
+      notifyListeners();
+    }
+  }
 
   List<IntakeRecord> getIntakeHistory() => intakeHistory;
 
@@ -818,6 +872,19 @@ class MedicineProvider extends ChangeNotifier {
     } catch (_) {
       // I promemoria non devono rendere non disponibile la cache locale.
     }
+  }
+
+  Future<void> _refreshNotificationPermissionStatus({
+    bool notify = true,
+  }) async {
+    try {
+      _notificationPermissionStatus = await _notificationService
+          .getPermissionStatus();
+    } catch (_) {
+      _notificationPermissionStatus =
+          const NotificationPermissionStatus.unknown();
+    }
+    if (notify) notifyListeners();
   }
 
   Future<void> _rescheduleAllMedicineNotifications() async {

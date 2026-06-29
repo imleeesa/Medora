@@ -13,6 +13,50 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-06-29 - Sprint Deep Link Notifiche
+
+Tipo modifica: Feature / Stabilizzazione notifiche / Test / Documentation.
+
+Descrizione:
+
+- aggiunto `NotificationNavigationEvents` per convertire il tap normale sul corpo della notifica in una richiesta di navigazione verso una medicina;
+- separato il flusso del tap normale dalle azioni rapide `Assunta` e `Saltata` usando `NotificationResponseType`;
+- collegata `MyApp` a una `GlobalKey<NavigatorState>` per aprire `MedicineDetailScreen` dopo che `MedicineProvider` ha completato il caricamento;
+- aggiunto `MedicineProvider.ensureInitialized()` per rendere sicura la navigazione quando l'app viene aperta da notifica;
+- gestiti payload invalidi e medicine non piu' presenti senza crash e senza messaggi tecnici;
+- aggiunti test per payload deep link, distinzione tap/azione e navigazione widget verso dettaglio medicina.
+
+File modificati:
+
+- `lib/app.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/services/notification_service.dart`;
+- `lib/services/notification_navigation_service.dart`;
+- `test/notification_navigation_service_test.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- tap sul corpo della notifica senza navigazione al dettaglio medicina;
+- rischio di confondere tap normale e azioni rapide della notifica;
+- assenza di un canale di navigazione testabile e indipendente dal servizio notifiche.
+
+Problemi rimandati:
+
+- deep link verso storico o flusso di correzione guidata;
+- promemoria automatici per scorte basse;
+- verifiche manuali Android su app chiusa/background e battery optimization Samsung.
+
+Motivazione:
+
+Lo sprint rende le notifiche piu' utili senza cambiare database, schema Drift o comportamento delle azioni rapide gia' operative.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
+
 ## 2026-06-19 - Documentazione
 
 Tipo modifica: preparazione del flusso di lavoro documentato.
@@ -810,6 +854,48 @@ Motivazione:
 Lo sprint completa il cambio giorno senza anticipare notifiche o modificare le assunzioni ancora recuperabili nella giornata corrente.
 
 Stato finale: implementato, verifiche automatiche e manuali da completare.
+
+## 2026-06-26 - Sprint UX permessi notifiche
+
+Tipo modifica: UX / Stabilizzazione / Test / Documentation.
+
+Descrizione:
+
+- aggiunto `NotificationPermissionStatus` come model di dominio per esporre supporto notifiche locali, permesso notifiche Android ed exact alarm senza classi plugin nella UI;
+- estesa l'interfaccia `MedicineNotificationScheduler` con lettura stato permessi e richieste esplicite per notifiche ed exact alarm;
+- aggiunta in Impostazioni una sezione Notifiche con toggle app, stato permesso Android, stato exact alarm, azioni di aggiornamento/richiesta e nota su ottimizzazione batteria Android/Samsung;
+- mantenuto il comportamento del toggle: off cancella i reminder, on prova a ripianificare i reminder attivi senza bloccare app o salvataggi se i permessi OS sono negati;
+- aggiunti test Provider e widget per simulare permessi negati/concessi e verificare la sezione Impostazioni.
+
+File modificati:
+
+- `lib/models/notification_permission_status.dart`;
+- `lib/services/notification_service.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/settings_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- l'utente non aveva una UX chiara per capire se i promemoria erano bloccati da permesso notifiche o exact alarm;
+- il Provider non esponeva uno stato permessi testabile e leggibile dalla UI.
+
+Problemi rimandati:
+
+- deep link verso dettaglio medicina o storico;
+- apertura diretta delle impostazioni Android specifiche senza introdurre una dipendenza dedicata;
+- rilevazione puntuale della battery optimization, che dipende da sistema e produttore;
+- promemoria automatici per scorte basse.
+
+Motivazione:
+
+Lo sprint rende comprensibile lo stato dei promemoria senza introdurre notifiche remote, redesign o nuove feature complesse.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
 
 ## 2026-06-24 - Sprint Storico Assunzioni Base
 

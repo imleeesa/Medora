@@ -6,11 +6,19 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/medicine.dart';
+import '../models/notification_permission_status.dart';
 import 'notification_action_handler.dart';
+import 'notification_navigation_service.dart';
 import 'notification_payload.dart';
 
 abstract interface class MedicineNotificationScheduler {
   Future<void> initialize();
+
+  Future<NotificationPermissionStatus> getPermissionStatus();
+
+  Future<NotificationPermissionStatus> requestNotificationPermission();
+
+  Future<NotificationPermissionStatus> requestExactAlarmPermission();
 
   Future<void> rescheduleActiveMedicines(Iterable<Medicine> medicines);
 
@@ -49,6 +57,105 @@ class NotificationService implements MedicineNotificationScheduler {
     await (_initialization ??= _initializePlugin());
   }
 
+  @override
+  Future<NotificationPermissionStatus> getPermissionStatus() async {
+    if (!_supportsLocalNotifications) {
+      return const NotificationPermissionStatus.unsupported();
+    }
+    await initialize();
+
+    try {
+      final plugin = _plugin!;
+      final androidPlugin = plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
+      if (androidPlugin != null) {
+        final notificationsAllowed =
+            await androidPlugin.areNotificationsEnabled() ?? true;
+        final exactAlarmsAllowed =
+            await androidPlugin.canScheduleExactNotifications() ?? true;
+        return NotificationPermissionStatus(
+          localNotificationsSupported: true,
+          notificationsAllowed: notificationsAllowed,
+          exactAlarmsAllowed: exactAlarmsAllowed,
+          exactAlarmsCanBeChecked: true,
+        );
+      }
+
+      return const NotificationPermissionStatus(
+        localNotificationsSupported: true,
+        notificationsAllowed: true,
+        exactAlarmsAllowed: true,
+        exactAlarmsCanBeChecked: false,
+      );
+    } catch (_) {
+      return const NotificationPermissionStatus.unknown();
+    }
+  }
+
+  @override
+  Future<NotificationPermissionStatus> requestNotificationPermission() async {
+    if (!_supportsLocalNotifications) {
+      return const NotificationPermissionStatus.unsupported();
+    }
+    await initialize();
+
+    try {
+      final plugin = _plugin!;
+      final androidPlugin = plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final iosPlugin = plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+
+      final androidGranted = await androidPlugin
+          ?.requestNotificationsPermission();
+      final iosGranted = await iosPlugin?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      final status = await getPermissionStatus();
+      return status.copyWith(
+        notificationsAllowed:
+            androidGranted ?? iosGranted ?? status.notificationsAllowed,
+      );
+    } catch (_) {
+      return await getPermissionStatus();
+    }
+  }
+
+  @override
+  Future<NotificationPermissionStatus> requestExactAlarmPermission() async {
+    if (!_supportsLocalNotifications) {
+      return const NotificationPermissionStatus.unsupported();
+    }
+    await initialize();
+
+    try {
+      final plugin = _plugin!;
+      final androidPlugin = plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final exactAlarmGranted = await androidPlugin
+          ?.requestExactAlarmsPermission();
+      final status = await getPermissionStatus();
+      return status.copyWith(
+        exactAlarmsAllowed: exactAlarmGranted ?? status.exactAlarmsAllowed,
+        exactAlarmsCanBeChecked:
+            androidPlugin != null || status.exactAlarmsCanBeChecked,
+      );
+    } catch (_) {
+      return await getPermissionStatus();
+    }
+  }
+
   Future<void> _initializePlugin() async {
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Europe/Rome'));
@@ -85,10 +192,26 @@ class NotificationService implements MedicineNotificationScheduler {
           meditrackNotificationTapBackground,
     );
     _plugin = plugin;
+    await _handleLaunchNotification(plugin);
   }
 
   void _onNotificationTapped(NotificationResponse response) async {
-    await NotificationActionHandler().handleResponse(response);
+    if (response.notificationResponseType ==
+        NotificationResponseType.selectedNotificationAction) {
+      await NotificationActionHandler().handleResponse(response);
+      return;
+    }
+    NotificationNavigationEvents.instance.requestFromResponse(response);
+  }
+
+  Future<void> _handleLaunchNotification(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    final details = await plugin.getNotificationAppLaunchDetails();
+    final response = details?.notificationResponse;
+    if (details?.didNotificationLaunchApp == true && response != null) {
+      NotificationNavigationEvents.instance.requestFromResponse(response);
+    }
   }
 
   @override
@@ -154,8 +277,7 @@ class NotificationService implements MedicineNotificationScheduler {
             IOSFlutterLocalNotificationsPlugin
           >();
 
-      final androidGranted = await androidPlugin
-          ?.requestNotificationsPermission();
+      final permissionStatus = await requestNotificationPermission();
       var exactAlarmGranted = await androidPlugin
           ?.canScheduleExactNotifications();
       if (exactAlarmGranted == false) {
@@ -167,7 +289,7 @@ class NotificationService implements MedicineNotificationScheduler {
         sound: true,
       );
 
-      return (androidGranted ?? true) &&
+      return permissionStatus.notificationsAllowed &&
           (exactAlarmGranted ?? true) &&
           (iosGranted ?? true);
     } catch (_) {
@@ -313,5 +435,10 @@ class NotificationService implements MedicineNotificationScheduler {
 @pragma('vm:entry-point')
 void meditrackNotificationTapBackground(NotificationResponse response) async {
   DartPluginRegistrant.ensureInitialized();
-  await NotificationActionHandler().handleResponse(response);
+  if (response.notificationResponseType ==
+      NotificationResponseType.selectedNotificationAction) {
+    await NotificationActionHandler().handleResponse(response);
+    return;
+  }
+  NotificationNavigationEvents.instance.requestFromResponse(response);
 }
