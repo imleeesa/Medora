@@ -7,27 +7,11 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../models/medicine.dart';
 import '../models/notification_permission_status.dart';
+export 'medicine_notification_scheduler.dart';
+import 'medicine_notification_scheduler.dart';
 import 'notification_action_handler.dart';
 import 'notification_navigation_service.dart';
 import 'notification_payload.dart';
-
-abstract interface class MedicineNotificationScheduler {
-  Future<void> initialize();
-
-  Future<NotificationPermissionStatus> getPermissionStatus();
-
-  Future<NotificationPermissionStatus> requestNotificationPermission();
-
-  Future<NotificationPermissionStatus> requestExactAlarmPermission();
-
-  Future<void> rescheduleActiveMedicines(Iterable<Medicine> medicines);
-
-  Future<void> scheduleMedicineNotifications(Medicine medicine);
-
-  Future<void> cancelMedicineNotifications(Medicine medicine);
-
-  Future<void> cancelAllNotifications();
-}
 
 /// Gestisce i promemoria locali delle medicine senza esporre dettagli plugin al
 /// Provider o alla UI.
@@ -253,6 +237,7 @@ class NotificationService implements MedicineNotificationScheduler {
         );
       }
     }
+    await plugin.cancel(lowStockNotificationIdFor(medicine.id));
   }
 
   @override
@@ -260,6 +245,41 @@ class NotificationService implements MedicineNotificationScheduler {
     if (!_supportsLocalNotifications) return;
     await initialize();
     await _plugin?.cancelAll();
+  }
+
+  @override
+  Future<void> showLowStockNotification(Medicine medicine) async {
+    if (!medicine.isActive ||
+        medicine.stockWarningThreshold <= 0 ||
+        medicine.stockQuantity > medicine.stockWarningThreshold ||
+        !await _canShowNotifications()) {
+      return;
+    }
+
+    final plugin = _plugin!;
+    await plugin.show(
+      lowStockNotificationIdFor(medicine.id),
+      'Scorta bassa',
+      '${medicine.name} e sotto la soglia minima. Scorta attuale: ${Medicine.formatQuantity(medicine.stockQuantity)}',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          enableVibration: true,
+          playSound: true,
+          visibility: NotificationVisibility.public,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: MedicineNotificationPayload.encodeMedicineOnly(medicine.id),
+    );
   }
 
   Future<bool> _canScheduleNotifications() async {
@@ -292,6 +312,18 @@ class NotificationService implements MedicineNotificationScheduler {
       return permissionStatus.notificationsAllowed &&
           (exactAlarmGranted ?? true) &&
           (iosGranted ?? true);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _canShowNotifications() async {
+    if (!_supportsLocalNotifications) return false;
+    await initialize();
+
+    try {
+      final permissionStatus = await requestNotificationPermission();
+      return permissionStatus.notificationsAllowed;
     } catch (_) {
       return false;
     }
@@ -402,6 +434,16 @@ class NotificationService implements MedicineNotificationScheduler {
     required int minute,
   }) {
     final value = '$medicineId|$dayOfWeek|$hour|$minute';
+    var hash = 0x811c9dc5;
+    for (final codeUnit in value.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0x7fffffff;
+    }
+    return hash;
+  }
+
+  static int lowStockNotificationIdFor(String medicineId) {
+    final value = 'low_stock|$medicineId';
     var hash = 0x811c9dc5;
     for (final codeUnit in value.codeUnits) {
       hash ^= codeUnit;

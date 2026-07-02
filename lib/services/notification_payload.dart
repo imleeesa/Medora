@@ -25,6 +25,24 @@ class MedicineNotificationPayload {
     });
   }
 
+  static String encodeMedicineOnly(String medicineId) {
+    return jsonEncode({'v': version, 'medicineId': medicineId});
+  }
+
+  static String? tryDecodeMedicineId(String? payload) {
+    if (payload == null || payload.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map<String, dynamic>) return null;
+      final medicineId = decoded['medicineId'];
+      return medicineId is String && medicineId.trim().isNotEmpty
+          ? medicineId
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static MedicineNotificationPayload? tryDecode(String? payload) {
     if (payload == null || payload.trim().isEmpty) return null;
     try {

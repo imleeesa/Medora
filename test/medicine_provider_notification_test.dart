@@ -330,6 +330,80 @@ void main() {
       },
     );
 
+    test(
+      'taken crossing low stock threshold sends one low stock alert',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  dose: '1 compressa',
+                  stockQuantity: 6,
+                  stockWarningThreshold: 5,
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+        fixture.notifications.clear();
+
+        await fixture.provider.markMedicineAsTaken(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 2, 8),
+        );
+        await fixture.provider.markMedicineAsTaken(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 2, 12),
+        );
+
+        expect(fixture.notifications.lowStockMedicineIds, ['medicine-1']);
+        expect(
+          fixture.provider.getMedicineById('medicine-1')?.stockQuantity,
+          4,
+        );
+      },
+    );
+
+    test(
+      'low stock alert is skipped when app notifications are disabled',
+      () async {
+        final fixture = _ProviderFixture(
+          notificationsEnabled: false,
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  dose: '1 compressa',
+                  stockQuantity: 6,
+                  stockWarningThreshold: 5,
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+
+        await fixture.provider.markMedicineAsTaken(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 2, 8),
+        );
+
+        expect(fixture.notifications.lowStockMedicineIds, isEmpty);
+        expect(
+          fixture.provider.getMedicineById('medicine-1')?.stockQuantity,
+          5,
+        );
+      },
+    );
+
     testWidgets(
       'settings screen shows notification permission and exact alarm status',
       (tester) async {
@@ -423,6 +497,74 @@ void main() {
         expect(find.text('Non hai ancora aggiunto terapie'), findsOneWidget);
       },
     );
+
+    testWidgets('dashboard next medicine card opens medicine detail', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [
+              _medicine(
+                id: 'medicine-1',
+                therapyId: 'therapy-1',
+                times: const [TimeOfDay(hour: 23, minute: 59)],
+                daysOfWeek: [DateTime.now().weekday],
+              ),
+            ],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: const MyApp(),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('medicine-1').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dettagli Medicina'), findsOneWidget);
+    });
+
+    testWidgets('dashboard intake action buttons still update intake status', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [
+              _medicine(
+                id: 'medicine-1',
+                therapyId: 'therapy-1',
+                times: const [TimeOfDay(hour: 23, minute: 59)],
+                daysOfWeek: [DateTime.now().weekday],
+              ),
+            ],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: const MyApp(),
+        ),
+      );
+      await tester.pump();
+      await tester.scrollUntilVisible(find.text('Assunta'), 300);
+      await tester.tap(find.text('Assunta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dettagli Medicina'), findsNothing);
+      expect(fixture.provider.intakeHistory.single.status, IntakeStatus.taken);
+    });
 
     test(
       'external notification action reloads provider history and stock without restart',
@@ -556,6 +698,7 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
   final scheduledMedicineIds = <String>[];
   final cancelledMedicineIds = <String>[];
   final rescheduledBatches = <List<String>>[];
+  final lowStockMedicineIds = <String>[];
 
   @override
   Future<void> initialize() async {
@@ -599,6 +742,11 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
   }
 
   @override
+  Future<void> showLowStockNotification(Medicine medicine) async {
+    lowStockMedicineIds.add(medicine.id);
+  }
+
+  @override
   Future<void> cancelAllNotifications() async {
     cancelAllCount++;
   }
@@ -608,6 +756,7 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
     scheduledMedicineIds.clear();
     cancelledMedicineIds.clear();
     rescheduledBatches.clear();
+    lowStockMedicineIds.clear();
   }
 }
 
@@ -849,6 +998,10 @@ Medicine _medicine({
   required String therapyId,
   String dose = '1 compressa',
   bool isActive = true,
+  double stockQuantity = 10,
+  double stockWarningThreshold = 2,
+  List<TimeOfDay> times = const [TimeOfDay(hour: 8, minute: 0)],
+  List<int> daysOfWeek = const [DateTime.monday],
 }) {
   final now = DateTime.now();
   return Medicine(
@@ -857,10 +1010,10 @@ Medicine _medicine({
     therapyId: therapyId,
     name: id,
     dose: dose,
-    times: const [TimeOfDay(hour: 8, minute: 0)],
-    daysOfWeek: const [DateTime.monday],
-    stockQuantity: 10,
-    stockWarningThreshold: 2,
+    times: times,
+    daysOfWeek: daysOfWeek,
+    stockQuantity: stockQuantity,
+    stockWarningThreshold: stockWarningThreshold,
     isActive: isActive,
     createdAt: now,
     updatedAt: now,

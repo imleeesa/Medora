@@ -42,12 +42,10 @@ class NotificationNavigationEvents {
   }
 
   bool requestFromPayload(String? payload) {
-    final decoded = MedicineNotificationPayload.tryDecode(payload);
-    if (decoded == null) return false;
+    final medicineId = MedicineNotificationPayload.tryDecodeMedicineId(payload);
+    if (medicineId == null) return false;
 
-    requestNavigation(
-      NotificationNavigationRequest(medicineId: decoded.medicineId),
-    );
+    requestNavigation(NotificationNavigationRequest(medicineId: medicineId));
     return true;
   }
 

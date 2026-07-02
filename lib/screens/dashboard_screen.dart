@@ -10,6 +10,7 @@ import '../providers/medicine_provider.dart';
 import '../widgets/empty_state.dart';
 import 'add_therapy_screen.dart';
 import 'history_screen.dart';
+import 'medicine_detail_screen.dart';
 import 'medicines_screen.dart';
 import 'profile_screen.dart';
 
@@ -141,6 +142,17 @@ class _HomeDashboard extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
     );
   }
+}
+
+void _openMedicineDetail(BuildContext context, String medicineId) {
+  final provider = context.read<MedicineProvider>();
+  final medicine = provider.getMedicineById(medicineId);
+  if (medicine == null) return;
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => MedicineDetailScreen(medicine: medicine)),
+  );
 }
 
 class _PremiumBottomNavigationBar extends StatelessWidget {
@@ -347,81 +359,94 @@ class _NextMedicineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final nextTime = medicine.getNextIntake();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2E7D32).withValues(alpha: 0.24),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2E7D32).withValues(alpha: 0.24),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.notifications_active, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                'Prossima Medicina',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.9),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () => _openMedicineDetail(context, medicine.id),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.notifications_active, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Prossima Medicina',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right, color: Colors.white),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            medicine.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: 0,
+                const SizedBox(height: 18),
+                Text(
+                  medicine.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Dose: ${medicine.doseLabel}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _Pill(
+                      icon: Icons.schedule,
+                      label: nextTime == null
+                          ? '--:--'
+                          : nextTime.format(context),
+                    ),
+                    if (nextTime != null)
+                      _Pill(
+                        icon: Icons.timer_outlined,
+                        label: 'Tra ${_timeUntil(nextTime)}',
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Dose: ${medicine.doseLabel}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _Pill(
-                icon: Icons.schedule,
-                label: nextTime == null ? '--:--' : nextTime.format(context),
-              ),
-              if (nextTime != null)
-                _Pill(
-                  icon: Icons.timer_outlined,
-                  label: 'Tra ${_timeUntil(nextTime)}',
-                ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -563,97 +588,106 @@ class _TodayIntakeCard extends StatelessWidget {
       IntakeStatus.scheduled => 'Prevista',
     };
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        onTap: () => _openMedicineDetail(context, intake.medicine.id),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  time,
-                  style: const TextStyle(
-                    color: Color(0xFF2E7D32),
-                    fontWeight: FontWeight.w800,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      time,
+                      style: const TextStyle(
+                        color: Color(0xFF2E7D32),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  intake.medicine.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E1E1E),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      intake.medicine.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1E1E1E),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right, color: Colors.grey.shade500),
+                ],
               ),
-              const SizedBox(width: 8),
+              const SizedBox(height: 6),
               Text(
-                statusLabel,
-                style: TextStyle(
-                  color: statusColor,
-                  fontWeight: FontWeight.w700,
-                ),
+                intake.medicine.doseLabel,
+                style: TextStyle(color: Colors.grey.shade600),
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            intake.medicine.doseLabel,
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-          if (isScheduled) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+              if (isScheduled) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _mark(context, IntakeStatus.skipped),
+                      icon: const Icon(Icons.skip_next_outlined),
+                      label: const Text('Saltata'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _mark(context, IntakeStatus.taken),
+                      icon: const Icon(Icons.check),
+                      label: const Text('Assunta'),
+                    ),
+                  ],
+                ),
+              ] else if (status == IntakeStatus.taken) ...[
+                const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () => _mark(context, IntakeStatus.skipped),
-                  icon: const Icon(Icons.skip_next_outlined),
-                  label: const Text('Saltata'),
+                  icon: const Icon(Icons.undo_outlined),
+                  label: const Text('Segna come saltata'),
                 ),
+              ] else ...[
+                const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () => _mark(context, IntakeStatus.taken),
                   icon: const Icon(Icons.check),
-                  label: const Text('Assunta'),
+                  label: const Text('Segna come assunta'),
                 ),
               ],
-            ),
-          ] else if (status == IntakeStatus.taken) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _mark(context, IntakeStatus.skipped),
-              icon: const Icon(Icons.undo_outlined),
-              label: const Text('Segna come saltata'),
-            ),
-          ] else ...[
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () => _mark(context, IntakeStatus.taken),
-              icon: const Icon(Icons.check),
-              label: const Text('Segna come assunta'),
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

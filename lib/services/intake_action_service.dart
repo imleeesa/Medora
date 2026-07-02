@@ -7,6 +7,7 @@ import '../repositories/intake_repository.dart';
 import '../repositories/medicine_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../repositories/therapy_repository.dart';
+import 'medicine_notification_scheduler.dart';
 
 class IntakeActionService {
   IntakeActionService({
@@ -14,15 +15,18 @@ class IntakeActionService {
     MedicineRepository? medicineRepository,
     IntakeRepository? intakeRepository,
     TherapyRepository? therapyRepository,
+    MedicineNotificationScheduler? notificationService,
   }) : _profileRepository = profileRepository ?? ProfileRepository(),
        _medicineRepository = medicineRepository ?? MedicineRepository(),
        _intakeRepository = intakeRepository ?? IntakeRepository(),
-       _therapyRepository = therapyRepository ?? TherapyRepository();
+       _therapyRepository = therapyRepository ?? TherapyRepository(),
+       _notificationService = notificationService;
 
   final ProfileRepository _profileRepository;
   final MedicineRepository _medicineRepository;
   final IntakeRepository _intakeRepository;
   final TherapyRepository _therapyRepository;
+  final MedicineNotificationScheduler? _notificationService;
 
   Future<IntakeStockChange> markTaken({
     required String medicineId,
@@ -196,7 +200,43 @@ class IntakeActionService {
       updateExistingRecord: existingRecord != null,
       updatedMedicine: updatedMedicine,
     );
+    await _notifyLowStockIfCrossedThreshold(
+      profileId: profile.id,
+      notificationsEnabled: profile.notificationsEnabled,
+      previous: medicine,
+      current: updatedMedicine,
+    );
     return stockChange;
+  }
+
+  Future<void> _notifyLowStockIfCrossedThreshold({
+    required String profileId,
+    required bool notificationsEnabled,
+    required Medicine previous,
+    required Medicine? current,
+  }) async {
+    if (!notificationsEnabled || current == null) return;
+    if (!_crossedLowStockThreshold(previous, current)) return;
+
+    final isActiveTherapy = await _isMedicineInActiveTherapy(
+      profileId: profileId,
+      medicine: current,
+    );
+    if (!isActiveTherapy) return;
+
+    try {
+      await _notificationService?.showLowStockNotification(current);
+    } catch (_) {
+      // La registrazione dell'assunzione non deve dipendere dalle notifiche.
+    }
+  }
+
+  bool _crossedLowStockThreshold(Medicine previous, Medicine current) {
+    final threshold = current.stockWarningThreshold;
+    return current.isActive &&
+        threshold > 0 &&
+        previous.stockQuantity > threshold &&
+        current.stockQuantity <= threshold;
   }
 
   Future<bool> _isNotificationSlotAllowed({
@@ -211,6 +251,19 @@ class IntakeActionService {
     }
     if (!_isScheduleStillCompatible(medicine, slot)) return false;
 
+    final therapyId = medicine.therapyId;
+    if (therapyId == null) return false;
+    final therapies = await _therapyRepository.getTherapies(profileId);
+    final therapy = therapies
+        .where((therapy) => therapy.id == therapyId)
+        .firstOrNull;
+    return therapy?.isActive ?? false;
+  }
+
+  Future<bool> _isMedicineInActiveTherapy({
+    required String profileId,
+    required Medicine medicine,
+  }) async {
     final therapyId = medicine.therapyId;
     if (therapyId == null) return false;
     final therapies = await _therapyRepository.getTherapies(profileId);

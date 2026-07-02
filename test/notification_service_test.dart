@@ -60,6 +60,18 @@ void main() {
       DateTime(2026, 6, 22, 8, 30),
     );
   });
+
+  test('builds a medicine-only payload for notification deep links', () {
+    final payload = MedicineNotificationPayload.encodeMedicineOnly(
+      'medicine-1',
+    );
+
+    expect(
+      MedicineNotificationPayload.tryDecodeMedicineId(payload),
+      'medicine-1',
+    );
+    expect(MedicineNotificationPayload.tryDecode(payload), isNull);
+  });
 }
 
 Medicine _medicine({required String dose}) {

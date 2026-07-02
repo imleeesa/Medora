@@ -43,6 +43,7 @@ class MedicineProvider extends ChangeNotifier {
              medicineRepository: medicineRepository ?? MedicineRepository(),
              intakeRepository: intakeRepository ?? IntakeRepository(),
              therapyRepository: therapyRepository ?? TherapyRepository(),
+             notificationService: notificationService ?? NotificationService(),
            );
 
   final ProfileRepository _profileRepository;
@@ -467,6 +468,7 @@ class MedicineProvider extends ChangeNotifier {
       final updated = await _medicineRepository.updateMedicine(updatedMedicine);
       if (!updated) return;
       await _reloadCache();
+      await _notifyLowStockIfCrossedThreshold(medicine, updatedMedicine);
       await _cancelMedicineNotifications([medicine]);
       await _scheduleMedicineNotifications(updatedMedicine);
       _errorMessage = null;
@@ -546,6 +548,7 @@ class MedicineProvider extends ChangeNotifier {
       final updated = await _medicineRepository.updateMedicine(updatedMedicine);
       if (!updated) return;
       await _reloadCache();
+      await _notifyLowStockIfCrossedThreshold(medicine, updatedMedicine);
       _errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -914,6 +917,29 @@ class MedicineProvider extends ChangeNotifier {
       await _notificationService.scheduleMedicineNotifications(medicine);
     } catch (_) {
       // Una mancata pianificazione non deve annullare una modifica persistita.
+    }
+  }
+
+  Future<void> _notifyLowStockIfCrossedThreshold(
+    Medicine previous,
+    Medicine current,
+  ) async {
+    if (!_currentProfile.notificationsEnabled ||
+        !current.isActive ||
+        current.stockWarningThreshold <= 0 ||
+        previous.stockQuantity <= current.stockWarningThreshold ||
+        current.stockQuantity > current.stockWarningThreshold) {
+      return;
+    }
+
+    final therapyId = current.therapyId;
+    final therapy = therapyId == null ? null : getTherapyById(therapyId);
+    if (therapy == null || !therapy.isActive) return;
+
+    try {
+      await _notificationService.showLowStockNotification(current);
+    } catch (_) {
+      // La modifica delle scorte resta valida anche senza notifiche locali.
     }
   }
 

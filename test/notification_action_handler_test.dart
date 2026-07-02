@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meditrack/models/intake_record.dart';
 import 'package:meditrack/models/medicine.dart';
 import 'package:meditrack/models/medicine_schedule.dart';
+import 'package:meditrack/models/notification_permission_status.dart';
 import 'package:meditrack/models/therapy.dart';
 import 'package:meditrack/models/user_profile.dart';
 import 'package:meditrack/repositories/intake_repository.dart';
@@ -45,6 +46,34 @@ void main() {
       );
       expect(fixture.medicineRepository.medicine?.stockQuantity, 9.5);
     });
+
+    test(
+      'Assunta from notification sends one low stock alert on threshold crossing',
+      () async {
+        final fixture = _ActionFixture(
+          medicine: _medicine(
+            dose: '1 compressa',
+            stockQuantity: 6,
+            stockWarningThreshold: 5,
+          ),
+        );
+        final payload = _payload();
+
+        await fixture.handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: payload,
+          referenceDate: DateTime(2026, 6, 22, 8, 5),
+        );
+        await fixture.handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: payload,
+          referenceDate: DateTime(2026, 6, 22, 8, 6),
+        );
+
+        expect(fixture.notifications.lowStockMedicineIds, ['medicine-1']);
+        expect(fixture.medicineRepository.medicine?.stockQuantity, 5);
+      },
+    );
 
     test(
       'Saltata creates a skipped record without decrementing stock',
@@ -260,7 +289,8 @@ class _ActionFixture {
     : profileRepository = _FakeProfileRepository(),
       medicineRepository = _FakeMedicineRepository(medicine),
       therapyRepository = _FakeTherapyRepository(isActive: therapyIsActive),
-      intakeRepository = _FakeIntakeRepository() {
+      intakeRepository = _FakeIntakeRepository(),
+      notifications = _FakeNotificationScheduler() {
     intakeRepository.onUpdateMedicine = (medicine) {
       medicineRepository.medicine = medicine;
     };
@@ -270,6 +300,7 @@ class _ActionFixture {
         medicineRepository: medicineRepository,
         intakeRepository: intakeRepository,
         therapyRepository: therapyRepository,
+        notificationService: notifications,
       ),
     );
   }
@@ -278,7 +309,44 @@ class _ActionFixture {
   final _FakeMedicineRepository medicineRepository;
   final _FakeTherapyRepository therapyRepository;
   final _FakeIntakeRepository intakeRepository;
+  final _FakeNotificationScheduler notifications;
   late final NotificationActionHandler handler;
+}
+
+class _FakeNotificationScheduler implements MedicineNotificationScheduler {
+  final lowStockMedicineIds = <String>[];
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<NotificationPermissionStatus> getPermissionStatus() async =>
+      const NotificationPermissionStatus.unknown();
+
+  @override
+  Future<NotificationPermissionStatus> requestNotificationPermission() async =>
+      const NotificationPermissionStatus.unknown();
+
+  @override
+  Future<NotificationPermissionStatus> requestExactAlarmPermission() async =>
+      const NotificationPermissionStatus.unknown();
+
+  @override
+  Future<void> rescheduleActiveMedicines(Iterable<Medicine> medicines) async {}
+
+  @override
+  Future<void> scheduleMedicineNotifications(Medicine medicine) async {}
+
+  @override
+  Future<void> cancelMedicineNotifications(Medicine medicine) async {}
+
+  @override
+  Future<void> showLowStockNotification(Medicine medicine) async {
+    lowStockMedicineIds.add(medicine.id);
+  }
+
+  @override
+  Future<void> cancelAllNotifications() async {}
 }
 
 class _FakeProfileRepository implements ProfileRepository {
@@ -473,6 +541,7 @@ String _payload() {
 Medicine _medicine({
   required String dose,
   required double stockQuantity,
+  double stockWarningThreshold = 2,
   List<TimeOfDay> times = const [TimeOfDay(hour: 8, minute: 0)],
 }) {
   final now = DateTime(2026, 6, 22);
@@ -485,7 +554,7 @@ Medicine _medicine({
     times: times,
     daysOfWeek: const [DateTime.monday],
     stockQuantity: stockQuantity,
-    stockWarningThreshold: 2,
+    stockWarningThreshold: stockWarningThreshold,
     createdAt: now,
     updatedAt: now,
   );

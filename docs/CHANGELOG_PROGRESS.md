@@ -13,6 +13,56 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-02 - Sprint Promemoria Scorte Basse e Dashboard cliccabile
+
+Tipo modifica: Feature / UX / Test / Documentation.
+
+Descrizione:
+
+- aggiunta notifica locale immediata `Scorta bassa` quando una medicina attiva in terapia attiva attraversa la soglia minima dall'alto verso il basso;
+- introdotto `MedicineNotificationScheduler` in un file dedicato per permettere a Provider e `IntakeActionService` di usare lo scheduler senza esporre classi plugin alla UI;
+- aggiunto payload medicine-only per notifiche che devono aprire il dettaglio medicina senza rappresentare uno slot di assunzione;
+- mantenute separate le azioni rapide `Assunta`/`Saltata` dai tap di navigazione;
+- cancellata anche l'eventuale notifica scorta bassa quando vengono cancellate le notifiche di una medicina;
+- rese cliccabili nella Dashboard la card Prossima Medicina e le card Assunzioni di oggi, senza interferire con i pulsanti Assunta/Saltata;
+- aggiunti test per attraversamento soglia, toggle notifiche disattivato, azioni da notifica, payload medicine-only e navigazione Dashboard.
+
+File modificati:
+
+- `lib/services/medicine_notification_scheduler.dart`;
+- `lib/services/notification_service.dart`;
+- `lib/services/notification_payload.dart`;
+- `lib/services/notification_navigation_service.dart`;
+- `lib/services/notification_action_handler.dart`;
+- `lib/services/intake_action_service.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `test/notification_action_handler_test.dart`;
+- `test/notification_service_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- assenza di promemoria locali per scorta bassa;
+- rischio di notifiche duplicate continue quando una medicina resta sotto soglia;
+- medicine nella Dashboard non cliccabili verso il dettaglio.
+
+Problemi rimandati:
+
+- promemoria di riacquisto avanzati e configurabili;
+- rilevazione puntuale battery optimization Android/Samsung;
+- deep link verso storico o flussi di correzione guidata.
+
+Motivazione:
+
+Lo sprint collega scorte, storico e notifiche senza modificare lo schema Drift e migliora la navigazione quotidiana dalla Dashboard.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
+
 ## 2026-06-29 - Sprint Deep Link Notifiche
 
 Tipo modifica: Feature / Stabilizzazione notifiche / Test / Documentation.

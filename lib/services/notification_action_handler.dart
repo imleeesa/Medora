@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/intake_record.dart';
 import 'intake_action_service.dart';
 import 'notification_payload.dart';
+import 'notification_service.dart';
 
 class NotificationActionEvents {
   NotificationActionEvents._();
@@ -65,7 +66,9 @@ class NotificationActionEvents {
 
 class NotificationActionHandler {
   NotificationActionHandler({IntakeActionService? intakeActionService})
-    : _intakeActionService = intakeActionService ?? IntakeActionService();
+    : _intakeActionService =
+          intakeActionService ??
+          IntakeActionService(notificationService: NotificationService());
 
   final IntakeActionService _intakeActionService;
 
