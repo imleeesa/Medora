@@ -36,6 +36,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Raggruppamento delle medicine per terapia.
 - Ricerca per nome terapia o nome medicina.
 - Dettaglio della medicina con dosaggio, stato, orari, giorni, scorte e note.
+- Modifica di una medicina esistente dal dettaglio, mantenendo lo stesso identificativo e ripianificando i promemoria.
 - Spostamento persistente di una medicina verso un'altra terapia attiva.
 - Attivazione o disattivazione di una medicina.
 - Eliminazione persistente di una medicina senza rimuovere automaticamente la terapia.
@@ -61,7 +62,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 
 - Miglioramento generale della UI e consolidamento del design system.
 - Evoluzione del sistema Terapie con filtri, ordinamento e stati archiviati piu' chiari.
-- Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' e flussi di modifica completi.
+- Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' piu' avanzati.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
 - Evoluzione dello storico con filtri, ritardi, note e statistiche avanzate.
 - Gestione avanzata delle scorte con registro carico/scarico e promemoria di riacquisto configurabili.
@@ -226,7 +227,7 @@ flutter run -d <device-id>
 
 ## Stato attuale del progetto
 
-Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; la dose e' opzionale e viene distinta dalla quantita' in scorta.
+Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; la medicina puo' essere modificata dal dettaglio senza perdere storico o identificativo; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
 Lo storico base e' operativo e persistente. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi, includono azioni rapide Assunta/Saltata, aprono il dettaglio medicina dal tap sul corpo della notifica, avvisano quando la scorta attraversa la soglia minima e mostrano in Impostazioni lo stato dei permessi Android; Backup e Report PDF restano predisposti ma non ancora operativi.
 

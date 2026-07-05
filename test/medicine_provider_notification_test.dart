@@ -16,6 +16,7 @@ import 'package:meditrack/repositories/profile_repository.dart';
 import 'package:meditrack/repositories/settings_repository.dart';
 import 'package:meditrack/repositories/therapy_repository.dart';
 import 'package:meditrack/screens/settings_screen.dart';
+import 'package:meditrack/screens/medicine_detail_screen.dart';
 import 'package:meditrack/services/intake_action_service.dart';
 import 'package:meditrack/services/notification_action_handler.dart';
 import 'package:meditrack/services/notification_navigation_service.dart';
@@ -472,6 +473,10 @@ void main() {
 
       expect(find.text('Dettagli Medicina'), findsOneWidget);
       expect(find.text('medicine-1'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('medicine-schedule-time-8-0')),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
@@ -529,6 +534,204 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Dettagli Medicina'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('medicine-schedule-time-23-59')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('medicine detail shows one chip for equivalent schedules', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [
+              _medicine(
+                id: 'medicine-1',
+                therapyId: 'therapy-1',
+                times: const [TimeOfDay(hour: 13, minute: 53)],
+                daysOfWeek: const [DateTime.monday, DateTime.wednesday],
+                schedules: const [
+                  MedicineSchedule(
+                    time: TimeOfDay(hour: 13, minute: 53),
+                    daysOfWeek: [DateTime.monday],
+                  ),
+                  MedicineSchedule(
+                    time: TimeOfDay(hour: 13, minute: 53),
+                    daysOfWeek: [DateTime.wednesday],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: MaterialApp(
+            home: MedicineDetailScreen(
+              medicine: fixture.provider.getMedicineById('medicine-1')!,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('medicine-schedule-time-13-53')),
+        findsOneWidget,
+      );
+      expect(find.text('Lun, Mer'), findsOneWidget);
+    });
+
+    testWidgets('medicine detail shows multiple different schedules once', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [
+              _medicine(
+                id: 'medicine-1',
+                therapyId: 'therapy-1',
+                times: const [
+                  TimeOfDay(hour: 8, minute: 0),
+                  TimeOfDay(hour: 20, minute: 30),
+                ],
+                daysOfWeek: const [DateTime.monday],
+              ),
+            ],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: MaterialApp(
+            home: MedicineDetailScreen(
+              medicine: fixture.provider.getMedicineById('medicine-1')!,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('medicine-schedule-time-8-0')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('medicine-schedule-time-20-30')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('medicine detail edit updates medicine and keeps same id', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [_medicine(id: 'medicine-1', therapyId: 'therapy-1')],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+      fixture.notifications.clear();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: MaterialApp(
+            home: MedicineDetailScreen(
+              medicine: fixture.provider.getMedicineById('medicine-1')!,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('medicine-detail-edit-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Modifica Medicina'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('medicine-name-field')),
+        'Aspirina aggiornata',
+      );
+      await tester.tap(find.text('1/2'));
+      await tester.enterText(
+        find.byKey(const ValueKey('medicine-stock-field')),
+        '12.5',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('medicine-warning-threshold-field')),
+        '4',
+      );
+      await tester.ensureVisible(find.text('Salva Modifiche'));
+      await tester.tap(find.text('Salva Modifiche'));
+      await tester.pumpAndSettle();
+
+      final updated = fixture.provider.getMedicineById('medicine-1')!;
+      expect(updated.id, 'medicine-1');
+      expect(updated.name, 'Aspirina aggiornata');
+      expect(updated.dose, '1/2 compressa');
+      expect(updated.stockQuantity, 12.5);
+      expect(updated.stockWarningThreshold, 4);
+      expect(fixture.notifications.cancelledMedicineIds, ['medicine-1']);
+      expect(fixture.notifications.scheduledMedicineIds, ['medicine-1']);
+      expect(find.text('Aspirina aggiornata'), findsOneWidget);
+    });
+
+    testWidgets('cancelling medicine edit does not change the medicine', (
+      tester,
+    ) async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [_medicine(id: 'medicine-1', therapyId: 'therapy-1')],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: fixture.provider,
+          child: MaterialApp(
+            home: MedicineDetailScreen(
+              medicine: fixture.provider.getMedicineById('medicine-1')!,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('medicine-detail-edit-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('medicine-name-field')),
+        'Nome da annullare',
+      );
+      await tester.ensureVisible(find.text('Annulla'));
+      await tester.tap(find.text('Annulla'));
+      await tester.pumpAndSettle();
+
+      expect(
+        fixture.provider.getMedicineById('medicine-1')!.name,
+        'medicine-1',
+      );
+      expect(find.text('Nome da annullare'), findsNothing);
     });
 
     testWidgets('dashboard intake action buttons still update intake status', (
@@ -1002,6 +1205,7 @@ Medicine _medicine({
   double stockWarningThreshold = 2,
   List<TimeOfDay> times = const [TimeOfDay(hour: 8, minute: 0)],
   List<int> daysOfWeek = const [DateTime.monday],
+  List<MedicineSchedule>? schedules,
 }) {
   final now = DateTime.now();
   return Medicine(
@@ -1012,6 +1216,7 @@ Medicine _medicine({
     dose: dose,
     times: times,
     daysOfWeek: daysOfWeek,
+    schedules: schedules,
     stockQuantity: stockQuantity,
     stockWarningThreshold: stockWarningThreshold,
     isActive: isActive,

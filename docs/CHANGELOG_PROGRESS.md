@@ -13,6 +13,49 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-03 - Sprint Medicine Detail: orari e modifica medicina
+
+Tipo modifica: Bug Fix / Feature / UX / Test / Documentation.
+
+Descrizione:
+
+- corretto il dettaglio medicina per mostrare gli orari reali degli schedule una sola volta, senza duplicare lo stesso valore nella riga;
+- il dettaglio medicina ora legge la versione aggiornata dal Provider, cosi' nome, dose, colore, scorte, giorni e note restano coerenti dopo modifiche o deep link;
+- aggiunta azione `Modifica medicina` dal dettaglio con icona matita;
+- esteso `AddMedicineScreen` in modalita' edit, con precompilazione dei campi e salvataggio tramite `MedicineProvider.updateMedicine`;
+- preservato l'ID della medicina e mantenuto il cambio terapia nel flusso dedicato `Cambia terapia`;
+- impedito l'inserimento duplicato dello stesso orario nel form;
+- aggiornato il testo del form sulla quantita' per assunzione, ora usata dal decremento scorte quando interpretabile;
+- aggiunti test widget per deduplica orari, apertura da Dashboard/deep link, modifica dal dettaglio e annullamento modifica.
+
+File modificati:
+
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- orari duplicati o ambigui nella sezione `Orari di Assunzione`;
+- assenza di una vera azione di modifica medicina dal dettaglio;
+- rischio di salvare orari duplicati dal form.
+
+Problemi rimandati:
+
+- modifica della terapia associata resta nel flusso separato `Cambia terapia`;
+- gestione schedule con giorni diversi per singolo orario resta rappresentata nel form come selezione giorni globale, coerente con il flusso attuale;
+- filtri o statistiche avanzate restano fuori perimetro.
+
+Motivazione:
+
+Lo sprint migliora il dettaglio medicina e abilita la modifica dei dati principali senza cambiare schema Drift, UI globale o comportamento di storico, scorte e notifiche.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
+
 ## 2026-07-02 - Sprint Promemoria Scorte Basse e Dashboard cliccabile
 
 Tipo modifica: Feature / UX / Test / Documentation.

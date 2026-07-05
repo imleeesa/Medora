@@ -487,6 +487,76 @@ Nel dettaglio medicina e' disponibile l'azione `Cambia terapia`. La UI mostra so
 
 Le terapie archiviate non sono destinazioni disponibili e non vengono riattivate automaticamente durante lo spostamento.
 
+## Orari duplicati nel dettaglio medicina
+
+### Categoria
+
+Bug UI/dati derivati.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-07-03
+
+### Causa
+
+La sezione `Orari di Assunzione` mostrava lo stesso `TimeOfDay` due volte nella stessa riga: una volta nel chip evidenziato e una volta come testo normale. Inoltre il dettaglio usava in alcune sezioni l'istanza iniziale della medicina invece della versione aggiornata dal Provider, rendendo piu' facile visualizzare dati non allineati dopo navigazioni da Dashboard o notifica.
+
+### Come e' stato risolto
+
+`MedicineDetailScreen` ora legge la medicina corrente dal Provider, costruisce la lista orari dagli schedule attivi, raggruppa gli schedule equivalenti per ora/minuto, unisce i giorni associati e ordina gli orari in modo crescente. La riga mostra un solo chip orario e i giorni collegati, senza aggiungere una seconda etichetta con lo stesso orario.
+
+### File modificati
+
+- `lib/screens/medicine_detail_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/TECHNICAL_GUIDE.md`.
+
+### Note
+
+La correzione vale per aperture da Dashboard, dettaglio terapia e deep link notifica, perche' tutte arrivano allo stesso `MedicineDetailScreen`.
+
+## Modifica medicina dal dettaglio non disponibile
+
+### Categoria
+
+Funzionalita' incompleta.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-07-03
+
+### Cosa e' stato trovato
+
+Il dettaglio medicina permetteva di eliminare o cambiare terapia, ma non di modificare nome, dose, orari, giorni, scorte, soglia e note.
+
+### Come e' stato risolto
+
+Il dettaglio medicina espone ora un'azione `Modifica medicina`. Il form `AddMedicineScreen` supporta anche la modalita' edit: precompila i campi esistenti e salva tramite `MedicineProvider.updateMedicine`, mantenendo invariato `medicineId`, aggiornando `updatedAt` tramite Provider e ripianificando le notifiche della medicina.
+
+### File modificati
+
+- `lib/screens/medicine_detail_screen.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `README.md`.
+
+### Note
+
+Il cambio terapia resta nel flusso separato `Cambia terapia`, gia' persistente e validato sulle terapie attive.
+
 ## Record legacy di medicine senza terapia
 
 ### Categoria

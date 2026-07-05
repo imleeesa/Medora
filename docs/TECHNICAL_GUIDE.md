@@ -261,14 +261,17 @@ Responsabilita':
 
 ### `AddMedicineScreen`
 
-Form di inserimento di una nuova medicina.
+Form di inserimento o modifica di una medicina.
 
 Responsabilita':
 
 - validare terapia, nome, dosaggio, orari, giorni e quantita';
 - ricevere opzionalmente una terapia esistente per associare una medicina senza reinserirne il nome;
+- ricevere opzionalmente una medicina esistente per aprirsi in modalita' edit;
 - permettere selezione di colore e note;
-- chiamare `MedicineProvider.addMedicine` o `addMedicineToTherapy`;
+- chiamare `MedicineProvider.addMedicine` / `addMedicineToTherapy` in creazione oppure `updateMedicine` in modifica;
+- mantenere invariato `medicineId` durante la modifica e lasciare il cambio terapia al flusso dedicato `Cambia terapia`;
+- deduplicare gli orari selezionati prima del salvataggio;
 - mostrare feedback di successo o errore.
 
 ### `AddTherapyScreen`
@@ -299,9 +302,11 @@ Schermata di dettaglio di una medicina.
 Responsabilita':
 
 - mostrare nome, dosaggio e stato;
-- mostrare orari e giorni di assunzione;
+- mostrare orari e giorni di assunzione usando gli schedule attivi della medicina corrente;
 - mostrare quantita' e soglia minima;
-- mostrare note se presenti.
+- mostrare note se presenti;
+- aprire il form di modifica della medicina;
+- cambiare terapia o eliminare la medicina tramite azioni dedicate.
 
 ### `HistoryScreen`
 
@@ -960,7 +965,9 @@ Le terapie sono entita' autonome persistite. Possono essere create, modificate, 
 
 ### Medicine
 
-Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. Dal dettaglio medicina l'utente puo' scegliere `Cambia terapia`: sono proposte solo terapie attive diverse da quella corrente, senza riattivare automaticamente quelle archiviate. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Ogni modifica rilevante deve aggiornare `updatedAt`.
+Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. Dal dettaglio medicina l'utente puo' scegliere `Modifica medicina` per aggiornare nome, dose, orari, giorni, scorte, soglia, colore e note mantenendo lo stesso `medicineId`; puo' scegliere `Cambia terapia` per spostarla in una terapia attiva diversa, senza riattivare automaticamente quelle archiviate. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Ogni modifica rilevante deve aggiornare `updatedAt`.
+
+Il dettaglio medicina non deve mescolare prossima assunzione calcolata e schedule reali. La sezione `Orari di Assunzione` deriva dagli schedule attivi, raggruppa gli orari equivalenti per ora/minuto, unisce i giorni associati e li ordina in modo crescente. Dashboard, dettaglio terapia e deep link notifica passano solo l'ID/istanza iniziale: la schermata rilegge sempre la medicina corrente dal Provider per evitare dati obsoleti.
 
 ### Storico
 

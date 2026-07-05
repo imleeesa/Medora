@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/medicine.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../widgets/primary_button.dart';
 
 class AddMedicineScreen extends StatefulWidget {
   final Therapy? therapy;
+  final Medicine? medicine;
 
-  const AddMedicineScreen({super.key, this.therapy});
+  const AddMedicineScreen({super.key, this.therapy, this.medicine});
 
   @override
   State<AddMedicineScreen> createState() => _AddMedicineScreenState();
@@ -31,6 +33,8 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   bool _isCustomQuantity = false;
   String _selectedColor = '#2E7D32';
   bool _isLoading = false;
+
+  bool get _isEditing => widget.medicine != null;
 
   final List<String> _colors = [
     '#2E7D32',
@@ -59,8 +63,36 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   @override
   void initState() {
     super.initState();
+    final medicine = widget.medicine;
     final therapy = widget.therapy;
-    if (therapy != null) {
+    if (medicine != null) {
+      _nameController.text = medicine.name;
+      _notesController.text = medicine.notes ?? '';
+      _stockController.text = Medicine.formatQuantity(medicine.stockQuantity);
+      _warningController.text = Medicine.formatQuantity(
+        medicine.stockWarningThreshold,
+      );
+      _selectedTherapyId = medicine.therapyId ?? therapy?.id;
+      _selectedColor = medicine.color;
+      final activeSchedules = medicine.schedules
+          .where((schedule) => schedule.isActive)
+          .toList(growable: false);
+      _times.addAll(
+        _uniqueSortedTimes(
+          activeSchedules.isEmpty
+              ? medicine.times
+              : activeSchedules.map((schedule) => schedule.time),
+        ),
+      );
+      _daysOfWeek.addAll(
+        _uniqueSortedDays(
+          activeSchedules.isEmpty
+              ? medicine.daysOfWeek
+              : activeSchedules.expand((schedule) => schedule.daysOfWeek),
+        ),
+      );
+      _seedDose(medicine.dose);
+    } else if (therapy != null) {
       _selectedTherapyId = therapy.id;
       _selectedColor = therapy.color;
     }
@@ -87,7 +119,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: _closeKeyboardAndPop,
         ),
-        title: const Text('Aggiungi Medicina'),
+        title: Text(_isEditing ? 'Modifica Medicina' : 'Aggiungi Medicina'),
         elevation: 0,
         backgroundColor: Colors.white,
       ),
@@ -106,19 +138,27 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.therapy == null) ...[
+                      if (widget.therapy == null && !_isEditing) ...[
                         _buildLabel('Terapia *'),
                         const SizedBox(height: 8),
                         _buildTherapySelector(),
-                      ] else ...[
+                      ] else if (widget.therapy != null) ...[
                         _buildLabel('Terapia'),
                         const SizedBox(height: 8),
                         _SelectedTherapyField(therapy: widget.therapy!),
+                      ] else ...[
+                        _buildLabel('Terapia'),
+                        const SizedBox(height: 8),
+                        _ReadOnlyInfoField(
+                          icon: Icons.spa_outlined,
+                          text: 'Terapia non disponibile',
+                        ),
                       ],
                       const SizedBox(height: 20),
                       _buildLabel('Nome Medicina *'),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const ValueKey('medicine-name-field'),
                         controller: _nameController,
                         decoration: const InputDecoration(
                           hintText: 'Es. Tachipirina',
@@ -151,6 +191,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       _buildLabel('Note'),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const ValueKey('medicine-notes-field'),
                         controller: _notesController,
                         decoration: const InputDecoration(
                           hintText: 'Es. Prendere dopo i pasti',
@@ -163,10 +204,12 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: PrimaryButton(
-                          label: 'Aggiungi Medicina',
-                          icon: Icons.add,
+                          label: _isEditing
+                              ? 'Salva Modifiche'
+                              : 'Aggiungi Medicina',
+                          icon: _isEditing ? Icons.save_outlined : Icons.add,
                           isLoading: _isLoading,
-                          onPressed: _addMedicine,
+                          onPressed: _saveMedicine,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -260,6 +303,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         if (_isCustomQuantity) ...[
           const SizedBox(height: 12),
           TextFormField(
+            key: const ValueKey('medicine-custom-quantity-field'),
             controller: _customQuantityController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
@@ -286,6 +330,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         if (_selectedUnit == 'Altro') ...[
           const SizedBox(height: 12),
           TextFormField(
+            key: const ValueKey('medicine-custom-unit-field'),
             controller: _customUnitController,
             decoration: const InputDecoration(
               hintText: 'Inserisci l\'unita',
@@ -296,7 +341,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         ],
         const SizedBox(height: 6),
         Text(
-          'Opzionale. La quantita per assunzione non modifica la scorta.',
+          'Opzionale. Se interpretabile, viene usata per aggiornare la scorta.',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
@@ -501,15 +546,18 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     if (!mounted) return;
     if (time != null) {
       setState(() {
-        _times.add(time);
-        _times.sort(
-          (a, b) => a.hour * 60 + a.minute > b.hour * 60 + b.minute ? 1 : -1,
+        final exists = _times.any(
+          (item) => item.hour == time.hour && item.minute == time.minute,
         );
+        if (!exists) {
+          _times.add(time);
+          _times.sort(_compareTimeOfDay);
+        }
       });
     }
   }
 
-  void _addMedicine() async {
+  void _saveMedicine() async {
     if (!_formKey.currentState!.validate()) return;
     if (_times.isEmpty || _daysOfWeek.isEmpty) {
       ScaffoldMessenger.of(
@@ -532,25 +580,46 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
 
     try {
       final provider = Provider.of<MedicineProvider>(context, listen: false);
-      await provider.addMedicineToTherapy(
-        therapyId: therapyId,
-        name: _nameController.text,
-        dose: _buildDose(),
-        times: _times,
-        daysOfWeek: _daysOfWeek,
-        stockQuantity: _parseQuantity(_stockController.text),
-        stockWarningThreshold: _parseQuantity(_warningController.text),
-        notes: _notesController.text,
-        color: _selectedColor,
-      );
+      final medicine = widget.medicine;
+      if (medicine == null) {
+        await provider.addMedicineToTherapy(
+          therapyId: therapyId,
+          name: _nameController.text,
+          dose: _buildDose(),
+          times: _uniqueSortedTimes(_times),
+          daysOfWeek: _uniqueSortedDays(_daysOfWeek),
+          stockQuantity: _parseQuantity(_stockController.text),
+          stockWarningThreshold: _parseQuantity(_warningController.text),
+          notes: _notesController.text,
+          color: _selectedColor,
+        );
+      } else {
+        await provider.updateMedicine(
+          id: medicine.id,
+          name: _nameController.text,
+          dose: _buildDose(),
+          times: _uniqueSortedTimes(_times),
+          daysOfWeek: _uniqueSortedDays(_daysOfWeek),
+          stockQuantity: _parseQuantity(_stockController.text),
+          stockWarningThreshold: _parseQuantity(_warningController.text),
+          notes: _notesController.text,
+          color: _selectedColor,
+          icon: medicine.icon,
+          isActive: medicine.isActive,
+        );
+      }
 
       if (mounted) {
         FocusManager.instance.primaryFocus?.unfocus();
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Medicina aggiunta con successo'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Medicina aggiornata con successo'
+                  : 'Medicina aggiunta con successo',
+            ),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -575,6 +644,56 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
 
   double _parseQuantity(String value) =>
       double.parse(value.trim().replaceAll(',', '.'));
+
+  List<TimeOfDay> _uniqueSortedTimes(Iterable<TimeOfDay> times) {
+    final unique = <String, TimeOfDay>{};
+    for (final time in times) {
+      unique['${time.hour}:${time.minute}'] = time;
+    }
+    return unique.values.toList(growable: false)..sort(_compareTimeOfDay);
+  }
+
+  List<int> _uniqueSortedDays(Iterable<int> days) {
+    return days.toSet().where((day) => day >= 1 && day <= 7).toList()..sort();
+  }
+
+  int _compareTimeOfDay(TimeOfDay first, TimeOfDay second) {
+    final firstMinutes = first.hour * 60 + first.minute;
+    final secondMinutes = second.hour * 60 + second.minute;
+    return firstMinutes.compareTo(secondMinutes);
+  }
+
+  void _seedDose(String dose) {
+    final trimmed = dose.trim();
+    if (trimmed.isEmpty) return;
+
+    final match = RegExp(
+      r'^(\d+\s*/\s*\d+|\d+(?:[,.]\d+)?)(?:\s+(.+))?$',
+    ).firstMatch(trimmed);
+    if (match == null) {
+      _isCustomQuantity = true;
+      _customQuantityController.text = trimmed;
+      return;
+    }
+
+    final quantity = match.group(1)!.replaceAll(RegExp(r'\s+'), '');
+    if (_quantityPresets.contains(quantity)) {
+      _selectedQuantity = quantity;
+      _isCustomQuantity = false;
+    } else {
+      _isCustomQuantity = true;
+      _customQuantityController.text = quantity;
+    }
+
+    final unit = match.group(2)?.trim();
+    if (unit == null || unit.isEmpty) return;
+    if (_unitOptions.contains(unit) && unit != 'Altro') {
+      _selectedUnit = unit;
+    } else {
+      _selectedUnit = 'Altro';
+      _customUnitController.text = unit;
+    }
+  }
 
   Color _parseColor(String colorHex) {
     final value = colorHex.replaceFirst('#', '');
@@ -625,6 +744,43 @@ class _SelectedTherapyField extends StatelessWidget {
   }
 }
 
+class _ReadOnlyInfoField extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _ReadOnlyInfoField({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.grey.shade600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E1E1E),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StockNumberField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -651,6 +807,9 @@ class _StockNumberField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextFormField(
+          key: label == 'Quantita iniziale'
+              ? const ValueKey('medicine-stock-field')
+              : const ValueKey('medicine-warning-threshold-field'),
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
