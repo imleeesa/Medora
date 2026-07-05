@@ -99,6 +99,293 @@ void main() {
     );
 
     test(
+      'modifying a medicine can persist different schedules for the same medicine',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [_medicine(id: 'medicine-1', therapyId: 'therapy-1')],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+        fixture.notifications.clear();
+
+        await fixture.provider.updateMedicine(
+          id: 'medicine-1',
+          name: 'Tachipirina',
+          dose: '1 compressa',
+          times: const [
+            TimeOfDay(hour: 8, minute: 0),
+            TimeOfDay(hour: 14, minute: 0),
+          ],
+          daysOfWeek: const [DateTime.monday, DateTime.wednesday],
+          schedules: const [
+            MedicineSchedule(
+              time: TimeOfDay(hour: 8, minute: 0),
+              daysOfWeek: [DateTime.monday],
+            ),
+            MedicineSchedule(
+              time: TimeOfDay(hour: 14, minute: 0),
+              daysOfWeek: [DateTime.wednesday],
+            ),
+          ],
+          stockQuantity: 10,
+          stockWarningThreshold: 2,
+          isActive: true,
+        );
+
+        final updated = fixture.provider.getMedicineById('medicine-1')!;
+        expect(updated.id, 'medicine-1');
+        expect(updated.schedules, hasLength(2));
+        expect(updated.schedules[0].daysOfWeek, [DateTime.monday]);
+        expect(updated.schedules[1].daysOfWeek, [DateTime.wednesday]);
+        expect(fixture.notifications.cancelledMedicineIds, ['medicine-1']);
+        expect(fixture.notifications.scheduledMedicineIds, ['medicine-1']);
+      },
+    );
+
+    test('dashboard intakes distinguish two slots on the same day', () async {
+      final fixture = _ProviderFixture(
+        therapies: [
+          _therapy(
+            id: 'therapy-1',
+            medicines: [
+              _medicine(
+                id: 'medicine-1',
+                therapyId: 'therapy-1',
+                times: const [
+                  TimeOfDay(hour: 8, minute: 0),
+                  TimeOfDay(hour: 20, minute: 0),
+                ],
+                daysOfWeek: const [DateTime.monday],
+                schedules: const [
+                  MedicineSchedule(
+                    time: TimeOfDay(hour: 8, minute: 0),
+                    daysOfWeek: [DateTime.monday],
+                  ),
+                  MedicineSchedule(
+                    time: TimeOfDay(hour: 20, minute: 0),
+                    daysOfWeek: [DateTime.monday],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+      await fixture.provider.initialize();
+
+      final intakes = fixture.provider.getTodayScheduledIntakes(
+        date: DateTime(2026, 7, 6),
+      );
+
+      expect(intakes, hasLength(2));
+      expect(intakes[0].scheduledDateTime.hour, 8);
+      expect(intakes[1].scheduledDateTime.hour, 20);
+
+      await fixture.provider.markMedicineAsTaken(
+        medicineId: 'medicine-1',
+        scheduledDateTime: DateTime(2026, 7, 6, 8),
+      );
+      await fixture.provider.markMedicineAsSkipped(
+        medicineId: 'medicine-1',
+        scheduledDateTime: DateTime(2026, 7, 6, 20),
+      );
+
+      expect(fixture.provider.intakeHistory, hasLength(2));
+      expect(
+        fixture.provider.intakeHistory.map((record) => record.status),
+        containsAll([IntakeStatus.taken, IntakeStatus.skipped]),
+      );
+    });
+
+    test(
+      'stock changes are isolated per real scheduled slot on the same day',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  dose: '1 compressa',
+                  stockQuantity: 10,
+                  times: const [
+                    TimeOfDay(hour: 8, minute: 0),
+                    TimeOfDay(hour: 20, minute: 0),
+                  ],
+                  daysOfWeek: const [DateTime.monday],
+                  schedules: const [
+                    MedicineSchedule(
+                      time: TimeOfDay(hour: 8, minute: 0),
+                      daysOfWeek: [DateTime.monday],
+                    ),
+                    MedicineSchedule(
+                      time: TimeOfDay(hour: 20, minute: 0),
+                      daysOfWeek: [DateTime.monday],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+
+        await fixture.provider.markMedicineAsTaken(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+        );
+        await fixture.provider.markMedicineAsTaken(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+        );
+        expect(
+          fixture.provider.getMedicineById('medicine-1')?.stockQuantity,
+          9,
+        );
+
+        await fixture.provider.markMedicineAsTaken(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 6, 20),
+        );
+        expect(
+          fixture.provider.getMedicineById('medicine-1')?.stockQuantity,
+          8,
+        );
+
+        await fixture.provider.markMedicineAsSkipped(
+          medicineId: 'medicine-1',
+          scheduledDateTime: DateTime(2026, 7, 6, 20),
+        );
+
+        expect(fixture.provider.intakeHistory, hasLength(2));
+        expect(
+          fixture.provider.getMedicineById('medicine-1')?.stockQuantity,
+          9,
+        );
+        expect(
+          fixture.provider.intakeHistory
+              .where(
+                (record) => record.scheduledDateTime == DateTime(2026, 7, 6, 8),
+              )
+              .single
+              .status,
+          IntakeStatus.taken,
+        );
+        expect(
+          fixture.provider.intakeHistory
+              .where(
+                (record) =>
+                    record.scheduledDateTime == DateTime(2026, 7, 6, 20),
+              )
+              .single
+              .status,
+          IntakeStatus.skipped,
+        );
+      },
+    );
+
+    test(
+      'advanced schedules do not create cartesian slots for next intake or today list',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  name: 'Tachipirina',
+                  times: const [
+                    TimeOfDay(hour: 14, minute: 30),
+                    TimeOfDay(hour: 15, minute: 30),
+                    TimeOfDay(hour: 15, minute: 35),
+                    TimeOfDay(hour: 16, minute: 35),
+                  ],
+                  daysOfWeek: const [
+                    DateTime.monday,
+                    DateTime.tuesday,
+                    DateTime.saturday,
+                    DateTime.sunday,
+                  ],
+                  schedules: _advancedSchedules(),
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+
+        final sunday = DateTime(2026, 7, 5, 15, 33);
+        final sundayIntakes = fixture.provider.getTodayScheduledIntakes(
+          date: sunday,
+        );
+        final next = fixture.provider.getNextScheduledIntake(
+          referenceDate: sunday,
+        );
+
+        expect(
+          sundayIntakes.map(
+            (intake) => TimeOfDay.fromDateTime(intake.scheduledDateTime),
+          ),
+          const [
+            TimeOfDay(hour: 14, minute: 30),
+            TimeOfDay(hour: 16, minute: 35),
+          ],
+        );
+        expect(
+          sundayIntakes.any(
+            (intake) =>
+                intake.scheduledDateTime.hour == 15 &&
+                intake.scheduledDateTime.minute == 35,
+          ),
+          isFalse,
+        );
+        expect(next?.scheduledDateTime, DateTime(2026, 7, 5, 16, 35));
+
+        expect(
+          fixture.provider
+              .getTodayScheduledIntakes(date: DateTime(2026, 7, 6))
+              .map(
+                (intake) => TimeOfDay.fromDateTime(intake.scheduledDateTime),
+              ),
+          const [
+            TimeOfDay(hour: 15, minute: 30),
+            TimeOfDay(hour: 15, minute: 35),
+          ],
+        );
+        expect(
+          fixture.provider
+              .getTodayScheduledIntakes(date: DateTime(2026, 7, 7))
+              .map(
+                (intake) => TimeOfDay.fromDateTime(intake.scheduledDateTime),
+              ),
+          const [
+            TimeOfDay(hour: 14, minute: 30),
+            TimeOfDay(hour: 16, minute: 35),
+          ],
+        );
+        expect(
+          fixture.provider
+              .getTodayScheduledIntakes(date: DateTime(2026, 7, 11))
+              .map(
+                (intake) => TimeOfDay.fromDateTime(intake.scheduledDateTime),
+              ),
+          const [
+            TimeOfDay(hour: 15, minute: 30),
+            TimeOfDay(hour: 15, minute: 35),
+          ],
+        );
+      },
+    );
+
+    test(
       'deleting and deactivating medicines cancel reminders, reactivation schedules them again',
       () async {
         final fixture = _ProviderFixture(
@@ -227,6 +514,127 @@ void main() {
           isNotNull,
         );
         expect(fixture.notifications.scheduledMedicineIds, isEmpty);
+      },
+    );
+
+    test('creating a medicine deduplicates identical schedule slots', () async {
+      final fixture = _ProviderFixture(therapies: [_therapy(id: 'therapy-1')]);
+      await fixture.provider.initialize();
+
+      await fixture.provider.addMedicine(
+        therapyId: 'therapy-1',
+        name: 'Antibiotico',
+        dose: '1 compressa',
+        times: const [TimeOfDay(hour: 8, minute: 0)],
+        daysOfWeek: const [DateTime.monday],
+        schedules: const [
+          MedicineSchedule(
+            time: TimeOfDay(hour: 8, minute: 0),
+            daysOfWeek: [DateTime.monday, DateTime.monday],
+          ),
+          MedicineSchedule(
+            time: TimeOfDay(hour: 8, minute: 0),
+            daysOfWeek: [DateTime.monday],
+          ),
+        ],
+        stockQuantity: 10,
+        stockWarningThreshold: 2,
+      );
+
+      final created = fixture.provider.medicines.single;
+      expect(created.name, 'Antibiotico');
+      expect(created.schedules, hasLength(1));
+      expect(created.schedules.single.daysOfWeek, [DateTime.monday]);
+    });
+
+    test(
+      'notification scheduling receives only real advanced schedule slots',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  schedules: _advancedSchedules(),
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+
+        expect(
+          fixture.notifications.rescheduledSlots.single,
+          containsAll([
+            'medicine-1|1|15|30',
+            'medicine-1|1|15|35',
+            'medicine-1|6|15|30',
+            'medicine-1|6|15|35',
+            'medicine-1|2|14|30',
+            'medicine-1|2|16|35',
+            'medicine-1|7|14|30',
+            'medicine-1|7|16|35',
+          ]),
+        );
+        expect(
+          fixture.notifications.rescheduledSlots.single,
+          isNot(contains('medicine-1|7|15|35')),
+        );
+      },
+    );
+
+    test(
+      'updating advanced schedules removes old dashboard and notification slots',
+      () async {
+        final fixture = _ProviderFixture(
+          therapies: [
+            _therapy(
+              id: 'therapy-1',
+              medicines: [
+                _medicine(
+                  id: 'medicine-1',
+                  therapyId: 'therapy-1',
+                  schedules: _advancedSchedules(),
+                ),
+              ],
+            ),
+          ],
+        );
+        await fixture.provider.initialize();
+        fixture.notifications.clear();
+
+        await fixture.provider.updateMedicine(
+          id: 'medicine-1',
+          name: 'Tachis',
+          dose: '1 compressa',
+          times: const [TimeOfDay(hour: 18, minute: 0)],
+          daysOfWeek: const [DateTime.sunday],
+          schedules: const [
+            MedicineSchedule(
+              time: TimeOfDay(hour: 18, minute: 0),
+              daysOfWeek: [DateTime.sunday],
+            ),
+          ],
+          stockQuantity: 10,
+          stockWarningThreshold: 2,
+          isActive: true,
+        );
+
+        expect(
+          fixture.provider
+              .getTodayScheduledIntakes(date: DateTime(2026, 7, 5))
+              .map((intake) => intake.scheduledDateTime),
+          [DateTime(2026, 7, 5, 18)],
+        );
+        expect(fixture.notifications.cancelledMedicineIds, ['medicine-1']);
+        expect(fixture.notifications.scheduledSlots, ['medicine-1|7|18|0']);
+        expect(
+          fixture.notifications.scheduledSlots,
+          isNot(contains('medicine-1|7|16|35')),
+        );
       },
     );
 
@@ -901,6 +1309,8 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
   final scheduledMedicineIds = <String>[];
   final cancelledMedicineIds = <String>[];
   final rescheduledBatches = <List<String>>[];
+  final rescheduledSlots = <List<String>>[];
+  final scheduledSlots = <String>[];
   final lowStockMedicineIds = <String>[];
 
   @override
@@ -931,12 +1341,14 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
     rescheduledBatches.add(
       medicines.map((medicine) => medicine.id).toList(growable: false),
     );
+    rescheduledSlots.add(medicines.expand(_slotKeys).toList(growable: false));
   }
 
   @override
   Future<void> scheduleMedicineNotifications(Medicine medicine) async {
     if (throwOnSchedule) throw StateError('Permission denied');
     scheduledMedicineIds.add(medicine.id);
+    scheduledSlots.addAll(_slotKeys(medicine));
   }
 
   @override
@@ -959,7 +1371,17 @@ class _FakeNotificationScheduler implements MedicineNotificationScheduler {
     scheduledMedicineIds.clear();
     cancelledMedicineIds.clear();
     rescheduledBatches.clear();
+    rescheduledSlots.clear();
+    scheduledSlots.clear();
     lowStockMedicineIds.clear();
+  }
+
+  Iterable<String> _slotKeys(Medicine medicine) sync* {
+    for (final schedule in medicine.schedules) {
+      for (final dayOfWeek in schedule.daysOfWeek.toSet()) {
+        yield '${medicine.id}|$dayOfWeek|${schedule.time.hour}|${schedule.time.minute}';
+      }
+    }
   }
 }
 
@@ -1200,6 +1622,7 @@ Medicine _medicine({
   required String id,
   required String therapyId,
   String dose = '1 compressa',
+  String? name,
   bool isActive = true,
   double stockQuantity = 10,
   double stockWarningThreshold = 2,
@@ -1212,7 +1635,7 @@ Medicine _medicine({
     id: id,
     profileId: 'profile-1',
     therapyId: therapyId,
-    name: id,
+    name: name ?? id,
     dose: dose,
     times: times,
     daysOfWeek: daysOfWeek,
@@ -1223,6 +1646,27 @@ Medicine _medicine({
     createdAt: now,
     updatedAt: now,
   );
+}
+
+List<MedicineSchedule> _advancedSchedules() {
+  return const [
+    MedicineSchedule(
+      time: TimeOfDay(hour: 15, minute: 30),
+      daysOfWeek: [DateTime.monday, DateTime.saturday],
+    ),
+    MedicineSchedule(
+      time: TimeOfDay(hour: 15, minute: 35),
+      daysOfWeek: [DateTime.monday, DateTime.saturday],
+    ),
+    MedicineSchedule(
+      time: TimeOfDay(hour: 14, minute: 30),
+      daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+    ),
+    MedicineSchedule(
+      time: TimeOfDay(hour: 16, minute: 35),
+      daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+    ),
+  ];
 }
 
 Future<void> _waitFor(

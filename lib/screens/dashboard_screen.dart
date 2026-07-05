@@ -58,7 +58,7 @@ class _HomeDashboard extends StatelessWidget {
         }
 
         final therapies = provider.therapies;
-        final nextMedicine = provider.getNextMedicine();
+        final nextIntake = provider.getNextScheduledIntake();
         final lowStockMedicines = provider.getLowStockMedicines();
         final todayIntakes = provider.getTodayScheduledIntakes();
 
@@ -93,9 +93,9 @@ class _HomeDashboard extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
                       sliver: SliverToBoxAdapter(
-                        child: nextMedicine == null
+                        child: nextIntake == null
                             ? const _NoNextMedicineCard()
-                            : _NextMedicineCard(medicine: nextMedicine),
+                            : _NextMedicineCard(intake: nextIntake),
                       ),
                     ),
                     SliverPadding(
@@ -351,13 +351,14 @@ class _Header extends StatelessWidget {
 }
 
 class _NextMedicineCard extends StatelessWidget {
-  final Medicine medicine;
+  final ScheduledIntake intake;
 
-  const _NextMedicineCard({required this.medicine});
+  const _NextMedicineCard({required this.intake});
 
   @override
   Widget build(BuildContext context) {
-    final nextTime = medicine.getNextIntake();
+    final medicine = intake.medicine;
+    final nextTime = TimeOfDay.fromDateTime(intake.scheduledDateTime);
 
     return Material(
       color: Colors.transparent,
@@ -432,15 +433,12 @@ class _NextMedicineCard extends StatelessWidget {
                   children: [
                     _Pill(
                       icon: Icons.schedule,
-                      label: nextTime == null
-                          ? '--:--'
-                          : nextTime.format(context),
+                      label: nextTime.format(context),
                     ),
-                    if (nextTime != null)
-                      _Pill(
-                        icon: Icons.timer_outlined,
-                        label: 'Tra ${_timeUntil(nextTime)}',
-                      ),
+                    _Pill(
+                      icon: Icons.timer_outlined,
+                      label: 'Tra ${_timeUntil(intake.scheduledDateTime)}',
+                    ),
                   ],
                 ),
               ],
@@ -451,10 +449,10 @@ class _NextMedicineCard extends StatelessWidget {
     );
   }
 
-  String _timeUntil(TimeOfDay time) {
-    final now = TimeOfDay.now();
-    var minutes = time.hour * 60 + time.minute - (now.hour * 60 + now.minute);
-    if (minutes <= 0) minutes += 24 * 60;
+  String _timeUntil(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = dateTime.difference(now);
+    final minutes = difference.inMinutes <= 0 ? 1 : difference.inMinutes;
     if (minutes < 60) return '$minutes min';
     return '${minutes ~/ 60}h ${minutes % 60}m';
   }

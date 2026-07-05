@@ -13,6 +13,126 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-05 - QA breve Schedule avanzati
+
+Tipo modifica: QA / Test / Documentation.
+
+Descrizione:
+
+- verificata la stabilita' degli schedule avanzati dopo il fix del prodotto cartesiano giorni/orari;
+- aggiunti test di dominio per `Medicine.shouldTakeOn` e `Medicine.getNextIntakeFor`, cosi' gli helper sono verificabili con una data esplicita;
+- aggiunta copertura Provider per due slot reali nello stesso giorno, con storico e scorte indipendenti;
+- aggiunta copertura per modifica schedule: gli slot vecchi non restano in Dashboard e le notifiche vengono cancellate/ripianificate sul nuovo slot reale;
+- confermati i test gia' presenti su Dashboard domenica 15:33, notifiche reali, missed planner e payload notifica non reale ignorato.
+
+File modificati:
+
+- `lib/models/medicine.dart`;
+- `test/medicine_test.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- nessun nuovo bug trovato durante il QA;
+- rafforzata la copertura contro regressioni future sugli slot inventati.
+
+Problemi rimandati:
+
+- nessuno per questo sprint QA.
+
+Motivazione:
+
+Lo sprint consolida la regola tecnica secondo cui `medicine.schedules` e' l'unica fonte operativa degli slot, mentre `times` e `daysOfWeek` restano campi derivati di compatibilita'.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
+
+## 2026-07-05 - Bug fix urgente Schedule avanzati
+
+Tipo modifica: Bug Fix / Test / Documentation.
+
+Descrizione:
+
+- corretto il calcolo della `Prossima Medicina` in Dashboard per usare lo slot reale `ScheduledIntake`;
+- impedito il prodotto cartesiano tra `Medicine.times` e `Medicine.daysOfWeek` nei calcoli di oggi/prossima assunzione;
+- aggiornati gli helper del model `Medicine` per leggere gli schedule attivi reali;
+- verificato che notifiche, missed planner e azioni rapide lavorino su combinazioni atomiche `medicineId + dayOfWeek + hour + minute`;
+- aggiunti test sul caso reale `Lun/Sab -> 15:30, 15:35` e `Mar/Dom -> 14:30, 16:35`.
+
+File modificati:
+
+- `lib/models/medicine.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `test/notification_action_handler_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- Dashboard poteva mostrare `Dom 15:35` anche se lo slot reale era solo `Lun/Sab 15:35`;
+- le card medicina potevano calcolare la prossima assunzione usando campi derivati;
+- mancanza di test espliciti contro combinazioni giorno/orario inventate.
+
+Problemi rimandati:
+
+- nessuno in questo sprint; restano futuri solo miglioramenti UX dell'editor programmazioni.
+
+Motivazione:
+
+Gli schedule avanzati richiedono che ogni logica applicativa usi solo slot atomici reali e tratti `times` e `daysOfWeek` come viste derivate di compatibilita'.
+
+Stato finale: completato; nessuna modifica a database, schema Drift o redesign.
+
+## 2026-07-05 - Sprint Schedule avanzati per medicina
+
+Tipo modifica: Feature / Bug Fix / Test / Documentation.
+
+Descrizione:
+
+- introdotta nel form medicina la sezione `Programmazione assunzioni`, con card modificabili composte da giorni e orari propri;
+- rimossa la limitazione operativa dei giorni globali applicati a tutti gli orari della medicina;
+- mantenuta una singola medicina con piu' schedule interni, senza duplicare record medicina;
+- il Provider accetta schedule espliciti, li normalizza e deduplica per combinazione giorno/orario;
+- il database Drift non e' stato modificato: `medicine_schedules` supporta gia' righe atomiche `medicineId + dayOfWeek + hour + minute`;
+- il dettaglio medicina raggruppa le programmazioni in modo leggibile, unendo giorni e orari equivalenti senza duplicati;
+- la Dashboard usa gli schedule attivi sulla data richiesta e mostra slot separati della stessa medicina nello stesso giorno;
+- storico, missed planner, notifiche e scorte basse continuano a lavorare sugli slot reali;
+- aggiunti test per schedule multipli, deduplica, due slot nello stesso giorno, dettaglio raggruppato e missed planner multi-slot.
+
+File modificati:
+
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+Problemi risolti:
+
+- selezione giorni globale per tutti gli orari nel form medicina;
+- rischio di duplicare medicine per rappresentare orari/giorni diversi;
+- `getTodayScheduledIntakes(date:)` filtrava le medicine usando il giorno corrente invece della data richiesta.
+
+Problemi rimandati:
+
+- un editor calendario piu' ricco o template rapidi di programmazione;
+- validazioni visuali piu' avanzate per conflitti tra programmazioni;
+- eventuali statistiche su aderenza per singola programmazione.
+
+Motivazione:
+
+Lo sprint rende il modello `Terapie -> Medicine -> Programmazioni` piu' aderente all'uso reale senza cambiare schema database, notifiche, storico o scorte.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
+
 ## 2026-07-03 - Sprint Medicine Detail: orari e modifica medicina
 
 Tipo modifica: Bug Fix / Feature / UX / Test / Documentation.

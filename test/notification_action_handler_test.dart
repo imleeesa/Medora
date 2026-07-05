@@ -223,6 +223,46 @@ void main() {
     );
 
     test(
+      'notification action is ignored for cartesian slot not in advanced schedules',
+      () async {
+        final fixture = _ActionFixture(
+          medicine: _medicine(
+            dose: '1 compressa',
+            stockQuantity: 10,
+            times: const [
+              TimeOfDay(hour: 14, minute: 30),
+              TimeOfDay(hour: 15, minute: 30),
+              TimeOfDay(hour: 15, minute: 35),
+              TimeOfDay(hour: 16, minute: 35),
+            ],
+            daysOfWeek: const [
+              DateTime.monday,
+              DateTime.tuesday,
+              DateTime.saturday,
+              DateTime.sunday,
+            ],
+            schedules: _advancedSchedules(),
+          ),
+        );
+
+        final result = await fixture.handler.handle(
+          actionId: NotificationActionIds.taken,
+          payload: NotificationService.payloadFor(
+            medicineId: 'medicine-1',
+            dayOfWeek: DateTime.sunday,
+            hour: 15,
+            minute: 35,
+          ),
+          referenceDate: DateTime(2026, 7, 5, 15, 36),
+        );
+
+        expect(result, isTrue);
+        expect(fixture.intakeRepository.records, isEmpty);
+        expect(fixture.medicineRepository.medicine?.stockQuantity, 10);
+      },
+    );
+
+    test(
       'notification is ignored when medicine was deleted before tap',
       () async {
         final fixture = _ActionFixture(medicine: null);
@@ -543,6 +583,8 @@ Medicine _medicine({
   required double stockQuantity,
   double stockWarningThreshold = 2,
   List<TimeOfDay> times = const [TimeOfDay(hour: 8, minute: 0)],
+  List<int> daysOfWeek = const [DateTime.monday],
+  List<MedicineSchedule>? schedules,
 }) {
   final now = DateTime(2026, 6, 22);
   return Medicine(
@@ -552,10 +594,32 @@ Medicine _medicine({
     name: 'Aspirina',
     dose: dose,
     times: times,
-    daysOfWeek: const [DateTime.monday],
+    daysOfWeek: daysOfWeek,
+    schedules: schedules,
     stockQuantity: stockQuantity,
     stockWarningThreshold: stockWarningThreshold,
     createdAt: now,
     updatedAt: now,
   );
+}
+
+List<MedicineSchedule> _advancedSchedules() {
+  return const [
+    MedicineSchedule(
+      time: TimeOfDay(hour: 15, minute: 30),
+      daysOfWeek: [DateTime.monday, DateTime.saturday],
+    ),
+    MedicineSchedule(
+      time: TimeOfDay(hour: 15, minute: 35),
+      daysOfWeek: [DateTime.monday, DateTime.saturday],
+    ),
+    MedicineSchedule(
+      time: TimeOfDay(hour: 14, minute: 30),
+      daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+    ),
+    MedicineSchedule(
+      time: TimeOfDay(hour: 16, minute: 35),
+      daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+    ),
+  ];
 }

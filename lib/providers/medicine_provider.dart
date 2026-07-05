@@ -7,6 +7,7 @@ import '../models/app_settings.dart';
 import '../models/intake_record.dart';
 import '../models/intake_stock_change.dart';
 import '../models/medicine.dart';
+import '../models/medicine_schedule.dart';
 import '../models/notification_permission_status.dart';
 import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
@@ -129,6 +130,7 @@ class MedicineProvider extends ChangeNotifier {
     required List<int> daysOfWeek,
     required double stockQuantity,
     required double stockWarningThreshold,
+    List<MedicineSchedule>? schedules,
     String? notes,
     String color = '#2E7D32',
     String? icon,
@@ -141,20 +143,30 @@ class MedicineProvider extends ChangeNotifier {
     }
     final now = DateTime.now();
     final therapy = _therapies[therapyIndex];
+    final resolvedSchedules = _normalizeSchedules(
+      schedules ??
+          times.map(
+            (time) => MedicineSchedule(
+              time: time,
+              daysOfWeek: List<int>.from(daysOfWeek),
+            ),
+          ),
+    );
 
     final medicine = Medicine(
       id: const Uuid().v4(),
       therapyId: therapy.id,
       name: name.trim(),
       dose: dose.trim(),
-      times: List<TimeOfDay>.from(times),
-      daysOfWeek: List<int>.from(daysOfWeek)..sort(),
+      times: _timesFromSchedules(resolvedSchedules),
+      daysOfWeek: _daysFromSchedules(resolvedSchedules),
       stockQuantity: stockQuantity,
       stockWarningThreshold: stockWarningThreshold,
       notes: notes?.trim(),
       color: color,
       icon: icon,
       profileId: _currentProfile.id,
+      schedules: resolvedSchedules,
       createdAt: now,
       updatedAt: now,
     );
@@ -185,6 +197,7 @@ class MedicineProvider extends ChangeNotifier {
     required List<int> daysOfWeek,
     required double stockQuantity,
     required double stockWarningThreshold,
+    List<MedicineSchedule>? schedules,
     String? notes,
     String color = '#2E7D32',
     String? icon,
@@ -197,6 +210,7 @@ class MedicineProvider extends ChangeNotifier {
       daysOfWeek: daysOfWeek,
       stockQuantity: stockQuantity,
       stockWarningThreshold: stockWarningThreshold,
+      schedules: schedules,
       notes: notes,
       color: color,
       icon: icon,
@@ -441,6 +455,7 @@ class MedicineProvider extends ChangeNotifier {
     required List<int> daysOfWeek,
     required double stockQuantity,
     required double stockWarningThreshold,
+    List<MedicineSchedule>? schedules,
     String? notes,
     String color = '#2E7D32',
     String? icon,
@@ -451,11 +466,21 @@ class MedicineProvider extends ChangeNotifier {
 
     final therapy = _therapies[location.therapyIndex];
     final medicine = therapy.medicines[location.medicineIndex];
+    final resolvedSchedules = _normalizeSchedules(
+      schedules ??
+          times.map(
+            (time) => MedicineSchedule(
+              time: time,
+              daysOfWeek: List<int>.from(daysOfWeek),
+            ),
+          ),
+    );
     final updatedMedicine = medicine.copyWith(
       name: name.trim(),
       dose: dose.trim(),
-      times: List<TimeOfDay>.from(times),
-      daysOfWeek: List<int>.from(daysOfWeek)..sort(),
+      times: _timesFromSchedules(resolvedSchedules),
+      daysOfWeek: _daysFromSchedules(resolvedSchedules),
+      schedules: resolvedSchedules,
       stockQuantity: stockQuantity,
       stockWarningThreshold: stockWarningThreshold,
       notes: notes?.trim(),
@@ -641,11 +666,18 @@ class MedicineProvider extends ChangeNotifier {
     }
   }
 
-  List<Medicine> getTodayScheduledMedicines() => _therapies
-      .where((therapy) => therapy.isActive)
-      .expand((therapy) => therapy.medicines)
-      .where((medicine) => medicine.shouldTakeToday())
-      .toList(growable: false);
+  List<Medicine> getTodayScheduledMedicines({DateTime? date}) {
+    final selectedDate = date ?? DateTime.now();
+    return _activeMedicines()
+        .where(
+          (medicine) => medicine.schedules.any(
+            (schedule) =>
+                schedule.isActive &&
+                schedule.daysOfWeek.contains(selectedDate.weekday),
+          ),
+        )
+        .toList(growable: false);
+  }
 
   Future<void> refreshNotificationPermissionStatus() {
     return _refreshNotificationPermissionStatus();
@@ -694,7 +726,7 @@ class MedicineProvider extends ChangeNotifier {
     final selectedDate = date ?? DateTime.now();
     final intakes = <ScheduledIntake>[];
 
-    for (final medicine in getTodayScheduledMedicines()) {
+    for (final medicine in _activeMedicines()) {
       for (final schedule in medicine.schedules) {
         if (!schedule.isActive ||
             !schedule.daysOfWeek.contains(selectedDate.weekday)) {
@@ -751,23 +783,24 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   List<Medicine> getMedicinesTodayDue() {
-    return medicines.where((medicine) => medicine.shouldTakeToday()).toList();
+    return getTodayScheduledMedicines();
+  }
+
+  ScheduledIntake? getNextScheduledIntake({DateTime? referenceDate}) {
+    final reference = referenceDate ?? DateTime.now();
+    final intakes = getTodayScheduledIntakes(date: reference)
+        .where((intake) => intake.scheduledDateTime.isAfter(reference))
+        .toList(growable: false);
+    if (intakes.isEmpty) return null;
+    intakes.sort(
+      (first, second) =>
+          first.scheduledDateTime.compareTo(second.scheduledDateTime),
+    );
+    return intakes.first;
   }
 
   Medicine? getNextMedicine() {
-    final today = getTodayScheduledMedicines()
-        .where((medicine) => medicine.getNextIntake() != null)
-        .toList();
-    if (today.isEmpty) return null;
-
-    today.sort((a, b) {
-      final nextA = a.getNextIntake();
-      final nextB = b.getNextIntake();
-      if (nextA == null || nextB == null) return 0;
-      return _compareTimeOfDay(nextA, nextB);
-    });
-
-    return today.first;
+    return getNextScheduledIntake()?.medicine;
   }
 
   List<Medicine> getLowStockMedicines() {
@@ -777,6 +810,57 @@ class MedicineProvider extends ChangeNotifier {
               medicine.stockQuantity <= medicine.stockWarningThreshold,
         )
         .toList();
+  }
+
+  List<Medicine> _activeMedicines() {
+    return _therapies
+        .where((therapy) => therapy.isActive)
+        .expand((therapy) => therapy.medicines)
+        .where((medicine) => medicine.isActive)
+        .toList(growable: false);
+  }
+
+  List<MedicineSchedule> _normalizeSchedules(
+    Iterable<MedicineSchedule> schedules,
+  ) {
+    final daysByTime = <String, Set<int>>{};
+    final timeByKey = <String, TimeOfDay>{};
+
+    for (final schedule in schedules) {
+      if (!schedule.isActive) continue;
+      final key = '${schedule.time.hour}:${schedule.time.minute}';
+      timeByKey[key] = schedule.time;
+      final days = schedule.daysOfWeek
+          .where((day) => day >= 1 && day <= 7)
+          .toSet();
+      if (days.isEmpty) continue;
+      daysByTime.putIfAbsent(key, () => <int>{}).addAll(days);
+    }
+
+    final normalized = daysByTime.entries.map((entry) {
+      final days = entry.value.toList()..sort();
+      return MedicineSchedule(time: timeByKey[entry.key]!, daysOfWeek: days);
+    }).toList();
+
+    normalized.sort(
+      (first, second) => _compareTimeOfDay(first.time, second.time),
+    );
+    return normalized;
+  }
+
+  List<TimeOfDay> _timesFromSchedules(List<MedicineSchedule> schedules) {
+    final times = schedules.map((schedule) => schedule.time).toList();
+    times.sort(_compareTimeOfDay);
+    return times;
+  }
+
+  List<int> _daysFromSchedules(List<MedicineSchedule> schedules) {
+    return schedules
+        .expand((schedule) => schedule.daysOfWeek)
+        .where((day) => day >= 1 && day <= 7)
+        .toSet()
+        .toList()
+      ..sort();
   }
 
   int _compareTimeOfDay(TimeOfDay first, TimeOfDay second) {

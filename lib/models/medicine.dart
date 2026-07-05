@@ -96,15 +96,41 @@ class Medicine {
 
   /// Verifica se la medicina deve essere assunta oggi
   bool shouldTakeToday() {
-    final today = DateTime.now().weekday;
-    return isActive && daysOfWeek.contains(today);
+    return shouldTakeOn(DateTime.now());
+  }
+
+  bool shouldTakeOn(DateTime date) {
+    final dayOfWeek = date.weekday;
+    return isActive &&
+        schedules.any(
+          (schedule) =>
+              schedule.isActive && schedule.daysOfWeek.contains(dayOfWeek),
+        );
   }
 
   /// Restituisce la prossima assunzione
   TimeOfDay? getNextIntake() {
-    if (!shouldTakeToday()) return null;
-    final now = TimeOfDay.now();
-    for (final time in times) {
+    return getNextIntakeFor(DateTime.now());
+  }
+
+  TimeOfDay? getNextIntakeFor(DateTime referenceDate) {
+    if (!shouldTakeOn(referenceDate)) return null;
+    final now = TimeOfDay(
+      hour: referenceDate.hour,
+      minute: referenceDate.minute,
+    );
+    final dayOfWeek = referenceDate.weekday;
+    final todayTimes =
+        schedules
+            .where(
+              (schedule) =>
+                  schedule.isActive && schedule.daysOfWeek.contains(dayOfWeek),
+            )
+            .map((schedule) => schedule.time)
+            .toList()
+          ..sort(_compareTimeOfDay);
+
+    for (final time in todayTimes) {
       if (_compareTimeOfDay(time, now) > 0) {
         return time;
       }

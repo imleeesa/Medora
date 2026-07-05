@@ -557,6 +557,82 @@ Il dettaglio medicina espone ora un'azione `Modifica medicina`. Il form `AddMedi
 
 Il cambio terapia resta nel flusso separato `Cambia terapia`, gia' persistente e validato sulle terapie attive.
 
+## Selezione giorni globale per tutti gli orari della medicina
+
+### Categoria
+
+Limite funzionale / UX.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-07-05
+
+### Cosa e' stato trovato
+
+Il form medicina permetteva di scegliere una sola lista globale di giorni e una lista globale di orari. Questo rappresentava bene casi come `Lun, Mer, Ven alle 08:00 e 20:00`, ma non casi come `Lun alle 08:00` e `Mer alle 14:00` per la stessa medicina.
+
+### Come e' stato risolto
+
+`AddMedicineScreen` usa ora una sezione `Programmazione assunzioni`, composta da una o piu' card. Ogni card contiene i propri giorni e i propri orari. Al salvataggio il form converte le card in schedule reali, il Provider deduplica le combinazioni giorno/orario e il repository continua a salvare righe atomiche nella tabella `medicine_schedules`, senza modificare lo schema Drift.
+
+### File modificati
+
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+### Note
+
+La medicina resta una sola. Dashboard, storico, missed planner e notifiche lavorano sugli slot generati dalle programmazioni interne.
+
+## Prodotto cartesiano giorni/orari negli schedule avanzati
+
+### Categoria
+
+Bug.
+
+### Stato
+
+Risolto
+
+### Data risoluzione
+
+2026-07-05
+
+### Cosa e' stato trovato
+
+Dopo l'introduzione degli schedule avanzati, alcuni calcoli potevano ancora usare le viste derivate `Medicine.times` e `Medicine.daysOfWeek`. Con programmazioni come `Lun/Sab -> 15:30, 15:35` e `Mar/Dom -> 14:30, 16:35`, l'unione globale di giorni e orari poteva generare uno slot inesistente come `Dom 15:35`.
+
+### Come e' stato risolto
+
+Dashboard e Provider usano ora `ScheduledIntake` derivati da `medicine.schedules`, filtrando gli schedule attivi per la data richiesta. Gli helper `Medicine.shouldTakeToday()` e `Medicine.getNextIntake()` leggono gli schedule reali invece dei campi derivati. Notifiche, missed planner e azioni rapide sono coperti da test che verificano solo combinazioni atomiche reali `medicineId + dayOfWeek + hour + minute`.
+
+### File modificati
+
+- `lib/models/medicine.dart`;
+- `lib/providers/medicine_provider.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `test/medicine_provider_notification_test.dart`;
+- `test/missed_intake_planner_test.dart`;
+- `test/notification_action_handler_test.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+### Note
+
+`Medicine.times` e `Medicine.daysOfWeek` restano disponibili come viste di compatibilita', ma non devono essere usati per ricostruire slot operativi.
+
 ## Record legacy di medicine senza terapia
 
 ### Categoria

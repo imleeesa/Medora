@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meditrack/models/medicine.dart';
+import 'package:meditrack/models/medicine_schedule.dart';
 
 void main() {
   test('uses a readable fallback when the dose is not specified', () {
@@ -60,4 +61,72 @@ void main() {
     expect(Medicine.formatQuantity(0.25), '0.25');
     expect(Medicine.normalizeQuantity(0.3 - 0.1 - 0.2), 0.0);
   });
+
+  test('uses real schedules for day checks instead of derived days', () {
+    final medicine = _advancedScheduleMedicine();
+
+    expect(medicine.shouldTakeOn(DateTime(2026, 7, 5)), isTrue);
+    expect(medicine.shouldTakeOn(DateTime(2026, 7, 9)), isFalse);
+  });
+
+  test('uses real schedules for next intake instead of derived times', () {
+    final medicine = _advancedScheduleMedicine();
+
+    expect(
+      medicine.getNextIntakeFor(DateTime(2026, 7, 5, 15, 33)),
+      const TimeOfDay(hour: 16, minute: 35),
+    );
+    expect(
+      medicine.getNextIntakeFor(DateTime(2026, 7, 5, 15, 33)),
+      isNot(const TimeOfDay(hour: 15, minute: 35)),
+    );
+    expect(
+      medicine.getNextIntakeFor(DateTime(2026, 7, 6, 15, 31)),
+      const TimeOfDay(hour: 15, minute: 35),
+    );
+  });
+}
+
+Medicine _advancedScheduleMedicine() {
+  final now = DateTime(2026, 7, 1);
+  return Medicine(
+    id: 'medicine-advanced',
+    name: 'Tachis',
+    dose: '1 compressa',
+    times: const [
+      TimeOfDay(hour: 14, minute: 30),
+      TimeOfDay(hour: 15, minute: 30),
+      TimeOfDay(hour: 15, minute: 35),
+      TimeOfDay(hour: 16, minute: 35),
+    ],
+    daysOfWeek: const [
+      DateTime.monday,
+      DateTime.tuesday,
+      DateTime.thursday,
+      DateTime.saturday,
+      DateTime.sunday,
+    ],
+    schedules: const [
+      MedicineSchedule(
+        time: TimeOfDay(hour: 15, minute: 30),
+        daysOfWeek: [DateTime.monday, DateTime.saturday],
+      ),
+      MedicineSchedule(
+        time: TimeOfDay(hour: 15, minute: 35),
+        daysOfWeek: [DateTime.monday, DateTime.saturday],
+      ),
+      MedicineSchedule(
+        time: TimeOfDay(hour: 14, minute: 30),
+        daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+      ),
+      MedicineSchedule(
+        time: TimeOfDay(hour: 16, minute: 35),
+        daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+      ),
+    ],
+    stockQuantity: 10.0,
+    stockWarningThreshold: 2.0,
+    createdAt: now,
+    updatedAt: now,
+  );
 }

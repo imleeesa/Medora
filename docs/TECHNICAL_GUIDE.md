@@ -268,10 +268,11 @@ Responsabilita':
 - validare terapia, nome, dosaggio, orari, giorni e quantita';
 - ricevere opzionalmente una terapia esistente per associare una medicina senza reinserirne il nome;
 - ricevere opzionalmente una medicina esistente per aprirsi in modalita' edit;
+- gestire una o piu' programmazioni interne, ognuna con giorni e orari propri;
 - permettere selezione di colore e note;
 - chiamare `MedicineProvider.addMedicine` / `addMedicineToTherapy` in creazione oppure `updateMedicine` in modifica;
 - mantenere invariato `medicineId` durante la modifica e lasciare il cambio terapia al flusso dedicato `Cambia terapia`;
-- deduplicare gli orari selezionati prima del salvataggio;
+- convertire le programmazioni in `MedicineSchedule` e deduplicare gli slot giorno/orario prima del salvataggio;
 - mostrare feedback di successo o errore.
 
 ### `AddTherapyScreen`
@@ -302,7 +303,7 @@ Schermata di dettaglio di una medicina.
 Responsabilita':
 
 - mostrare nome, dosaggio e stato;
-- mostrare orari e giorni di assunzione usando gli schedule attivi della medicina corrente;
+- mostrare programmazioni di assunzione usando gli schedule attivi della medicina corrente;
 - mostrare quantita' e soglia minima;
 - mostrare note se presenti;
 - aprire il form di modifica della medicina;
@@ -965,9 +966,13 @@ Le terapie sono entita' autonome persistite. Possono essere create, modificate, 
 
 ### Medicine
 
-Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. Dal dettaglio medicina l'utente puo' scegliere `Modifica medicina` per aggiornare nome, dose, orari, giorni, scorte, soglia, colore e note mantenendo lo stesso `medicineId`; puo' scegliere `Cambia terapia` per spostarla in una terapia attiva diversa, senza riattivare automaticamente quelle archiviate. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Ogni modifica rilevante deve aggiornare `updatedAt`.
+Ogni nuova medicina deve essere associata a una terapia esistente. Il form globale presenta un selettore terapia e, in assenza di terapie, indirizza prima alla loro creazione. Il Provider valida il relativo `therapyId`, cosi' la regola resta valida anche fuori dalla UI. Dal dettaglio medicina l'utente puo' scegliere `Modifica medicina` per aggiornare nome, dose, programmazioni, scorte, soglia, colore e note mantenendo lo stesso `medicineId`; puo' scegliere `Cambia terapia` per spostarla in una terapia attiva diversa, senza riattivare automaticamente quelle archiviate. La dose e' una stringa opzionale composta dal form tramite quantita' e unita' per assunzione; quando non definita, la UI mostra `Dose non specificata`. Questo valore non deve essere confuso con `stockQuantity`, che rappresenta la disponibilita' fisica residua. Ogni modifica rilevante deve aggiornare `updatedAt`.
 
-Il dettaglio medicina non deve mescolare prossima assunzione calcolata e schedule reali. La sezione `Orari di Assunzione` deriva dagli schedule attivi, raggruppa gli orari equivalenti per ora/minuto, unisce i giorni associati e li ordina in modo crescente. Dashboard, dettaglio terapia e deep link notifica passano solo l'ID/istanza iniziale: la schermata rilegge sempre la medicina corrente dal Provider per evitare dati obsoleti.
+Una medicina puo' avere piu' programmazioni interne. La UI le rappresenta come gruppi `giorni + orari`; il Provider le converte in `MedicineSchedule`, le normalizza e deduplica per combinazione `dayOfWeek + hour + minute`. Il database non richiede migrazioni per questo comportamento: `medicine_schedules` salva gia' righe atomiche per medicina, giorno e orario. `Medicine.times` e `Medicine.daysOfWeek` restano viste derivate/di compatibilita' basate sull'unione degli schedule reali.
+
+Regola importante: la logica applicativa non deve ricostruire slot facendo il prodotto cartesiano tra `Medicine.times` e `Medicine.daysOfWeek`. Dashboard, assunzioni di oggi, missed planner, notifiche, azioni rapide e storico devono usare sempre gli schedule atomici reali `medicineId + dayOfWeek + hour + minute`. Questo evita combinazioni inesistenti, ad esempio `Dom 15:35` quando `15:35` appartiene solo a `Lun/Sab`.
+
+Il dettaglio medicina non deve mescolare prossima assunzione calcolata e schedule reali. La sezione `Orari di Assunzione` deriva dagli schedule attivi, normalizza gli orari equivalenti, unisce i giorni associati e poi raggruppa le righe con stesso set di giorni, mostrando ad esempio `Lun, Mer, Ven - 08:00, 20:00`. Dashboard usa `MedicineProvider.getNextScheduledIntake()` e mostra l'orario del relativo `ScheduledIntake`, non il primo orario derivato della medicina. Dashboard, dettaglio terapia e deep link notifica passano solo l'ID/istanza iniziale: la schermata rilegge sempre la medicina corrente dal Provider per evitare dati obsoleti.
 
 ### Storico
 

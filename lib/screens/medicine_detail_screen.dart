@@ -151,7 +151,7 @@ class MedicineDetailScreen extends StatelessWidget {
                   title: 'Orari di Assunzione',
                   icon: Icons.schedule,
                   child: _ScheduleList(
-                    schedules: _displaySchedules(currentMedicine),
+                    groups: _displayScheduleGroups(currentMedicine),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -499,7 +499,7 @@ class MedicineDetailScreen extends StatelessWidget {
     return safeDays.map((d) => names[d - 1]).toList();
   }
 
-  List<MedicineSchedule> _displaySchedules(Medicine medicine) {
+  List<_DisplayScheduleGroup> _displayScheduleGroups(Medicine medicine) {
     final sourceSchedules = medicine.schedules
         .where((schedule) => schedule.isActive)
         .toList(growable: false);
@@ -517,21 +517,50 @@ class MedicineDetailScreen extends StatelessWidget {
     final daysByTime = <String, Set<int>>{};
     final timeByKey = <String, TimeOfDay>{};
     for (final schedule in schedules) {
-      final key = '${schedule.time.hour}:${schedule.time.minute}';
-      timeByKey[key] = schedule.time;
-      daysByTime.putIfAbsent(key, () => <int>{}).addAll(schedule.daysOfWeek);
+      final days =
+          schedule.daysOfWeek
+              .where((day) => day >= 1 && day <= 7)
+              .toSet()
+              .toList()
+            ..sort();
+      if (days.isEmpty) continue;
+      final timeKey = '${schedule.time.hour}:${schedule.time.minute}';
+      timeByKey[timeKey] = schedule.time;
+      daysByTime.putIfAbsent(timeKey, () => <int>{}).addAll(days);
     }
 
-    final result = daysByTime.entries.map((entry) {
-      final time = timeByKey[entry.key]!;
-      final days = entry.value.where((day) => day >= 1 && day <= 7).toList()
-        ..sort();
-      return MedicineSchedule(time: time, daysOfWeek: days);
+    final timesByDays = <String, Map<String, TimeOfDay>>{};
+    final daysByKey = <String, List<int>>{};
+    for (final entry in daysByTime.entries) {
+      final days = entry.value.toList()..sort();
+      final daysKey = days.join(',');
+      daysByKey[daysKey] = days;
+      timesByDays.putIfAbsent(daysKey, () => <String, TimeOfDay>{})[entry.key] =
+          timeByKey[entry.key]!;
+    }
+
+    final result = timesByDays.entries.map((entry) {
+      final times = entry.value.values.toList()
+        ..sort((first, second) {
+          final firstMinutes = first.hour * 60 + first.minute;
+          final secondMinutes = second.hour * 60 + second.minute;
+          return firstMinutes.compareTo(secondMinutes);
+        });
+      return _DisplayScheduleGroup(days: daysByKey[entry.key]!, times: times);
     }).toList();
 
     result.sort((first, second) {
-      final firstMinutes = first.time.hour * 60 + first.time.minute;
-      final secondMinutes = second.time.hour * 60 + second.time.minute;
+      final firstDay = first.days.isEmpty ? 8 : first.days.first;
+      final secondDay = second.days.isEmpty ? 8 : second.days.first;
+      if (firstDay != secondDay) return firstDay.compareTo(secondDay);
+      final firstTime = first.times.isEmpty
+          ? const TimeOfDay(hour: 23, minute: 59)
+          : first.times.first;
+      final secondTime = second.times.isEmpty
+          ? const TimeOfDay(hour: 23, minute: 59)
+          : second.times.first;
+      final firstMinutes = firstTime.hour * 60 + firstTime.minute;
+      final secondMinutes = secondTime.hour * 60 + secondTime.minute;
       return firstMinutes.compareTo(secondMinutes);
     });
     return result;
@@ -544,14 +573,21 @@ class MedicineDetailScreen extends StatelessWidget {
   }
 }
 
-class _ScheduleList extends StatelessWidget {
-  final List<MedicineSchedule> schedules;
+class _DisplayScheduleGroup {
+  final List<int> days;
+  final List<TimeOfDay> times;
 
-  const _ScheduleList({required this.schedules});
+  const _DisplayScheduleGroup({required this.days, required this.times});
+}
+
+class _ScheduleList extends StatelessWidget {
+  final List<_DisplayScheduleGroup> groups;
+
+  const _ScheduleList({required this.groups});
 
   @override
   Widget build(BuildContext context) {
-    if (schedules.isEmpty) {
+    if (groups.isEmpty) {
       return Text(
         'Nessun orario programmato',
         style: TextStyle(
@@ -563,27 +599,30 @@ class _ScheduleList extends StatelessWidget {
     }
 
     return Column(
-      children: schedules
+      children: groups
           .map(
-            (schedule) => Padding(
+            (group) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 children: [
                   Container(
                     key: ValueKey(
-                      'medicine-schedule-time-${schedule.time.hour}-${schedule.time.minute}',
+                      'medicine-schedule-group-${group.days.join('-')}-${group.times.map((time) => '${time.hour}-${time.minute}').join('-')}',
                     ),
-                    width: 72,
-                    height: 40,
+                    width: 132,
+                    constraints: const BoxConstraints(minHeight: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
                       child: Text(
-                        schedule.time.format(context),
+                        _dayNames(group.days).join(', '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF2E7D32),
                         ),
@@ -592,15 +631,37 @@ class _ScheduleList extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _dayNames(schedule.daysOfWeek).join(', '),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E1E1E),
-                      ),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: group.times
+                          .map(
+                            (time) => Container(
+                              key: ValueKey(
+                                'medicine-schedule-time-${time.hour}-${time.minute}',
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF2E7D32),
+                                ),
+                              ),
+                              child: Text(
+                                time.format(context),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E1E1E),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
                     ),
                   ),
                 ],

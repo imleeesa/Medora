@@ -131,29 +131,119 @@ void main() {
     expect(firstCandidates, hasLength(1));
     expect(secondCandidates, isEmpty);
   });
+
+  test('creates distinct candidates for multiple schedules on past days', () {
+    final medicine = _medicine(
+      daysOfWeek: [yesterday.weekday],
+      schedules: [
+        MedicineSchedule(
+          time: const TimeOfDay(hour: 8, minute: 0),
+          daysOfWeek: [yesterday.weekday],
+          createdAt: DateTime(2026, 6, 1),
+        ),
+        MedicineSchedule(
+          time: const TimeOfDay(hour: 20, minute: 0),
+          daysOfWeek: [yesterday.weekday],
+          createdAt: DateTime(2026, 6, 1),
+        ),
+      ],
+    );
+
+    final candidates = MissedIntakePlanner.findCandidates(
+      therapies: [_therapy(medicine)],
+      records: const [],
+      referenceDate: referenceDate,
+      lookbackDays: 1,
+    );
+
+    expect(candidates, hasLength(2));
+    expect(candidates.map((candidate) => candidate.scheduledDateTime.hour), [
+      8,
+      20,
+    ]);
+  });
+
+  test('does not create cartesian missed slots for advanced schedules', () {
+    final medicine = _medicine(
+      daysOfWeek: const [
+        DateTime.monday,
+        DateTime.tuesday,
+        DateTime.saturday,
+        DateTime.sunday,
+      ],
+      schedules: [
+        MedicineSchedule(
+          time: TimeOfDay(hour: 15, minute: 30),
+          daysOfWeek: [DateTime.monday, DateTime.saturday],
+          createdAt: DateTime(2026, 6, 1),
+        ),
+        MedicineSchedule(
+          time: TimeOfDay(hour: 15, minute: 35),
+          daysOfWeek: [DateTime.monday, DateTime.saturday],
+          createdAt: DateTime(2026, 6, 1),
+        ),
+        MedicineSchedule(
+          time: TimeOfDay(hour: 14, minute: 30),
+          daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+          createdAt: DateTime(2026, 6, 1),
+        ),
+        MedicineSchedule(
+          time: TimeOfDay(hour: 16, minute: 35),
+          daysOfWeek: [DateTime.tuesday, DateTime.sunday],
+          createdAt: DateTime(2026, 6, 1),
+        ),
+      ],
+    );
+
+    final candidates = MissedIntakePlanner.findCandidates(
+      therapies: [_therapy(medicine)],
+      records: const [],
+      referenceDate: DateTime(2026, 7, 6, 12),
+      lookbackDays: 1,
+    );
+
+    expect(
+      candidates.map(
+        (candidate) => TimeOfDay.fromDateTime(candidate.scheduledDateTime),
+      ),
+      const [TimeOfDay(hour: 14, minute: 30), TimeOfDay(hour: 16, minute: 35)],
+    );
+    expect(
+      candidates.any(
+        (candidate) =>
+            candidate.scheduledDateTime.hour == 15 &&
+            candidate.scheduledDateTime.minute == 35,
+      ),
+      isFalse,
+    );
+  });
 }
 
 Medicine _medicine({
   required List<int> daysOfWeek,
   DateTime? createdAt,
   DateTime? scheduleCreatedAt,
+  List<MedicineSchedule>? schedules,
 }) {
   final now = createdAt ?? DateTime(2026, 6, 1);
+  final resolvedSchedules =
+      schedules ??
+      [
+        MedicineSchedule(
+          time: const TimeOfDay(hour: 8, minute: 0),
+          daysOfWeek: daysOfWeek,
+          createdAt: scheduleCreatedAt,
+        ),
+      ];
   return Medicine(
     id: 'medicine-1',
     profileId: 'profile-1',
     therapyId: 'therapy-1',
     name: 'Medicina di prova',
     dose: '1 compressa',
-    times: const [TimeOfDay(hour: 8, minute: 0)],
+    times: resolvedSchedules.map((schedule) => schedule.time).toList(),
     daysOfWeek: daysOfWeek,
-    schedules: [
-      MedicineSchedule(
-        time: const TimeOfDay(hour: 8, minute: 0),
-        daysOfWeek: daysOfWeek,
-        createdAt: scheduleCreatedAt,
-      ),
-    ],
+    schedules: resolvedSchedules,
     stockQuantity: 10.0,
     stockWarningThreshold: 2.0,
     createdAt: now,
