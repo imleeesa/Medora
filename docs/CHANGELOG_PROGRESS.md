@@ -13,6 +13,46 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-06 - Sprint Filtri Storico
+
+Tipo modifica: Feature / UX / Test / Documentation.
+
+Descrizione:
+
+- aggiunti filtri in memoria alla schermata Storico per stato, periodo, terapia e medicina;
+- aggiunto reset filtri e stato vuoto dedicato quando nessun record corrisponde alla selezione;
+- mantenuto l'ordine cronologico con record piu' recenti prima;
+- aggiunto `HistoryFilterService` per isolare e testare la logica di filtro senza query Drift dedicate;
+- supportato il filtro medicina anche per record di medicine eliminate tramite snapshot del nome;
+- documentato il limite del filtro terapia sui record di medicine eliminate, perche' lo storico non conserva uno snapshot terapia.
+
+File modificati:
+
+- `README.md`;
+- `lib/screens/history_screen.dart`;
+- `lib/services/history_filter_service.dart`;
+- `test/history_filter_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- storico difficile da consultare quando contiene molti record;
+- mancanza di filtri combinabili per stato, periodo, terapia e medicina;
+- assenza di copertura automatica sulla logica di filtro.
+
+Problemi rimandati:
+
+- filtro terapia affidabile per record di medicine eliminate o terapie eliminate, da valutare con snapshot terapia o soft delete;
+- statistiche, grafici, export e report restano fuori perimetro.
+
+Motivazione:
+
+Lo sprint migliora l'usabilita' dello storico senza modificare schema database, repository o comportamento di notifiche, scorte e missed planner.
+
+Stato finale: completato con `dart analyze`, `flutter analyze`, `flutter test` e build APK debug superati.
+
 ## 2026-07-05 - QA breve Schedule avanzati
 
 Tipo modifica: QA / Test / Documentation.

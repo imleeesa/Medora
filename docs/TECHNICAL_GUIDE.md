@@ -161,8 +161,11 @@ File attuale:
 
 - `notification_service.dart`
 - `notification_navigation_service.dart`
+- `history_filter_service.dart`
 
 Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `Europe/Rome`, richiede i permessi solo quando il profilo abilita i promemoria e pianifica reminder ricorrenti. Espone l'interfaccia `MedicineNotificationScheduler`, cosi' `MedicineProvider` non dipende dal plugin e il comportamento puo' essere verificato con test di dominio. `NotificationNavigationEvents` trasforma il tap normale su una notifica in una richiesta di navigazione verso il dettaglio medicina, senza usare `BuildContext` dentro il servizio notifiche.
+
+`HistoryFilterService` applica in memoria i filtri della schermata Storico su record gia' caricati dal Provider. Supporta filtri per stato, periodo, terapia e medicina, incluse medicine eliminate tramite snapshot del nome. Non introduce query Drift dedicate.
 
 ## Responsabilita' dei model
 
@@ -311,18 +314,19 @@ Responsabilita':
 
 ### `HistoryScreen`
 
-Schermata predisposta per lo storico.
+Schermata dello storico assunzioni.
 
 Responsabilita' attuali:
 
-- mostrare uno stato vuoto;
-- differenziare il messaggio in base alla presenza di medicine.
+- mostrare le assunzioni registrate in ordine cronologico, con le piu' recenti prima;
+- filtrare in memoria per stato, periodo, terapia e medicina;
+- permettere reset dei filtri;
+- mostrare uno stato vuoto quando non esistono record o quando i filtri non producono risultati;
+- mantenere leggibili gli snapshot delle medicine eliminate.
 
 Responsabilita' future:
 
-- visualizzare assunzioni registrate;
-- filtrare per periodo, terapia e medicina;
-- supportare statistiche e report.
+- supportare note avanzate, correzioni manuali, statistiche e report.
 
 ### `StockScreen`
 
@@ -976,7 +980,9 @@ Il dettaglio medicina non deve mescolare prossima assunzione calcolata e schedul
 
 ### Storico
 
-Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la stessa logica e' esposta da `IntakeActionService`, cosi' puo' essere usata anche dalle azioni delle notifiche senza dipendere dalla UI. La combinazione medicina e orario previsto evita duplicati. Durante `initialize`, `MissedIntakePlanner` controlla al massimo i sette giorni precedenti e salva gli slot senza record come `missed`, senza aggiornare le scorte. Uno slot e' idoneo solo dal momento piu' recente tra creazione della medicina, creazione dello schedule e data di inizio della terapia, quando presente: in questo modo non vengono ricostruite dimenticanze anteriori alla programmazione effettiva. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre azioni rapide per la data corrente, le notifiche locali offrono Assunta/Saltata per lo slot notificato e HistoryScreen visualizza anche lo stato Dimenticata. Statistiche, filtri e ritardi restano sviluppi futuri.
+Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la stessa logica e' esposta da `IntakeActionService`, cosi' puo' essere usata anche dalle azioni delle notifiche senza dipendere dalla UI. La combinazione medicina e orario previsto evita duplicati. Durante `initialize`, `MissedIntakePlanner` controlla al massimo i sette giorni precedenti e salva gli slot senza record come `missed`, senza aggiornare le scorte. Uno slot e' idoneo solo dal momento piu' recente tra creazione della medicina, creazione dello schedule e data di inizio della terapia, quando presente: in questo modo non vengono ricostruite dimenticanze anteriori alla programmazione effettiva. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre azioni rapide per la data corrente, le notifiche locali offrono Assunta/Saltata per lo slot notificato e HistoryScreen visualizza anche lo stato Dimenticata.
+
+`HistoryScreen` applica filtri in memoria tramite `HistoryFilterService`, usando la cache `provider.intakeHistory` e `provider.therapies`. I filtri disponibili sono stato (`taken`, `skipped`, `missed`), periodo (`Oggi`, `Ultimi 7 giorni`, `Ultimi 30 giorni`, `Tutto`), terapia e medicina. Il filtro periodo lavora sulla data prevista `scheduledDateTime`, normalizzata al giorno, cosi' evita confronti fragili sull'orario. Il filtro medicina include anche record di medicine eliminate usando `medicineNameSnapshot`; il filtro terapia sui record eliminati resta limitato perche' `IntakeRecord` non conserva uno snapshot terapia.
 
 ### Scorte
 
