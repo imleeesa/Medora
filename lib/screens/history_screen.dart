@@ -5,6 +5,7 @@ import '../models/intake_record.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../services/history_filter_service.dart';
+import 'statistics_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   final bool showAppBar;
@@ -62,14 +63,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
               children: [
-                const Text(
-                  'Storico',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E1E1E),
-                    letterSpacing: 0,
-                  ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Storico',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E1E1E),
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: 'Statistiche',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StatisticsScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.insights_outlined),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 _HistoryFiltersPanel(

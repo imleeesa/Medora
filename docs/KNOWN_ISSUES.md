@@ -206,7 +206,7 @@ Restano fuori dal perimetro le statistiche, i filtri per periodo o terapia, i re
 
 Per evitare di generare molti record dopo un lungo periodo di inattivita', il rollover controlla al massimo i sette giorni precedenti. Gli slot piu' vecchi non vengono ricostruiti automaticamente.
 
-## Filtro terapia su storico di medicine eliminate
+## Filtro e statistiche terapia su storico di medicine eliminate
 
 ### Categoria
 
@@ -222,7 +222,7 @@ Lo storico conserva snapshot di nome e dose della medicina, ma non conserva uno 
 
 ### Motivazione
 
-Il filtro medicina puo' ancora funzionare sui record eliminati usando `medicineNameSnapshot`. Il filtro terapia, invece, non puo' associare in modo affidabile quei record a una terapia eliminata o non piu' presente senza un campo snapshot dedicato o una strategia di soft delete.
+Il filtro medicina e le statistiche per medicina possono ancora funzionare sui record eliminati usando `medicineNameSnapshot`. Il filtro terapia e le statistiche per terapia, invece, non possono associare in modo affidabile quei record a una terapia eliminata o non piu' presente senza un campo snapshot dedicato o una strategia di soft delete.
 
 ### Possibili soluzioni
 

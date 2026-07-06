@@ -137,6 +137,7 @@ File attuali:
 - `therapy_detail_screen.dart`
 - `medicine_detail_screen.dart`
 - `history_screen.dart`
+- `statistics_screen.dart`
 - `stock_screen.dart`
 - `profile_screen.dart`
 - `settings_screen.dart`
@@ -162,10 +163,13 @@ File attuale:
 - `notification_service.dart`
 - `notification_navigation_service.dart`
 - `history_filter_service.dart`
+- `history_statistics_service.dart`
 
 Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `Europe/Rome`, richiede i permessi solo quando il profilo abilita i promemoria e pianifica reminder ricorrenti. Espone l'interfaccia `MedicineNotificationScheduler`, cosi' `MedicineProvider` non dipende dal plugin e il comportamento puo' essere verificato con test di dominio. `NotificationNavigationEvents` trasforma il tap normale su una notifica in una richiesta di navigazione verso il dettaglio medicina, senza usare `BuildContext` dentro il servizio notifiche.
 
 `HistoryFilterService` applica in memoria i filtri della schermata Storico su record gia' caricati dal Provider. Supporta filtri per stato, periodo, terapia e medicina, incluse medicine eliminate tramite snapshot del nome. Non introduce query Drift dedicate.
+
+`HistoryStatisticsService` calcola statistiche in memoria partendo da `IntakeRecord` e dalla cache delle terapie. Espone totali, stati, aderenza, finestre temporali e breakdown per medicina/terapia senza usare classi Drift nella UI.
 
 ## Responsabilita' dei model
 
@@ -326,7 +330,24 @@ Responsabilita' attuali:
 
 Responsabilita' future:
 
-- supportare note avanzate, correzioni manuali, statistiche e report.
+- supportare note avanzate, correzioni manuali e report.
+
+### `StatisticsScreen`
+
+Schermata di statistiche base accessibile dallo Storico.
+
+Responsabilita':
+
+- mostrare aderenza generale;
+- mostrare riepiloghi per oggi, ultimi 7 giorni, ultimi 30 giorni e tutto;
+- mostrare conteggi per stato;
+- mostrare statistiche per medicina, incluse medicine eliminate tramite snapshot;
+- mostrare statistiche per terapia quando il record e' attribuibile a una terapia corrente;
+- mostrare uno stato vuoto quando non esiste storico.
+
+Responsabilita' future:
+
+- grafici, trend, note avanzate, export e report.
 
 ### `StockScreen`
 
@@ -983,6 +1004,8 @@ Il dettaglio medicina non deve mescolare prossima assunzione calcolata e schedul
 Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la stessa logica e' esposta da `IntakeActionService`, cosi' puo' essere usata anche dalle azioni delle notifiche senza dipendere dalla UI. La combinazione medicina e orario previsto evita duplicati. Durante `initialize`, `MissedIntakePlanner` controlla al massimo i sette giorni precedenti e salva gli slot senza record come `missed`, senza aggiornare le scorte. Uno slot e' idoneo solo dal momento piu' recente tra creazione della medicina, creazione dello schedule e data di inizio della terapia, quando presente: in questo modo non vengono ricostruite dimenticanze anteriori alla programmazione effettiva. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre azioni rapide per la data corrente, le notifiche locali offrono Assunta/Saltata per lo slot notificato e HistoryScreen visualizza anche lo stato Dimenticata.
 
 `HistoryScreen` applica filtri in memoria tramite `HistoryFilterService`, usando la cache `provider.intakeHistory` e `provider.therapies`. I filtri disponibili sono stato (`taken`, `skipped`, `missed`), periodo (`Oggi`, `Ultimi 7 giorni`, `Ultimi 30 giorni`, `Tutto`), terapia e medicina. Il filtro periodo lavora sulla data prevista `scheduledDateTime`, normalizzata al giorno, cosi' evita confronti fragili sull'orario. Il filtro medicina include anche record di medicine eliminate usando `medicineNameSnapshot`; il filtro terapia sui record eliminati resta limitato perche' `IntakeRecord` non conserva uno snapshot terapia.
+
+`StatisticsScreen` usa `HistoryStatisticsService` con la stessa cache. La formula di aderenza base e' `taken / (taken + skipped + missed)`: i record `scheduled`, se presenti, restano nel totale record ma non entrano nel denominatore. In assenza di dati valutabili l'aderenza e' `0%` e la UI mostra testo di fallback. I periodi usano `scheduledDateTime` normalizzato al giorno; `Ultimi 7 giorni` e `Ultimi 30 giorni` includono la giornata corrente.
 
 ### Scorte
 

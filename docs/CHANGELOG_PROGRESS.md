@@ -13,6 +13,47 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-06 - Sprint Statistiche Base
+
+Tipo modifica: Feature / UX / Test / Documentation.
+
+Descrizione:
+
+- aggiunta schermata `Statistiche`, accessibile dalla schermata Storico;
+- aggiunto `HistoryStatisticsService` per calcolare statistiche in memoria senza query Drift dedicate;
+- calcolati totale record, assunte, saltate, dimenticate e percentuale di aderenza;
+- aggiunti riepiloghi per oggi, ultimi 7 giorni, ultimi 30 giorni e tutto lo storico;
+- aggiunti breakdown per medicina, incluse medicine eliminate tramite snapshot nome;
+- aggiunti breakdown per terapia quando il record e' ancora attribuibile a una terapia corrente;
+- aggiunto empty state quando non esiste storico.
+
+File modificati:
+
+- `README.md`;
+- `lib/screens/history_screen.dart`;
+- `lib/screens/statistics_screen.dart`;
+- `lib/services/history_statistics_service.dart`;
+- `test/history_statistics_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- assenza di una vista sintetica sull'aderenza terapeutica;
+- mancanza di calcoli testabili su aderenza, periodi e breakdown.
+
+Problemi rimandati:
+
+- grafici, export, report PDF e statistiche avanzate;
+- attribuzione certa per terapia dei record relativi a medicine eliminate, da risolvere con snapshot terapia o soft delete.
+
+Motivazione:
+
+Lo sprint introduce statistiche utili e leggibili senza modificare database, repository, notifiche, storico o scorte.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-06 - Sprint Filtri Storico
 
 Tipo modifica: Feature / UX / Test / Documentation.
