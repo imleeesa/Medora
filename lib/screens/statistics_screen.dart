@@ -162,10 +162,21 @@ class _AdherenceCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   hasData
-                      ? '${statistics.taken} assunte su ${statistics.adherenceDenominator} registrazioni valutabili'
+                      ? '${statistics.taken} assunte su ${statistics.evaluatedRecords} assunzioni valutate'
                       : 'Nessun dato valutabile',
                   style: TextStyle(color: Colors.grey.shade700, height: 1.3),
                 ),
+                if (statistics.totalRecords != statistics.evaluatedRecords) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${statistics.totalRecords} record totali, inclusi promemoria non ancora valutati',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -247,7 +258,9 @@ class _SmallStatCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${statistics.adherencePercent}%',
+            statistics.evaluatedRecords == 0
+                ? '--'
+                : '${statistics.adherencePercent}%',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,
@@ -256,7 +269,7 @@ class _SmallStatCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${statistics.totalRecords} record',
+            '${statistics.totalRecords} record, ${statistics.evaluatedRecords} valutate',
             style: TextStyle(color: Colors.grey.shade600),
           ),
         ],
@@ -277,8 +290,12 @@ class _StateSummaryCard extends StatelessWidget {
       child: Column(
         children: [
           _MetricRow(
-            label: 'Totale record',
+            label: 'Record totali',
             value: '${statistics.totalRecords}',
+          ),
+          _MetricRow(
+            label: 'Assunzioni valutate',
+            value: '${statistics.evaluatedRecords}',
           ),
           _MetricRow(label: 'Assunte', value: '${statistics.taken}'),
           _MetricRow(label: 'Saltate', value: '${statistics.skipped}'),

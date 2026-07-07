@@ -13,6 +13,41 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-07 - Sprint QA Statistiche Base
+
+Tipo modifica: QA / UX copy / Test / Documentation.
+
+Descrizione:
+
+- verificata la formula di aderenza `taken / (taken + skipped + missed)`;
+- chiarite nella UI le etichette tra record totali e assunzioni valutate;
+- aggiunto fallback `--` per i periodi senza assunzioni valutabili;
+- rinforzati i test su scheduled, arrotondamento, periodi, snapshot mancanti, medicine omonime e terapie archiviate/non attribuibili.
+
+File modificati:
+
+- `lib/services/history_statistics_service.dart`;
+- `lib/screens/statistics_screen.dart`;
+- `test/history_statistics_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- possibile ambiguita' tra totale record e denominatore dell'aderenza quando esistono record `scheduled`;
+- copertura test incompleta su alcuni casi limite delle statistiche base.
+
+Problemi rimandati:
+
+- grafici, export CSV/PDF e statistiche avanzate;
+- attribuzione certa per terapia dei record relativi a medicine eliminate, gia' documentata come limite.
+
+Motivazione:
+
+Lo sprint stabilizza le statistiche base prima di introdurre visualizzazioni piu' complesse.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-06 - Sprint Statistiche Base
 
 Tipo modifica: Feature / UX / Test / Documentation.

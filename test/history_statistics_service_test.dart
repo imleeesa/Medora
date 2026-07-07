@@ -114,7 +114,65 @@ void main() {
 
     expect(result.all.totalRecords, 1);
     expect(result.all.adherenceDenominator, 0);
+    expect(result.all.evaluatedRecords, 0);
     expect(result.all.adherencePercent, 0);
+  });
+
+  test('includes scheduled records in totals but not evaluated records', () {
+    final result = summary(
+      records: [
+        _record(
+          id: 'taken-1',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'scheduled-1',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 12),
+          status: IntakeStatus.scheduled,
+        ),
+      ],
+      therapies: therapies,
+    );
+
+    expect(result.all.totalRecords, 2);
+    expect(result.all.evaluatedRecords, 1);
+    expect(result.all.adherencePercent, 100);
+  });
+
+  test('rounds adherence percentage to the nearest integer', () {
+    final result = summary(
+      records: [
+        _record(
+          id: 'taken-1',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'taken-2',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 12),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'skipped-1',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 20),
+          status: IntakeStatus.skipped,
+        ),
+      ],
+      therapies: therapies,
+    );
+
+    expect(result.all.adherencePercent, 67);
   });
 
   test('calculates today, last 7 days and last 30 days windows', () {
@@ -158,6 +216,38 @@ void main() {
     expect(result.all.totalRecords, 4);
   });
 
+  test('uses day boundaries consistently for today', () {
+    final result = summary(
+      records: [
+        _record(
+          id: 'start-of-day',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'end-of-day',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 23, 59),
+          status: IntakeStatus.skipped,
+        ),
+        _record(
+          id: 'yesterday',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 5, 23, 59),
+          status: IntakeStatus.missed,
+        ),
+      ],
+      therapies: therapies,
+    );
+
+    expect(result.today.totalRecords, 2);
+    expect(result.today.evaluatedRecords, 2);
+  });
+
   test(
     'groups statistics by current medicine and deleted medicine snapshot',
     () {
@@ -189,6 +279,74 @@ void main() {
       expect(deleted.statistics.missed, 1);
     },
   );
+
+  test('uses a safe fallback when a deleted medicine has no snapshot name', () {
+    final result = summary(
+      records: [
+        _record(
+          id: 'deleted-no-snapshot',
+          medicineId: 'unknown-medicine',
+          medicineName: '',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.missed,
+        ),
+      ],
+      therapies: therapies,
+    );
+
+    expect(result.byMedicine.single.name, 'Medicina non disponibile');
+    expect(result.byMedicine.single.isDeleted, isTrue);
+    expect(result.byMedicine.single.statistics.missed, 1);
+  });
+
+  test('keeps current medicines with the same name separated by id', () {
+    final sameNameTherapies = [
+      _therapy(
+        id: 'therapy-a',
+        name: 'Terapia A',
+        medicines: [
+          _medicine(id: 'medicine-a', name: 'Tachis', therapyId: 'therapy-a'),
+        ],
+      ),
+      _therapy(
+        id: 'therapy-b',
+        name: 'Terapia B',
+        medicines: [
+          _medicine(id: 'medicine-b', name: 'Tachis', therapyId: 'therapy-b'),
+        ],
+      ),
+    ];
+
+    final result = summary(
+      records: [
+        _record(
+          id: 'medicine-a-record',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'medicine-b-record',
+          medicineId: 'medicine-b',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 9),
+          status: IntakeStatus.skipped,
+        ),
+      ],
+      therapies: sameNameTherapies,
+    );
+
+    expect(result.byMedicine, hasLength(2));
+    expect(
+      result.byMedicine.map((item) => item.id),
+      contains('medicine:medicine-a'),
+    );
+    expect(
+      result.byMedicine.map((item) => item.id),
+      contains('medicine:medicine-b'),
+    );
+  });
 
   test(
     'groups statistics by therapy when the medicine is still attributable',
@@ -231,14 +389,65 @@ void main() {
       expect(result.unattributedTherapyRecords, 1);
     },
   );
+
+  test(
+    'keeps archived therapies attributable and marks unknown therapy records',
+    () {
+      final archivedTherapies = [
+        _therapy(
+          id: 'therapy-archived',
+          name: 'Terapia archiviata',
+          isActive: false,
+          medicines: [
+            _medicine(
+              id: 'medicine-archived',
+              name: 'Medicina archiviata',
+              therapyId: 'therapy-archived',
+            ),
+          ],
+        ),
+      ];
+
+      final result = summary(
+        records: [
+          _record(
+            id: 'archived-therapy-record',
+            medicineId: 'medicine-archived',
+            medicineName: 'Medicina archiviata',
+            scheduledDateTime: DateTime(2026, 7, 6, 8),
+            status: IntakeStatus.taken,
+          ),
+          _record(
+            id: 'unknown-therapy-record',
+            medicineId: 'unknown-medicine',
+            medicineName: 'Medicina eliminata',
+            scheduledDateTime: DateTime(2026, 7, 6, 9),
+            status: IntakeStatus.missed,
+          ),
+        ],
+        therapies: archivedTherapies,
+      );
+
+      expect(result.byTherapy.single.name, 'Terapia archiviata');
+      expect(result.byTherapy.single.statistics.taken, 1);
+      expect(result.unattributedTherapyRecords, 1);
+    },
+  );
 }
 
 Therapy _therapy({
   required String id,
   required String name,
   required List<Medicine> medicines,
+  bool isActive = true,
 }) {
-  return Therapy(id: id, name: name, color: '#2E7D32', medicines: medicines);
+  return Therapy(
+    id: id,
+    name: name,
+    color: '#2E7D32',
+    medicines: medicines,
+    isActive: isActive,
+  );
 }
 
 Medicine _medicine({

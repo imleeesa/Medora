@@ -1005,7 +1005,7 @@ Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le a
 
 `HistoryScreen` applica filtri in memoria tramite `HistoryFilterService`, usando la cache `provider.intakeHistory` e `provider.therapies`. I filtri disponibili sono stato (`taken`, `skipped`, `missed`), periodo (`Oggi`, `Ultimi 7 giorni`, `Ultimi 30 giorni`, `Tutto`), terapia e medicina. Il filtro periodo lavora sulla data prevista `scheduledDateTime`, normalizzata al giorno, cosi' evita confronti fragili sull'orario. Il filtro medicina include anche record di medicine eliminate usando `medicineNameSnapshot`; il filtro terapia sui record eliminati resta limitato perche' `IntakeRecord` non conserva uno snapshot terapia.
 
-`StatisticsScreen` usa `HistoryStatisticsService` con la stessa cache. La formula di aderenza base e' `taken / (taken + skipped + missed)`: i record `scheduled`, se presenti, restano nel totale record ma non entrano nel denominatore. In assenza di dati valutabili l'aderenza e' `0%` e la UI mostra testo di fallback. I periodi usano `scheduledDateTime` normalizzato al giorno; `Ultimi 7 giorni` e `Ultimi 30 giorni` includono la giornata corrente.
+`StatisticsScreen` usa `HistoryStatisticsService` con la stessa cache. La formula di aderenza base e' `taken / (taken + skipped + missed)`: i record `scheduled`, se presenti, restano nei record totali ma non entrano nelle assunzioni valutate. In assenza di dati valutabili il servizio restituisce `0%` e la UI mostra `--` o testo di fallback, cosi' non sembra una divisione errata. I periodi usano `scheduledDateTime` normalizzato al giorno; `Ultimi 7 giorni` e `Ultimi 30 giorni` includono la giornata corrente.
 
 ### Scorte
 

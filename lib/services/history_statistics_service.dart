@@ -19,6 +19,8 @@ class IntakeStatistics {
 
   int get adherenceDenominator => taken + skipped + missed;
 
+  int get evaluatedRecords => adherenceDenominator;
+
   double get adherenceRatio =>
       adherenceDenominator == 0 ? 0 : taken / adherenceDenominator;
 
