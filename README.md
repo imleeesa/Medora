@@ -48,7 +48,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Quantita' di scorta e consumo per dose supportano interi, frazioni e decimali.
 - Ricarica manuale persistente delle scorte dalla schermata Scorte.
 - Dashboard con azioni rapide per segnare le assunzioni di oggi come assunte o saltate.
-- Schermata Storico persistente con stati assunta, saltata e dimenticata, filtri per stato, periodo, terapia e medicina, snapshot della medicina, dose, data/ora ed export CSV dei risultati filtrati.
+- Schermata Storico persistente con stati assunta, saltata e dimenticata, filtri per stato, periodo, terapia e medicina, snapshot della medicina, dose, data/ora ed export/condivisione CSV dei risultati filtrati.
 - Schermata Statistiche accessibile dallo Storico, con aderenza generale, andamento temporale filtrabile, riepiloghi per periodo, stato, medicina e terapia.
 - Decremento automatico della scorta per assunzioni con quantita' intera, frazionaria o decimale definita.
 - Profilo utente locale con nome, preferenze tema e notifiche.
@@ -83,6 +83,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - flutter_local_notifications per notifiche locali
 - timezone per la pianificazione delle notifiche
 - intl per supporto a date e formattazioni
+- share_plus per condividere file CSV tramite share sheet di sistema
 - uuid per generazione degli identificativi
 - drift e SQLite per persistenza locale
 - flutter_lints per le regole di qualita' del codice
@@ -231,7 +232,7 @@ flutter run -d <device-id>
 
 Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; puo' avere piu' programmazioni interne con giorni e orari propri; puo' essere modificata dal dettaglio senza perdere storico o identificativo; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
-Lo storico base e' operativo e persistente, con filtri in memoria per stato, periodo, terapia e medicina ed export CSV locale dei risultati filtrati. Le statistiche base mostrano aderenza, riepiloghi per periodo e breakdown per medicina e terapia. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi, includono azioni rapide Assunta/Saltata, aprono il dettaglio medicina dal tap sul corpo della notifica, avvisano quando la scorta attraversa la soglia minima e mostrano in Impostazioni lo stato dei permessi Android; Backup e Report PDF restano predisposti ma non ancora operativi.
+Lo storico base e' operativo e persistente, con filtri in memoria per stato, periodo, terapia e medicina ed export CSV condivisibile dei risultati filtrati. Le statistiche base mostrano aderenza, riepiloghi per periodo e breakdown per medicina e terapia. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi, includono azioni rapide Assunta/Saltata, aprono il dettaglio medicina dal tap sul corpo della notifica, avvisano quando la scorta attraversa la soglia minima e mostrano in Impostazioni lo stato dei permessi Android; Backup e Report PDF restano predisposti ma non ancora operativi.
 
 ## Roadmap futura
 

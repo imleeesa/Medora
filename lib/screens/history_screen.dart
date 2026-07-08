@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/intake_record.dart';
 import '../models/therapy.dart';
@@ -126,7 +127,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             therapies: provider.therapies,
                           ),
                     icon: const Icon(Icons.download_outlined),
-                    label: const Text('Esporta risultati filtrati'),
+                    label: const Text('Esporta/Condividi CSV'),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -175,26 +176,62 @@ class _HistoryScreenState extends State<HistoryScreen> {
     required List<Therapy> therapies,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
+    File? generatedFile;
 
     try {
       final csv = CsvExportService.exportIntakeHistory(
         records: records,
         therapies: therapies,
       );
-      final directory = await getApplicationDocumentsDirectory();
+      final directory = await getTemporaryDirectory();
       final fileName =
           'meditrack_storico_${_formatFileDate(DateTime.now())}.csv';
       final file = File('${directory.path}${Platform.pathSeparator}$fileName');
       await file.writeAsString(csv);
+      generatedFile = file;
 
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('CSV salvato: ${file.path}')),
+        const SnackBar(
+          content: Text('CSV generato. Scegli dove salvarlo o condividerlo.'),
+        ),
       );
+
+      final renderObject = context.findRenderObject();
+      final sharePositionOrigin = renderObject is RenderBox
+          ? renderObject.localToGlobal(Offset.zero) & renderObject.size
+          : null;
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          title: 'Storico Meditrack',
+          subject: 'Storico Meditrack',
+          text: 'Storico assunzioni esportato da Meditrack.',
+          files: [XFile(file.path, mimeType: 'text/csv', name: fileName)],
+          fileNameOverrides: [fileName],
+          sharePositionOrigin: sharePositionOrigin,
+        ),
+      );
+
+      if (!mounted) return;
+      if (result.status == ShareResultStatus.unavailable) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Condivisione non disponibile. CSV generato localmente: ${file.path}',
+            ),
+          ),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Impossibile esportare il CSV.')),
+        SnackBar(
+          content: Text(
+            generatedFile == null
+                ? 'Impossibile generare il CSV. Riprova tra poco.'
+                : 'CSV generato ma condivisione non riuscita: ${generatedFile.path}',
+          ),
+        ),
       );
     }
   }

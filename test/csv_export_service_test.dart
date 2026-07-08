@@ -4,6 +4,7 @@ import 'package:meditrack/models/intake_record.dart';
 import 'package:meditrack/models/medicine.dart';
 import 'package:meditrack/models/therapy.dart';
 import 'package:meditrack/services/csv_export_service.dart';
+import 'package:meditrack/services/history_filter_service.dart';
 
 void main() {
   final therapies = [
@@ -12,6 +13,13 @@ void main() {
       name: 'Terapia, principale',
       medicines: [
         _medicine(id: 'medicine-a', name: 'Medicina A', therapyId: 'therapy-a'),
+      ],
+    ),
+    _therapy(
+      id: 'therapy-b',
+      name: 'Terapia B',
+      medicines: [
+        _medicine(id: 'medicine-b', name: 'Medicina B', therapyId: 'therapy-b'),
       ],
     ),
   ];
@@ -71,6 +79,25 @@ void main() {
     expect(csv, contains('"Prima riga\nSeconda riga"'));
   });
 
+  test('keeps apostrophes and long names readable', () {
+    const longName =
+        'Medicina con nome molto lungo per verificare esportazione completa';
+    final csv = CsvExportService.exportIntakeHistory(
+      records: [
+        _record(
+          id: 'long',
+          medicineName: "$longName dell'utente",
+          notes: "Nota dell'utente",
+          status: IntakeStatus.taken,
+        ),
+      ],
+      therapies: therapies,
+    );
+
+    expect(csv, contains("$longName dell'utente"));
+    expect(csv, contains("Nota dell'utente"));
+  });
+
   test('exports deleted medicines through snapshot name', () {
     final csv = CsvExportService.exportIntakeHistory(
       records: [
@@ -127,6 +154,72 @@ void main() {
 
     expect(lines[1], contains('Nuova'));
     expect(lines[2], contains('Vecchia'));
+  });
+
+  test('exports only records visible after a status filter', () {
+    final filtered = HistoryFilterService.filterRecords(
+      records: [
+        _record(id: 'taken', status: IntakeStatus.taken),
+        _record(id: 'skipped', status: IntakeStatus.skipped),
+        _record(id: 'missed', status: IntakeStatus.missed),
+      ],
+      therapies: therapies,
+      filters: const HistoryFilters(status: HistoryStatusFilter.taken),
+      referenceDate: DateTime(2026, 7, 8, 12),
+    );
+    final csv = CsvExportService.exportIntakeHistory(
+      records: filtered,
+      therapies: therapies,
+    );
+
+    expect(csv, contains('Assunta'));
+    expect(csv, isNot(contains('Saltata')));
+    expect(csv, isNot(contains('Dimenticata')));
+  });
+
+  test('exports only records visible after combined filters', () {
+    final filtered = HistoryFilterService.filterRecords(
+      records: [
+        _record(
+          id: 'matching',
+          medicineId: 'medicine-a',
+          medicineName: 'Medicina A',
+          scheduledDateTime: DateTime(2026, 7, 8, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'wrong-medicine',
+          medicineId: 'medicine-b',
+          medicineName: 'Medicina B',
+          scheduledDateTime: DateTime(2026, 7, 8, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'wrong-period',
+          medicineId: 'medicine-a',
+          medicineName: 'Medicina A vecchia',
+          scheduledDateTime: DateTime(2026, 6, 1, 8),
+          status: IntakeStatus.taken,
+        ),
+      ],
+      therapies: therapies,
+      filters: const HistoryFilters(
+        status: HistoryStatusFilter.taken,
+        period: HistoryPeriodFilter.last7Days,
+        therapyId: 'therapy-a',
+        medicineId: 'medicine-a',
+      ),
+      referenceDate: DateTime(2026, 7, 8, 12),
+    );
+    final csv = CsvExportService.exportIntakeHistory(
+      records: filtered,
+      therapies: therapies,
+    );
+
+    expect(filtered, hasLength(1));
+    expect(csv, contains('Medicina A'));
+    expect(csv, isNot(contains('Medicina B')));
+    expect(csv, isNot(contains('Medicina A vecchia')));
   });
 }
 

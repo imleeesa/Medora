@@ -13,6 +13,75 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-08 - Sprint QA Export CSV e share sheet
+
+Tipo modifica: QA / Test / Documentation.
+
+Descrizione:
+
+- verificato il flusso Export/Condivisione CSV dopo l'introduzione di `share_plus`;
+- rinforzati i test su export dei record filtrati visibili;
+- aggiunti test per filtro stato e combinazione periodo + terapia + medicina;
+- confermata gestione caratteri speciali, snapshot medicine eliminate e terapia non disponibile.
+
+File modificati:
+
+- `test/csv_export_service_test.dart`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- copertura test insufficiente sulla relazione tra filtri dello Storico e contenuto CSV esportato.
+
+Problemi rimandati:
+
+- verifica manuale dello share sheet su dispositivo reale Android/Samsung;
+- export PDF, cloud e backup database.
+
+Motivazione:
+
+Lo sprint stabilizza l'export CSV condivisibile senza introdurre nuove funzionalita' fuori perimetro.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
+## 2026-07-08 - Fix Export CSV con share sheet
+
+Tipo modifica: Bug Fix / UX / Dependency / Documentation.
+
+Descrizione:
+
+- aggiunta dipendenza `share_plus`;
+- modificato l'export CSV dello Storico per aprire lo share sheet di sistema dopo la generazione del file;
+- il file CSV viene scritto temporaneamente e condiviso come `text/csv`;
+- aggiornata la UI da `Esporta risultati filtrati` a `Esporta/Condividi CSV`;
+- aggiunto fallback se la condivisione non e' disponibile o fallisce.
+
+File modificati:
+
+- `README.md`;
+- `pubspec.yaml`;
+- `pubspec.lock`;
+- `lib/screens/history_screen.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- il file CSV veniva salvato nella directory interna dell'app, difficile da recuperare dal file manager Android/Samsung.
+
+Problemi rimandati:
+
+- export PDF;
+- cloud/backup completo database;
+- scelta manuale di una cartella senza passare dallo share sheet.
+
+Motivazione:
+
+Lo share sheet rende l'export CSV realmente utilizzabile senza introdurre cloud o backup automatico.
+
+Stato finale: completato con `flutter pub add share_plus`, `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-08 - Sprint Export CSV
 
 Tipo modifica: Feature / UX / Test / Documentation.

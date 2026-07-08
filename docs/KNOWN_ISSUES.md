@@ -10,21 +10,33 @@ Limite funzionale.
 
 ### Stato
 
-Rimandato
+Risolto
 
 ### Cosa e' stato trovato
 
 Lo Sprint Export CSV salva lo storico filtrato in un file locale nella directory documenti dell'app. Non apre ancora un foglio di condivisione e non esporta PDF, backup database o cloud.
 
-### Motivazione
+### Data risoluzione
 
-Il progetto dispone gia' di `path_provider`, quindi il primo export puo' funzionare senza introdurre nuove dipendenze. Una condivisione nativa richiedera' un pacchetto dedicato o integrazione piattaforma e va valutata in uno sprint separato.
+2026-07-08
 
-### Possibili soluzioni
+### Come e' stato risolto
 
-- aggiungere in futuro una dipendenza come `share_plus` dopo valutazione;
-- aggiungere scelta cartella/condivisione file;
-- preparare export PDF o report solo in uno sprint dedicato.
+L'export CSV ora scrive un file temporaneo e apre lo share sheet di sistema tramite `share_plus`, cosi' l'utente puo' salvare o inviare il CSV con app come Files, Drive, Gmail o WhatsApp.
+
+### File modificati
+
+- `pubspec.yaml`;
+- `pubspec.lock`;
+- `lib/screens/history_screen.dart`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`;
+- `README.md`.
+
+### Note
+
+Se il dispositivo non ha destinazioni disponibili o lo share sheet fallisce, l'app non crasha e mostra un messaggio di fallback. PDF, cloud e backup database restano fuori da questo sprint.
 
 ## Naming non uniforme tra Medora e Meditrack
 
