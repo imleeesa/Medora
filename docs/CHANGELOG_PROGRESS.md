@@ -13,6 +13,46 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-07 - Sprint Grafico Andamento Aderenza
+
+Tipo modifica: Feature / UX / Test / Documentation.
+
+Descrizione:
+
+- aggiunta sezione `Andamento aderenza` nella schermata Statistiche;
+- introdotto trend giornaliero filtrabile per periodo, terapia e medicina;
+- usato grafico lineare con `CustomPainter`, senza nuove dipendenze;
+- i giorni senza assunzioni valutate restano senza punto percentuale e non vengono trattati come 0%;
+- esteso `HistoryStatisticsService` con calcolo testabile della serie temporale;
+- aggiunti test per periodo, ordinamento cronologico, scheduled esclusi, giorni senza dati, filtri medicina/terapia e periodo tutto.
+
+File modificati:
+
+- `README.md`;
+- `lib/services/history_statistics_service.dart`;
+- `lib/screens/statistics_screen.dart`;
+- `test/history_statistics_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- assenza di una vista temporale sull'andamento dell'aderenza;
+- mancanza di filtri dedicati al grafico senza alterare i dati dello storico.
+
+Problemi rimandati:
+
+- export CSV/PDF;
+- grafici avanzati, confronti multipli e aggregazioni settimanali/mensili;
+- attribuzione certa per terapia dei record relativi a medicine eliminate, gia' documentata come limite.
+
+Motivazione:
+
+Lo sprint introduce una lettura visuale semplice dell'aderenza senza modificare database, storico, notifiche o scorte.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-07 - Sprint QA Statistiche Base
 
 Tipo modifica: QA / UX copy / Test / Documentation.

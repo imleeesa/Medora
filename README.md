@@ -49,7 +49,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Ricarica manuale persistente delle scorte dalla schermata Scorte.
 - Dashboard con azioni rapide per segnare le assunzioni di oggi come assunte o saltate.
 - Schermata Storico persistente con stati assunta, saltata e dimenticata, filtri per stato, periodo, terapia e medicina, snapshot della medicina, dose e data/ora.
-- Schermata Statistiche accessibile dallo Storico, con aderenza generale, riepiloghi per periodo, stato, medicina e terapia.
+- Schermata Statistiche accessibile dallo Storico, con aderenza generale, andamento temporale filtrabile, riepiloghi per periodo, stato, medicina e terapia.
 - Decremento automatico della scorta per assunzioni con quantita' intera, frazionaria o decimale definita.
 - Profilo utente locale con nome, preferenze tema e notifiche.
 - Persistenza locale di profilo, impostazioni, terapie, medicine, scorte e schedule.
@@ -66,7 +66,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Evoluzione del sistema Terapie con filtri, ordinamento e stati archiviati piu' chiari.
 - Associazione piu' strutturata Medicine -> Terapie con controlli di integrita' piu' avanzati.
 - Dashboard avanzata con statistiche, aderenza terapeutica e azioni rapide.
-- Evoluzione dello storico con ritardi, note, correzioni e statistiche avanzate con grafici.
+- Evoluzione dello storico con ritardi, note, correzioni, grafici avanzati e confronti piu' approfonditi.
 - Gestione avanzata delle scorte con registro carico/scarico e promemoria di riacquisto configurabili.
 - Notifiche locali avanzate con deep link verso storico e controlli piattaforma piu' completi.
 - Migrazioni schema e test automatici del database locale.

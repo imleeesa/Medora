@@ -4,6 +4,8 @@ import '../models/therapy.dart';
 
 enum StatisticsPeriod { today, last7Days, last30Days, all }
 
+enum AdherenceTrendPeriod { last7Days, last30Days, all }
+
 class IntakeStatistics {
   final int totalRecords;
   final int taken;
@@ -25,6 +27,30 @@ class IntakeStatistics {
       adherenceDenominator == 0 ? 0 : taken / adherenceDenominator;
 
   int get adherencePercent => (adherenceRatio * 100).round();
+}
+
+class DailyAdherencePoint {
+  final DateTime date;
+  final int taken;
+  final int skipped;
+  final int missed;
+
+  const DailyAdherencePoint({
+    required this.date,
+    required this.taken,
+    required this.skipped,
+    required this.missed,
+  });
+
+  int get evaluatedRecords => taken + skipped + missed;
+
+  double? get adherenceRatio =>
+      evaluatedRecords == 0 ? null : taken / evaluatedRecords;
+
+  int? get adherencePercent {
+    final ratio = adherenceRatio;
+    return ratio == null ? null : (ratio * 100).round();
+  }
 }
 
 class NamedIntakeStatistics {
@@ -102,6 +128,72 @@ class HistoryStatisticsService {
     );
   }
 
+  static List<DailyAdherencePoint> adherenceTrend({
+    required Iterable<IntakeRecord> records,
+    required Iterable<Therapy> therapies,
+    required DateTime referenceDate,
+    required AdherenceTrendPeriod period,
+    String? therapyId,
+    String? medicineId,
+    String? medicineSnapshotName,
+  }) {
+    final today = _dateOnly(referenceDate);
+    final recordList = records.toList(growable: false);
+    final firstRecordDate = recordList.isEmpty
+        ? today
+        : recordList
+              .map((record) => _dateOnly(record.scheduledDateTime))
+              .reduce(
+                (first, second) => first.isBefore(second) ? first : second,
+              );
+    final start = switch (period) {
+      AdherenceTrendPeriod.last7Days => today.subtract(const Duration(days: 6)),
+      AdherenceTrendPeriod.last30Days => today.subtract(
+        const Duration(days: 29),
+      ),
+      AdherenceTrendPeriod.all =>
+        firstRecordDate.isAfter(today) ? today : firstRecordDate,
+    };
+    final medicineById = _medicineById(therapies);
+    final normalizedSnapshot = medicineSnapshotName == null
+        ? null
+        : _normalize(medicineSnapshotName);
+    final grouped = <DateTime, List<IntakeRecord>>{};
+
+    for (final record in recordList) {
+      final date = _dateOnly(record.scheduledDateTime);
+      if (date.isBefore(start) || date.isAfter(today)) continue;
+      if (!_matchesTrendFilters(
+        record: record,
+        medicineById: medicineById,
+        therapyId: therapyId,
+        medicineId: medicineId,
+        normalizedSnapshotName: normalizedSnapshot,
+      )) {
+        continue;
+      }
+      grouped.putIfAbsent(date, () => []).add(record);
+    }
+
+    final points = <DailyAdherencePoint>[];
+    for (
+      var date = start;
+      !date.isAfter(today);
+      date = date.add(const Duration(days: 1))
+    ) {
+      final statistics = _calculate(grouped[date] ?? const []);
+      points.add(
+        DailyAdherencePoint(
+          date: date,
+          taken: statistics.taken,
+          skipped: statistics.skipped,
+          missed: statistics.missed,
+        ),
+      );
+    }
+    return points;
+  }
+
   static IntakeStatistics _calculate(Iterable<IntakeRecord> records) {
     var totalRecords = 0;
     var taken = 0;
@@ -137,11 +229,7 @@ class HistoryStatisticsService {
   ) {
     if (period == StatisticsPeriod.all) return records;
 
-    final today = DateTime(
-      referenceDate.year,
-      referenceDate.month,
-      referenceDate.day,
-    );
+    final today = _dateOnly(referenceDate);
     final start = switch (period) {
       StatisticsPeriod.today => today,
       StatisticsPeriod.last7Days => today.subtract(const Duration(days: 6)),
@@ -151,11 +239,7 @@ class HistoryStatisticsService {
     final end = today.add(const Duration(days: 1));
 
     return records.where((record) {
-      final recordDate = DateTime(
-        record.scheduledDateTime.year,
-        record.scheduledDateTime.month,
-        record.scheduledDateTime.day,
-      );
+      final recordDate = _dateOnly(record.scheduledDateTime);
       return !recordDate.isBefore(start) && recordDate.isBefore(end);
     });
   }
@@ -267,4 +351,39 @@ class HistoryStatisticsService {
   }
 
   static String _normalize(String value) => value.trim().toLowerCase();
+
+  static DateTime _dateOnly(DateTime value) {
+    return DateTime(value.year, value.month, value.day);
+  }
+
+  static bool _matchesTrendFilters({
+    required IntakeRecord record,
+    required Map<String, Medicine> medicineById,
+    required String? therapyId,
+    required String? medicineId,
+    required String? normalizedSnapshotName,
+  }) {
+    final recordMedicineId = record.medicineId;
+
+    if (therapyId != null) {
+      if (recordMedicineId == null) return false;
+      if (medicineById[recordMedicineId]?.therapyId != therapyId) {
+        return false;
+      }
+    }
+
+    if (medicineId != null) {
+      return recordMedicineId == medicineId;
+    }
+
+    if (normalizedSnapshotName != null) {
+      final hasCurrentMedicine =
+          recordMedicineId != null &&
+          medicineById.containsKey(recordMedicineId);
+      if (hasCurrentMedicine) return false;
+      return _normalize(record.medicineNameSnapshot) == normalizedSnapshotName;
+    }
+
+    return true;
+  }
 }

@@ -222,7 +222,7 @@ Lo storico conserva snapshot di nome e dose della medicina, ma non conserva uno 
 
 ### Motivazione
 
-Il filtro medicina e le statistiche per medicina possono ancora funzionare sui record eliminati usando `medicineNameSnapshot`. Il filtro terapia e le statistiche per terapia, invece, non possono associare in modo affidabile quei record a una terapia eliminata o non piu' presente senza un campo snapshot dedicato o una strategia di soft delete.
+Il filtro medicina, le statistiche per medicina e il grafico di andamento filtrato per medicina possono ancora funzionare sui record eliminati usando `medicineNameSnapshot`. Il filtro terapia, le statistiche per terapia e il grafico filtrato per terapia, invece, non possono associare in modo affidabile quei record a una terapia eliminata o non piu' presente senza un campo snapshot dedicato o una strategia di soft delete.
 
 ### Possibili soluzioni
 

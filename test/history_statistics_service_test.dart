@@ -433,6 +433,206 @@ void main() {
       expect(result.unattributedTherapyRecords, 1);
     },
   );
+
+  test('builds a chronological 7 day adherence trend', () {
+    final trend = HistoryStatisticsService.adherenceTrend(
+      records: [
+        _record(
+          id: 'first-day',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 6, 30, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'last-day',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.skipped,
+        ),
+      ],
+      therapies: therapies,
+      referenceDate: referenceDate,
+      period: AdherenceTrendPeriod.last7Days,
+    );
+
+    expect(trend, hasLength(7));
+    expect(trend.first.date, DateTime(2026, 6, 30));
+    expect(trend.last.date, DateTime(2026, 7, 6));
+    expect(trend.first.adherencePercent, 100);
+    expect(trend.last.adherencePercent, 0);
+  });
+
+  test(
+    'builds a 30 day trend and leaves days without evaluated data empty',
+    () {
+      final trend = HistoryStatisticsService.adherenceTrend(
+        records: [
+          _record(
+            id: 'thirty-days',
+            medicineId: 'medicine-a',
+            medicineName: 'Tachis',
+            scheduledDateTime: DateTime(2026, 6, 7, 8),
+            status: IntakeStatus.taken,
+          ),
+        ],
+        therapies: therapies,
+        referenceDate: referenceDate,
+        period: AdherenceTrendPeriod.last30Days,
+      );
+
+      expect(trend, hasLength(30));
+      expect(trend.first.date, DateTime(2026, 6, 7));
+      expect(trend.first.adherencePercent, 100);
+      expect(trend[1].evaluatedRecords, 0);
+      expect(trend[1].adherencePercent, isNull);
+    },
+  );
+
+  test(
+    'calculates daily 50 percent and excludes scheduled records from trend',
+    () {
+      final trend = HistoryStatisticsService.adherenceTrend(
+        records: [
+          _record(
+            id: 'taken',
+            medicineId: 'medicine-a',
+            medicineName: 'Tachis',
+            scheduledDateTime: DateTime(2026, 7, 6, 8),
+            status: IntakeStatus.taken,
+          ),
+          _record(
+            id: 'skipped',
+            medicineId: 'medicine-a',
+            medicineName: 'Tachis',
+            scheduledDateTime: DateTime(2026, 7, 6, 12),
+            status: IntakeStatus.skipped,
+          ),
+          _record(
+            id: 'scheduled',
+            medicineId: 'medicine-a',
+            medicineName: 'Tachis',
+            scheduledDateTime: DateTime(2026, 7, 6, 20),
+            status: IntakeStatus.scheduled,
+          ),
+        ],
+        therapies: therapies,
+        referenceDate: referenceDate,
+        period: AdherenceTrendPeriod.last7Days,
+      );
+
+      expect(trend.last.evaluatedRecords, 2);
+      expect(trend.last.adherencePercent, 50);
+    },
+  );
+
+  test('filters trend by medicine id', () {
+    final trend = HistoryStatisticsService.adherenceTrend(
+      records: [
+        _record(
+          id: 'medicine-a',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'medicine-b',
+          medicineId: 'medicine-b',
+          medicineName: 'Vitamina D',
+          scheduledDateTime: DateTime(2026, 7, 6, 9),
+          status: IntakeStatus.missed,
+        ),
+      ],
+      therapies: therapies,
+      referenceDate: referenceDate,
+      period: AdherenceTrendPeriod.last7Days,
+      medicineId: 'medicine-b',
+    );
+
+    expect(trend.last.taken, 0);
+    expect(trend.last.missed, 1);
+    expect(trend.last.adherencePercent, 0);
+  });
+
+  test('filters trend by deleted medicine snapshot', () {
+    final trend = HistoryStatisticsService.adherenceTrend(
+      records: [
+        _record(
+          id: 'current',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'deleted',
+          medicineId: null,
+          medicineName: 'Medicina eliminata',
+          scheduledDateTime: DateTime(2026, 7, 6, 9),
+          status: IntakeStatus.missed,
+        ),
+      ],
+      therapies: therapies,
+      referenceDate: referenceDate,
+      period: AdherenceTrendPeriod.last7Days,
+      medicineSnapshotName: 'Medicina eliminata',
+    );
+
+    expect(trend.last.taken, 0);
+    expect(trend.last.missed, 1);
+    expect(trend.last.adherencePercent, 0);
+  });
+
+  test('filters trend by therapy without attributing unknown records', () {
+    final trend = HistoryStatisticsService.adherenceTrend(
+      records: [
+        _record(
+          id: 'therapy-a',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 6, 8),
+          status: IntakeStatus.taken,
+        ),
+        _record(
+          id: 'unknown',
+          medicineId: null,
+          medicineName: 'Medicina eliminata',
+          scheduledDateTime: DateTime(2026, 7, 6, 9),
+          status: IntakeStatus.missed,
+        ),
+      ],
+      therapies: therapies,
+      referenceDate: referenceDate,
+      period: AdherenceTrendPeriod.last7Days,
+      therapyId: 'therapy-a',
+    );
+
+    expect(trend.last.evaluatedRecords, 1);
+    expect(trend.last.adherencePercent, 100);
+  });
+
+  test('builds all trend from the first record to the reference date', () {
+    final trend = HistoryStatisticsService.adherenceTrend(
+      records: [
+        _record(
+          id: 'old',
+          medicineId: 'medicine-a',
+          medicineName: 'Tachis',
+          scheduledDateTime: DateTime(2026, 7, 1, 8),
+          status: IntakeStatus.taken,
+        ),
+      ],
+      therapies: therapies,
+      referenceDate: referenceDate,
+      period: AdherenceTrendPeriod.all,
+    );
+
+    expect(trend.first.date, DateTime(2026, 7, 1));
+    expect(trend.last.date, DateTime(2026, 7, 6));
+    expect(trend, hasLength(6));
+  });
 }
 
 Therapy _therapy({
