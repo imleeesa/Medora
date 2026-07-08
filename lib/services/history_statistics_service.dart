@@ -139,9 +139,26 @@ class HistoryStatisticsService {
   }) {
     final today = _dateOnly(referenceDate);
     final recordList = records.toList(growable: false);
-    final firstRecordDate = recordList.isEmpty
+    final medicineById = _medicineById(therapies);
+    final normalizedSnapshot = medicineSnapshotName == null
+        ? null
+        : _normalize(medicineSnapshotName);
+    final filteredRecords = recordList
+        .where((record) {
+          final date = _dateOnly(record.scheduledDateTime);
+          if (date.isAfter(today)) return false;
+          return _matchesTrendFilters(
+            record: record,
+            medicineById: medicineById,
+            therapyId: therapyId,
+            medicineId: medicineId,
+            normalizedSnapshotName: normalizedSnapshot,
+          );
+        })
+        .toList(growable: false);
+    final firstRecordDate = filteredRecords.isEmpty
         ? today
-        : recordList
+        : filteredRecords
               .map((record) => _dateOnly(record.scheduledDateTime))
               .reduce(
                 (first, second) => first.isBefore(second) ? first : second,
@@ -151,27 +168,13 @@ class HistoryStatisticsService {
       AdherenceTrendPeriod.last30Days => today.subtract(
         const Duration(days: 29),
       ),
-      AdherenceTrendPeriod.all =>
-        firstRecordDate.isAfter(today) ? today : firstRecordDate,
+      AdherenceTrendPeriod.all => firstRecordDate,
     };
-    final medicineById = _medicineById(therapies);
-    final normalizedSnapshot = medicineSnapshotName == null
-        ? null
-        : _normalize(medicineSnapshotName);
     final grouped = <DateTime, List<IntakeRecord>>{};
 
-    for (final record in recordList) {
+    for (final record in filteredRecords) {
       final date = _dateOnly(record.scheduledDateTime);
       if (date.isBefore(start) || date.isAfter(today)) continue;
-      if (!_matchesTrendFilters(
-        record: record,
-        medicineById: medicineById,
-        therapyId: therapyId,
-        medicineId: medicineId,
-        normalizedSnapshotName: normalizedSnapshot,
-      )) {
-        continue;
-      }
       grouped.putIfAbsent(date, () => []).add(record);
     }
 

@@ -64,9 +64,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (summary.all.totalRecords == 0)
-                  const _EmptyStatisticsState()
-                else ...[
+                if (summary.all.totalRecords == 0) ...[
+                  const _EmptyStatisticsState(),
+                  const SizedBox(height: 18),
+                  _TrendSection(
+                    trend: trend,
+                    period: _trendPeriod,
+                    therapies: provider.therapies,
+                    selectedTherapyId: _trendTherapyId,
+                    medicineOptions: medicineOptions,
+                    selectedMedicineValue: selectedMedicine?.value,
+                    onPeriodChanged: (period) {
+                      setState(() => _trendPeriod = period);
+                    },
+                    onTherapyChanged: (therapyId) {
+                      setState(() {
+                        _trendTherapyId = therapyId;
+                        _trendMedicineValue = null;
+                      });
+                    },
+                    onMedicineChanged: (medicineValue) {
+                      setState(() => _trendMedicineValue = medicineValue);
+                    },
+                  ),
+                ] else ...[
                   _AdherenceCard(statistics: summary.all),
                   const SizedBox(height: 12),
                   _PeriodCards(summary: summary),
@@ -511,9 +532,6 @@ class _AdherenceTrendPainter extends CustomPainter {
     final pointPaint = Paint()
       ..color = const Color(0xFF2E7D32)
       ..style = PaintingStyle.fill;
-    final emptyPointPaint = Paint()
-      ..color = Colors.grey.shade300
-      ..style = PaintingStyle.fill;
 
     for (final value in [0, 50, 100]) {
       final y = _yForPercent(value, chartHeight, topPadding);
@@ -546,10 +564,7 @@ class _AdherenceTrendPainter extends CustomPainter {
           : chartLeft + (chartWidth * index / (points.length - 1));
       final percent = point.adherencePercent;
 
-      if (percent == null) {
-        previousPoint = null;
-        canvas.drawCircle(Offset(x, chartBottom), 2.5, emptyPointPaint);
-      } else {
+      if (percent != null) {
         final currentPoint = Offset(
           x,
           _yForPercent(percent, chartHeight, topPadding),

@@ -13,6 +13,41 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-08 - Sprint QA Grafico Andamento Aderenza
+
+Tipo modifica: QA / Bug Fix / Test / Documentation.
+
+Descrizione:
+
+- verificato il comportamento del trend aderenza su 100%, 50%, 0% reale e giorni senza dati valutabili;
+- corretto il periodo `Tutto` per partire dal primo record coerente con i filtri selezionati;
+- mostrato l'empty state del grafico anche quando lo storico e' completamente vuoto;
+- aggiunti test per dataset vuoto, null vs 0%, missed nel denominatore, combinazione filtri e dataset lungo.
+
+File modificati:
+
+- `lib/services/history_statistics_service.dart`;
+- `lib/screens/statistics_screen.dart`;
+- `test/history_statistics_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- il periodo `Tutto` poteva includere giorni vuoti precedenti al primo record della medicina/terapia filtrata;
+- con storico vuoto non veniva mostrato l'empty state dedicato del grafico.
+
+Problemi rimandati:
+
+- aggregazioni settimanali/mensili avanzate per dataset molto lunghi;
+- attribuzione certa per terapia dei record relativi a medicine eliminate, gia' documentata come limite.
+
+Motivazione:
+
+Lo sprint stabilizza il grafico prima di introdurre grafici avanzati o export.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-07 - Sprint Grafico Andamento Aderenza
 
 Tipo modifica: Feature / UX / Test / Documentation.
