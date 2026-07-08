@@ -2,6 +2,30 @@
 
 Questo file raccoglie bug, discrepanze e rischi tecnici noti. Ogni problema resta tracciato fino a quando viene corretto, accettato come limite temporaneo o spostato nella roadmap.
 
+## Export CSV locale senza share sheet
+
+### Categoria
+
+Limite funzionale.
+
+### Stato
+
+Rimandato
+
+### Cosa e' stato trovato
+
+Lo Sprint Export CSV salva lo storico filtrato in un file locale nella directory documenti dell'app. Non apre ancora un foglio di condivisione e non esporta PDF, backup database o cloud.
+
+### Motivazione
+
+Il progetto dispone gia' di `path_provider`, quindi il primo export puo' funzionare senza introdurre nuove dipendenze. Una condivisione nativa richiedera' un pacchetto dedicato o integrazione piattaforma e va valutata in uno sprint separato.
+
+### Possibili soluzioni
+
+- aggiungere in futuro una dipendenza come `share_plus` dopo valutazione;
+- aggiungere scelta cartella/condivisione file;
+- preparare export PDF o report solo in uno sprint dedicato.
+
 ## Naming non uniforme tra Medora e Meditrack
 
 ### Categoria

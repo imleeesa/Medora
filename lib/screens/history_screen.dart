@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../models/intake_record.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
+import '../services/csv_export_service.dart';
 import '../services/history_filter_service.dart';
 import 'statistics_screen.dart';
 
@@ -111,6 +115,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       setState(() => _selectedMedicineValue = value),
                   onReset: _resetFilters,
                 ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: records.isEmpty
+                        ? null
+                        : () => _exportHistoryCsv(
+                            records: records,
+                            therapies: provider.therapies,
+                          ),
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Esporta risultati filtrati'),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 if (allRecords.isEmpty)
                   _EmptyHistoryState(
@@ -150,6 +168,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _selectedTherapyId = null;
       _selectedMedicineValue = _allValue;
     });
+  }
+
+  Future<void> _exportHistoryCsv({
+    required List<IntakeRecord> records,
+    required List<Therapy> therapies,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final csv = CsvExportService.exportIntakeHistory(
+        records: records,
+        therapies: therapies,
+      );
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          'meditrack_storico_${_formatFileDate(DateTime.now())}.csv';
+      final file = File('${directory.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsString(csv);
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('CSV salvato: ${file.path}')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Impossibile esportare il CSV.')),
+      );
+    }
+  }
+
+  String _formatFileDate(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
   }
 }
 

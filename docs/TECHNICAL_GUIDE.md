@@ -162,6 +162,7 @@ File attuale:
 
 - `notification_service.dart`
 - `notification_navigation_service.dart`
+- `csv_export_service.dart`
 - `history_filter_service.dart`
 - `history_statistics_service.dart`
 
@@ -170,6 +171,8 @@ Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `E
 `HistoryFilterService` applica in memoria i filtri della schermata Storico su record gia' caricati dal Provider. Supporta filtri per stato, periodo, terapia e medicina, incluse medicine eliminate tramite snapshot del nome. Non introduce query Drift dedicate.
 
 `HistoryStatisticsService` calcola statistiche in memoria partendo da `IntakeRecord` e dalla cache delle terapie. Espone totali, stati, aderenza, finestre temporali, breakdown per medicina/terapia e trend giornaliero senza usare classi Drift nella UI.
+
+`CsvExportService` genera CSV testabile dello storico assunzioni senza dipendere dalla UI o da Drift. Riceve record di dominio e terapie correnti, produce intestazioni stabili, converte stati in etichette leggibili e applica escaping CSV per virgole, virgolette e a capo.
 
 ## Responsabilita' dei model
 
@@ -324,6 +327,7 @@ Responsabilita' attuali:
 
 - mostrare le assunzioni registrate in ordine cronologico, con le piu' recenti prima;
 - filtrare in memoria per stato, periodo, terapia e medicina;
+- esportare in CSV i record filtrati attualmente visibili;
 - permettere reset dei filtri;
 - mostrare uno stato vuoto quando non esistono record o quando i filtri non producono risultati;
 - mantenere leggibili gli snapshot delle medicine eliminate.
@@ -1003,7 +1007,7 @@ Il dettaglio medicina non deve mescolare prossima assunzione calcolata e schedul
 
 Lo storico base usa `IntakeRecord` e `IntakeRepository`. Il Provider deriva le assunzioni previste dagli schedule attivi di oggi e crea o aggiorna un record quando l'utente segna una dose come `taken` o `skipped`; la stessa logica e' esposta da `IntakeActionService`, cosi' puo' essere usata anche dalle azioni delle notifiche senza dipendere dalla UI. La combinazione medicina e orario previsto evita duplicati. Durante `initialize`, `MissedIntakePlanner` controlla al massimo i sette giorni precedenti e salva gli slot senza record come `missed`, senza aggiornare le scorte. Uno slot e' idoneo solo dal momento piu' recente tra creazione della medicina, creazione dello schedule e data di inizio della terapia, quando presente: in questo modo non vengono ricostruite dimenticanze anteriori alla programmazione effettiva. I record mantengono snapshot di nome e dose, cosi' restano leggibili dopo l'eliminazione della medicina. Dashboard offre azioni rapide per la data corrente, le notifiche locali offrono Assunta/Saltata per lo slot notificato e HistoryScreen visualizza anche lo stato Dimenticata.
 
-`HistoryScreen` applica filtri in memoria tramite `HistoryFilterService`, usando la cache `provider.intakeHistory` e `provider.therapies`. I filtri disponibili sono stato (`taken`, `skipped`, `missed`), periodo (`Oggi`, `Ultimi 7 giorni`, `Ultimi 30 giorni`, `Tutto`), terapia e medicina. Il filtro periodo lavora sulla data prevista `scheduledDateTime`, normalizzata al giorno, cosi' evita confronti fragili sull'orario. Il filtro medicina include anche record di medicine eliminate usando `medicineNameSnapshot`; il filtro terapia sui record eliminati resta limitato perche' `IntakeRecord` non conserva uno snapshot terapia.
+`HistoryScreen` applica filtri in memoria tramite `HistoryFilterService`, usando la cache `provider.intakeHistory` e `provider.therapies`. I filtri disponibili sono stato (`taken`, `skipped`, `missed`), periodo (`Oggi`, `Ultimi 7 giorni`, `Ultimi 30 giorni`, `Tutto`), terapia e medicina. Il filtro periodo lavora sulla data prevista `scheduledDateTime`, normalizzata al giorno, cosi' evita confronti fragili sull'orario. Il filtro medicina include anche record di medicine eliminate usando `medicineNameSnapshot`; il filtro terapia sui record eliminati resta limitato perche' `IntakeRecord` non conserva uno snapshot terapia. L'azione `Esporta risultati filtrati` passa a `CsvExportService` gli stessi record visibili nella lista e salva un file locale `meditrack_storico_YYYY-MM-DD.csv` nella directory documenti dell'app tramite `path_provider`.
 
 `StatisticsScreen` usa `HistoryStatisticsService` con la stessa cache. La formula di aderenza base e' `taken / (taken + skipped + missed)`: i record `scheduled`, se presenti, restano nei record totali ma non entrano nelle assunzioni valutate. In assenza di dati valutabili il servizio restituisce `0%` e la UI mostra `--` o testo di fallback, cosi' non sembra una divisione errata. I periodi usano `scheduledDateTime` normalizzato al giorno; `Ultimi 7 giorni` e `Ultimi 30 giorni` includono la giornata corrente.
 

@@ -13,6 +13,46 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-08 - Sprint Export CSV
+
+Tipo modifica: Feature / UX / Test / Documentation.
+
+Descrizione:
+
+- aggiunto `CsvExportService` per generare CSV dello storico assunzioni in modo testabile;
+- aggiunta azione `Esporta risultati filtrati` nella schermata Storico;
+- il CSV include data/ora programmata, medicina, terapia, dose, stato, data registrazione e note;
+- gestiti snapshot di medicine eliminate, terapia non disponibile e escaping CSV per virgole, virgolette e a capo;
+- il file viene salvato localmente come `meditrack_storico_YYYY-MM-DD.csv`.
+
+File modificati:
+
+- `README.md`;
+- `lib/screens/history_screen.dart`;
+- `lib/services/csv_export_service.dart`;
+- `test/csv_export_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- assenza di un export base dello storico;
+- mancanza di serializzazione CSV testata per record filtrati e dati con caratteri speciali.
+
+Problemi rimandati:
+
+- share sheet nativo;
+- export PDF;
+- cloud/backup completo database;
+- snapshot terapia per record storici di medicine eliminate.
+
+Motivazione:
+
+Lo sprint introduce un primo export utile e contenuto senza modificare database, storico, statistiche, notifiche o scorte.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-08 - Sprint QA Grafico Andamento Aderenza
 
 Tipo modifica: QA / Bug Fix / Test / Documentation.
