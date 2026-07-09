@@ -443,14 +443,13 @@ Il PDF generato dal dettaglio terapia include informazioni terapia, medicine ass
 
 ### Motivazione
 
-Lo sprint introduce un primo riepilogo utile senza modificare schema database, storico, statistiche o notifiche. I record storici senza medicina corrente o senza snapshot terapia non vengono attribuiti alla terapia per evitare collegamenti non verificabili. Il PDF usa i font standard del pacchetto `pdf`; per supporto tipografico Unicode completo e resa piu' curata sara' opportuno aggiungere un font asset dedicato.
+Lo sprint introduce un primo riepilogo utile senza modificare schema database, storico, statistiche o notifiche. I record storici senza medicina corrente o senza snapshot terapia non vengono attribuiti alla terapia per evitare collegamenti non verificabili. Lo sprint QA del 2026-07-09 ha sostituito i font standard Helvetica con font Roboto locali per coprire accenti italiani e simboli comuni come frazioni, gradi e micro. Le emoji vengono rimosse dal testo PDF per evitare glyph mancanti.
 
 ### Possibili soluzioni
 
 - aggiungere in futuro snapshot terapia agli `intake_records`;
 - introdurre filtri di periodo per il PDF;
 - estendere il report a piu' terapie o a un riepilogo profilo;
-- aggiungere un font asset locale per coprire meglio accenti e caratteri speciali;
 - valutare grafici e sezioni avanzate in uno sprint dedicato.
 
 ## Overflow temporaneo in Aggiungi Medicina con tastiera aperta

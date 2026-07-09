@@ -13,6 +13,49 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-09 - QA Export PDF Riepilogo Terapia
+
+Tipo modifica: QA / Bug Fix / Test / Documentation.
+
+Descrizione:
+
+- verificato il servizio PDF su terapia con medicine, terapia vuota, terapia archiviata, medicina inattiva, dose vuota, schedule avanzati, note lunghe e scorte decimali;
+- aggiunti font Roboto locali al bundle Flutter per evitare i warning dei font standard Helvetica e supportare caratteri italiani comuni;
+- aggiunta sanificazione leggera del testo PDF per rimuovere emoji/surrogate pair non garantite dal font;
+- migliorata la sanitizzazione del nome file con limite di lunghezza e taglio a confine parola;
+- rinforzati i test del servizio PDF su contenuto atteso, Unicode, statistiche ultimi 30 giorni e casi vuoti.
+
+File modificati:
+
+- `assets/fonts/Roboto-Regular.ttf`;
+- `assets/fonts/Roboto-Bold.ttf`;
+- `pubspec.yaml`;
+- `lib/services/therapy_pdf_export_service.dart`;
+- `test/therapy_pdf_export_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- warning dei font PDF standard senza supporto Unicode completo;
+- rischio di resa non affidabile per accenti italiani comuni;
+- nome file lungo troncato in mezzo a una parola;
+- copertura test insufficiente sui contenuti reali del riepilogo terapia.
+
+Problemi rimandati:
+
+- emoji e simboli molto rari non garantiti nel PDF;
+- report multi-terapia;
+- grafici nel PDF;
+- cartella clinica completa o report medico avanzato.
+
+Motivazione:
+
+Lo sprint stabilizza l'export PDF base senza cambiare schema database, share sheet, storico, statistiche, notifiche o scorte.
+
+Stato finale: completato con `flutter pub get`, `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati.
+
 ## 2026-07-09 - Sprint Export PDF Riepilogo Terapia
 
 Tipo modifica: Feature / UX / Dependency / Test / Documentation.

@@ -175,7 +175,7 @@ Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `E
 
 `CsvExportService` genera CSV testabile dello storico assunzioni senza dipendere dalla UI o da Drift. Riceve record di dominio e terapie correnti, produce intestazioni stabili, converte stati in etichette leggibili e applica escaping CSV per virgole, virgolette e a capo.
 
-`TherapyPdfExportService` genera un riepilogo PDF testabile di una singola terapia senza dipendere dalla UI o da Drift. Riceve `Therapy`, medicine associate e storico in model di dominio, filtra i record attribuibili alla terapia negli ultimi 30 giorni, calcola aderenza con la formula `taken / (taken + skipped + missed)` e restituisce bytes PDF. La UI si occupa solo di salvare temporaneamente il file e aprire lo share sheet.
+`TherapyPdfExportService` genera un riepilogo PDF testabile di una singola terapia senza dipendere dalla UI o da Drift. Riceve `Therapy`, medicine associate e storico in model di dominio, filtra i record attribuibili alla terapia negli ultimi 30 giorni, calcola aderenza con la formula `taken / (taken + skipped + missed)` e restituisce bytes PDF. Usa font Roboto locali in `assets/fonts/` per supportare correttamente accenti italiani e simboli comuni; emoji e surrogate pair vengono rimossi in modo leggero dal testo PDF. La UI si occupa solo di salvare temporaneamente il file e aprire lo share sheet.
 
 ## Responsabilita' dei model
 
@@ -1054,6 +1054,7 @@ Limiti attuali:
 - nessun grafico nel PDF;
 - nessun report multi-terapia o cartella clinica completa;
 - i record storici senza medicina corrente o senza snapshot terapia non vengono attribuiti a una terapia per evitare associazioni inventate.
+- emoji e simboli non coperti da Roboto non sono garantiti nel PDF; le emoji vengono rimosse dal testo esportato.
 
 I report futuri dovrebbero estendere questo servizio con profilo, piu' terapie, storico filtrabile per intervallo temporale e formati piu' adatti a visite mediche.
 

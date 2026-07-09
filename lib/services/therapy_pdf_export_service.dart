@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -27,6 +26,10 @@ class TherapyPdfStatistics {
 class TherapyPdfExportService {
   const TherapyPdfExportService._();
 
+  static const _regularFontAsset = 'assets/fonts/Roboto-Regular.ttf';
+  static const _boldFontAsset = 'assets/fonts/Roboto-Bold.ttf';
+  static Future<_TherapyPdfFontSet>? _fontSetFuture;
+
   static Future<Uint8List> generateTherapySummary({
     required Therapy therapy,
     required Iterable<Medicine> medicines,
@@ -35,6 +38,7 @@ class TherapyPdfExportService {
   }) async {
     final now = referenceDate ?? DateTime.now();
     final medicineList = medicines.toList(growable: false);
+    final fontSet = await _loadFontSet();
     final relevantRecords = recordsForTherapyLast30Days(
       medicines: medicineList,
       records: intakeRecords,
@@ -42,7 +46,7 @@ class TherapyPdfExportService {
     );
     final statistics = calculateStatistics(relevantRecords);
     final document = pw.Document(
-      title: 'Riepilogo terapia - ${therapy.name}',
+      title: 'Riepilogo terapia - ${sanitizePdfText(therapy.name)}',
       author: 'Meditrack',
       creator: 'Meditrack',
     );
@@ -51,7 +55,10 @@ class TherapyPdfExportService {
       pw.MultiPage(
         pageTheme: pw.PageTheme(
           margin: const pw.EdgeInsets.all(32),
-          theme: pw.ThemeData.withFont(),
+          theme: pw.ThemeData.withFont(
+            base: fontSet.regular,
+            bold: fontSet.bold,
+          ),
         ),
         build: (context) => [
           _header(therapy, now),
@@ -79,6 +86,51 @@ class TherapyPdfExportService {
     );
 
     return document.save();
+  }
+
+  static String buildPlainTextSummary({
+    required Therapy therapy,
+    required Iterable<Medicine> medicines,
+    required Iterable<IntakeRecord> intakeRecords,
+    required DateTime referenceDate,
+  }) {
+    final medicineList = medicines.toList(growable: false);
+    final statistics = calculateStatistics(
+      recordsForTherapyLast30Days(
+        medicines: medicineList,
+        records: intakeRecords,
+        referenceDate: referenceDate,
+      ),
+    );
+
+    final lines = [
+      'Riepilogo terapia',
+      sanitizePdfText(therapy.name),
+      therapy.isActive ? 'Attiva' : 'Archiviata',
+      if (therapy.startDate != null) _formatDate(therapy.startDate!),
+      if (therapy.description?.trim().isNotEmpty ?? false)
+        sanitizePdfText(therapy.description!),
+      if (medicineList.isEmpty) 'Nessuna medicina associata a questa terapia.',
+      for (final medicine in medicineList) ...[
+        sanitizePdfText(medicine.name),
+        medicine.doseLabel,
+        _scheduleLabel(medicine),
+        Medicine.formatQuantity(medicine.stockQuantity),
+        Medicine.formatQuantity(medicine.stockWarningThreshold),
+        medicine.isActive ? 'Attiva' : 'Inattiva',
+        if (medicine.notes?.trim().isNotEmpty ?? false)
+          sanitizePdfText(medicine.notes!),
+      ],
+      '${statistics.evaluatedRecords}',
+      '${statistics.taken}',
+      '${statistics.skipped}',
+      '${statistics.missed}',
+      statistics.evaluatedRecords == 0
+          ? 'Nessun dato valutabile'
+          : '${statistics.adherencePercent}%',
+    ];
+
+    return lines.join('\n');
   }
 
   static List<IntakeRecord> recordsForTherapyLast30Days({
@@ -153,7 +205,18 @@ class TherapyPdfExportService {
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
-    return cleaned.isEmpty ? 'terapia' : cleaned;
+    if (cleaned.isEmpty) return 'terapia';
+    if (cleaned.length <= 48) return cleaned;
+    final truncated = cleaned.substring(0, 48).replaceAll(RegExp(r'_$'), '');
+    final lastSeparator = truncated.lastIndexOf('_');
+    if (lastSeparator >= 24) {
+      return truncated.substring(0, lastSeparator);
+    }
+    return truncated;
+  }
+
+  static String sanitizePdfText(String value) {
+    return value.replaceAll(RegExp(r'[\uD800-\uDFFF]'), '').trim();
   }
 
   static pw.Widget _header(Therapy therapy, DateTime generatedAt) {
@@ -177,7 +240,7 @@ class TherapyPdfExportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            therapy.name,
+            sanitizePdfText(therapy.name),
             style: pw.TextStyle(
               color: PdfColors.grey900,
               fontSize: 18,
@@ -216,12 +279,12 @@ class TherapyPdfExportService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _infoRow('Nome terapia', therapy.name),
+          _infoRow('Nome terapia', sanitizePdfText(therapy.name)),
           _infoRow('Stato', therapy.isActive ? 'Attiva' : 'Archiviata'),
           if (therapy.startDate != null)
             _infoRow('Data inizio', _formatDate(therapy.startDate!)),
           if (therapy.description?.trim().isNotEmpty ?? false)
-            _infoRow('Note', therapy.description!.trim()),
+            _infoRow('Note', sanitizePdfText(therapy.description!)),
         ],
       ),
     );
@@ -241,7 +304,7 @@ class TherapyPdfExportService {
             children: [
               pw.Expanded(
                 child: pw.Text(
-                  medicine.name,
+                  sanitizePdfText(medicine.name),
                   style: pw.TextStyle(
                     color: PdfColors.grey900,
                     fontSize: 13,
@@ -260,7 +323,7 @@ class TherapyPdfExportService {
             ],
           ),
           pw.SizedBox(height: 6),
-          _infoRow('Dose', medicine.doseLabel),
+          _infoRow('Dose', sanitizePdfText(medicine.doseLabel)),
           _infoRow('Programmazione', _scheduleLabel(medicine)),
           _infoRow(
             'Scorta attuale',
@@ -271,7 +334,7 @@ class TherapyPdfExportService {
             Medicine.formatQuantity(medicine.stockWarningThreshold),
           ),
           if (medicine.notes?.trim().isNotEmpty ?? false)
-            _infoRow('Note', medicine.notes!.trim()),
+            _infoRow('Note', sanitizePdfText(medicine.notes!)),
         ],
       ),
     );
@@ -364,6 +427,19 @@ class TherapyPdfExportService {
     return pw.TextStyle(color: color, fontSize: 10);
   }
 
+  static Future<_TherapyPdfFontSet> _loadFontSet() {
+    return _fontSetFuture ??= _loadFontSetFromAssets();
+  }
+
+  static Future<_TherapyPdfFontSet> _loadFontSetFromAssets() async {
+    final regularData = await rootBundle.load(_regularFontAsset);
+    final boldData = await rootBundle.load(_boldFontAsset);
+    return _TherapyPdfFontSet(
+      regular: pw.Font.ttf(regularData),
+      bold: pw.Font.ttf(boldData),
+    );
+  }
+
   static String _scheduleLabel(Medicine medicine) {
     final activeSchedules = medicine.schedules
         .where((schedule) => schedule.isActive)
@@ -421,4 +497,11 @@ class TherapyPdfExportService {
     final day = value.day.toString().padLeft(2, '0');
     return '${value.year}-$month-$day';
   }
+}
+
+class _TherapyPdfFontSet {
+  final pw.Font regular;
+  final pw.Font bold;
+
+  const _TherapyPdfFontSet({required this.regular, required this.bold});
 }
