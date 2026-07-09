@@ -13,6 +13,50 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-09 - Sprint Export PDF Riepilogo Terapia
+
+Tipo modifica: Feature / UX / Dependency / Test / Documentation.
+
+Descrizione:
+
+- aggiunta dipendenza `pdf` per generare documenti locali;
+- creato `TherapyPdfExportService` per produrre bytes PDF testabili senza dipendere dalla UI o da Drift;
+- aggiunta azione `Esporta PDF` nel menu del dettaglio terapia;
+- il PDF viene salvato temporaneamente come `meditrack_terapia_<nome>_YYYY-MM-DD.pdf` e condiviso tramite `share_plus`;
+- il riepilogo include dati terapia, medicine associate, schedule, scorte, soglia minima, note, stato medicine, aderenza ultimi 30 giorni e disclaimer;
+- aggiunti test per generazione PDF, terapia vuota, statistiche, filtro storico ultimi 30 giorni, schedule avanzati e nome file sanitizzato.
+
+File modificati:
+
+- `README.md`;
+- `pubspec.yaml`;
+- `pubspec.lock`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `lib/services/therapy_pdf_export_service.dart`;
+- `test/therapy_pdf_export_service_test.dart`;
+- `docs/TECHNICAL_GUIDE.md`;
+- `docs/KNOWN_ISSUES.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Problemi risolti:
+
+- assenza di un primo export PDF leggibile per una singola terapia;
+- mancanza di un servizio testabile per generare report PDF senza logica dentro la schermata.
+
+Problemi rimandati:
+
+- report PDF multi-terapia o cartella clinica completa;
+- grafici nel PDF;
+- selezione manuale intervallo temporale;
+- attribuzione certa dei record storici senza medicina corrente o senza snapshot terapia;
+- cloud, backup e PDF medico avanzato.
+
+Motivazione:
+
+Lo sprint introduce un primo PDF utile e condivisibile riusando i dati gia' caricati dal Provider, senza modificare schema database o flussi esistenti.
+
+Stato finale: completato con `flutter pub add pdf`, `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` e `flutter build apk --debug` superati. I test PDF segnalano il warning atteso dei font standard Helvetica senza supporto Unicode completo, documentato come limite futuro.
+
 ## 2026-07-08 - Sprint QA Export CSV e share sheet
 
 Tipo modifica: QA / Test / Documentation.

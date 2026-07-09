@@ -50,6 +50,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Dashboard con azioni rapide per segnare le assunzioni di oggi come assunte o saltate.
 - Schermata Storico persistente con stati assunta, saltata e dimenticata, filtri per stato, periodo, terapia e medicina, snapshot della medicina, dose, data/ora ed export/condivisione CSV dei risultati filtrati.
 - Schermata Statistiche accessibile dallo Storico, con aderenza generale, andamento temporale filtrabile, riepiloghi per periodo, stato, medicina e terapia.
+- Export/condivisione PDF del riepilogo di una singola terapia dal dettaglio terapia.
 - Decremento automatico della scorta per assunzioni con quantita' intera, frazionaria o decimale definita.
 - Profilo utente locale con nome, preferenze tema e notifiche.
 - Persistenza locale di profilo, impostazioni, terapie, medicine, scorte e schedule.
@@ -71,7 +72,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - Notifiche locali avanzate con deep link verso storico e controlli piattaforma piu' completi.
 - Migrazioni schema e test automatici del database locale.
 - Profili multipli per utente, familiari o caregiver.
-- Report PDF esportabile per medico o uso personale.
+- Report PDF avanzati per medico o uso personale, oltre al riepilogo terapia base gia' disponibile.
 - Backup Cloud e sincronizzazione tra dispositivi.
 
 ## Tecnologie utilizzate
@@ -84,6 +85,7 @@ Meditrack nasce per centralizzare queste informazioni in un'esperienza semplice,
 - timezone per la pianificazione delle notifiche
 - intl per supporto a date e formattazioni
 - share_plus per condividere file CSV tramite share sheet di sistema
+- pdf per generare riepiloghi PDF locali
 - uuid per generazione degli identificativi
 - drift e SQLite per persistenza locale
 - flutter_lints per le regole di qualita' del codice
@@ -232,7 +234,7 @@ flutter run -d <device-id>
 
 Meditrack e' in una fase prototipale avanzata. I flussi base per terapie e medicine sono persistenti: le terapie, le medicine, le scorte, gli schedule e le impostazioni principali restano disponibili al riavvio dell'app. Ogni nuova medicina viene associata a una terapia esistente; puo' avere piu' programmazioni interne con giorni e orari propri; puo' essere modificata dal dettaglio senza perdere storico o identificativo; la dose e' opzionale e viene distinta dalla quantita' in scorta.
 
-Lo storico base e' operativo e persistente, con filtri in memoria per stato, periodo, terapia e medicina ed export CSV condivisibile dei risultati filtrati. Le statistiche base mostrano aderenza, riepiloghi per periodo e breakdown per medicina e terapia. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi, includono azioni rapide Assunta/Saltata, aprono il dettaglio medicina dal tap sul corpo della notifica, avvisano quando la scorta attraversa la soglia minima e mostrano in Impostazioni lo stato dei permessi Android; Backup e Report PDF restano predisposti ma non ancora operativi.
+Lo storico base e' operativo e persistente, con filtri in memoria per stato, periodo, terapia e medicina ed export CSV condivisibile dei risultati filtrati. Le statistiche base mostrano aderenza, riepiloghi per periodo e breakdown per medicina e terapia. Dal dettaglio terapia e' disponibile un primo riepilogo PDF condivisibile con informazioni terapia, medicine, schedule, scorte e aderenza ultimi 30 giorni. Le notifiche locali vengono pianificate per le medicine attive quando il sistema concede i permessi, includono azioni rapide Assunta/Saltata, aprono il dettaglio medicina dal tap sul corpo della notifica, avvisano quando la scorta attraversa la soglia minima e mostrano in Impostazioni lo stato dei permessi Android; Backup e report PDF completi restano pianificati.
 
 ## Roadmap futura
 
@@ -293,8 +295,9 @@ Lo storico base e' operativo e persistente, con filtri in memoria per stato, per
 
 ### Fase 10 - Report PDF
 
-- Generare report con terapie, medicine, dosaggi e storico.
-- Consentire esportazione e condivisione.
+- Estendere il riepilogo PDF terapia gia' disponibile.
+- Generare report completi con piu' terapie, profilo, intervallo temporale e storico dettagliato.
+- Consentire esportazione e condivisione con filtri avanzati.
 - Preparare un formato chiaro per medici e visite.
 - Valutare filtri per intervallo temporale.
 

@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/medicine.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
+import '../services/therapy_pdf_export_service.dart';
 import 'add_medicine_screen.dart';
 import 'add_therapy_screen.dart';
 import 'medicine_detail_screen.dart';
@@ -40,8 +45,16 @@ class TherapyDetailScreen extends StatelessWidget {
               ),
               PopupMenuButton<_TherapyAction>(
                 tooltip: 'Azioni terapia',
-                onSelected: (action) => _handleAction(context, therapy, action),
+                onSelected: (action) =>
+                    _handleAction(context, therapy, medicines, action),
                 itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: _TherapyAction.exportPdf,
+                    child: _TherapyActionRow(
+                      icon: Icons.picture_as_pdf_outlined,
+                      label: 'Esporta PDF',
+                    ),
+                  ),
                   if (therapy.isActive)
                     const PopupMenuItem(
                       value: _TherapyAction.archive,
@@ -154,8 +167,14 @@ class TherapyDetailScreen extends StatelessWidget {
   Future<void> _handleAction(
     BuildContext context,
     Therapy therapy,
+    List<Medicine> medicines,
     _TherapyAction action,
   ) async {
+    if (action == _TherapyAction.exportPdf) {
+      await _exportPdf(context, therapy, medicines);
+      return;
+    }
+
     if (action == _TherapyAction.reactivate) {
       try {
         await context.read<MedicineProvider>().reactivateTherapy(therapy.id);
@@ -240,6 +259,80 @@ class TherapyDetailScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _exportPdf(
+    BuildContext context,
+    Therapy therapy,
+    List<Medicine> medicines,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<MedicineProvider>();
+    File? generatedFile;
+
+    try {
+      final now = DateTime.now();
+      final bytes = await TherapyPdfExportService.generateTherapySummary(
+        therapy: therapy,
+        medicines: medicines,
+        intakeRecords: provider.intakeHistory,
+        referenceDate: now,
+      );
+      final directory = await getTemporaryDirectory();
+      final fileName = TherapyPdfExportService.buildFileName(
+        therapyName: therapy.name,
+        date: now,
+      );
+      final file = File('${directory.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsBytes(bytes, flush: true);
+      generatedFile = file;
+
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('PDF generato. Scegli dove salvarlo o condividerlo.'),
+        ),
+      );
+
+      final renderObject = context.findRenderObject();
+      final sharePositionOrigin = renderObject is RenderBox
+          ? renderObject.localToGlobal(Offset.zero) & renderObject.size
+          : null;
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          title: 'Riepilogo terapia Meditrack',
+          subject: 'Riepilogo terapia Meditrack',
+          text: 'Riepilogo terapia esportato da Meditrack.',
+          files: [
+            XFile(file.path, mimeType: 'application/pdf', name: fileName),
+          ],
+          fileNameOverrides: [fileName],
+          sharePositionOrigin: sharePositionOrigin,
+        ),
+      );
+
+      if (!context.mounted) return;
+      if (result.status == ShareResultStatus.unavailable) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Condivisione non disponibile. PDF generato localmente: ${file.path}',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            generatedFile == null
+                ? 'Impossibile generare il PDF. Riprova tra poco.'
+                : 'PDF generato ma condivisione non riuscita: ${generatedFile.path}',
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _confirmDeleteMedicine(
     BuildContext context,
     Medicine medicine,
@@ -283,7 +376,7 @@ class TherapyDetailScreen extends StatelessWidget {
   }
 }
 
-enum _TherapyAction { archive, deletePermanently, reactivate }
+enum _TherapyAction { exportPdf, archive, deletePermanently, reactivate }
 
 class _TherapyActionRow extends StatelessWidget {
   final IconData icon;

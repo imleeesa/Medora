@@ -163,6 +163,7 @@ File attuale:
 - `notification_service.dart`
 - `notification_navigation_service.dart`
 - `csv_export_service.dart`
+- `therapy_pdf_export_service.dart`
 - `history_filter_service.dart`
 - `history_statistics_service.dart`
 
@@ -173,6 +174,8 @@ Il servizio notifiche inizializza `flutter_local_notifications` e il timezone `E
 `HistoryStatisticsService` calcola statistiche in memoria partendo da `IntakeRecord` e dalla cache delle terapie. Espone totali, stati, aderenza, finestre temporali, breakdown per medicina/terapia e trend giornaliero senza usare classi Drift nella UI.
 
 `CsvExportService` genera CSV testabile dello storico assunzioni senza dipendere dalla UI o da Drift. Riceve record di dominio e terapie correnti, produce intestazioni stabili, converte stati in etichette leggibili e applica escaping CSV per virgole, virgolette e a capo.
+
+`TherapyPdfExportService` genera un riepilogo PDF testabile di una singola terapia senza dipendere dalla UI o da Drift. Riceve `Therapy`, medicine associate e storico in model di dominio, filtra i record attribuibili alla terapia negli ultimi 30 giorni, calcola aderenza con la formula `taken / (taken + skipped + missed)` e restituisce bytes PDF. La UI si occupa solo di salvare temporaneamente il file e aprire lo share sheet.
 
 ## Responsabilita' dei model
 
@@ -304,7 +307,8 @@ Responsabilita':
 - mostrare stato, descrizione, data inizio e medicine associate;
 - aprire il form medicina con terapia gia' selezionata;
 - modificare una terapia;
-- archiviare terapie con medicine oppure eliminare in sicurezza terapie vuote.
+- archiviare terapie con medicine oppure eliminarle con conferma esplicita;
+- esportare e condividere un PDF di riepilogo della terapia usando i dati gia' caricati dal Provider.
 
 ### `MedicineDetailScreen`
 
@@ -1035,7 +1039,23 @@ Il campo `profileId` presente in `Medicine` e il model `UserProfile` preparano l
 
 ### Report PDF
 
-I report dovrebbero essere generati da dati persistenti e non direttamente dalla UI. Il formato dovrebbe includere profilo, terapie, medicine, dosaggi, storico e intervallo temporale.
+Il primo export PDF operativo e' il riepilogo di una singola terapia, disponibile da `TherapyDetailScreen`. La schermata raccoglie terapia, medicine associate e storico dalla cache del Provider, chiama `TherapyPdfExportService.generateTherapySummary`, salva un file temporaneo `meditrack_terapia_<nome>_YYYY-MM-DD.pdf` tramite `path_provider` e lo condivide con `share_plus`.
+
+Il PDF include:
+
+- titolo e data di generazione;
+- informazioni terapia, stato, data inizio e note;
+- elenco medicine con dose, schedule, scorte, soglia minima, note e stato attiva/inattiva;
+- riepilogo aderenza degli ultimi 30 giorni;
+- disclaimer personale.
+
+Limiti attuali:
+
+- nessun grafico nel PDF;
+- nessun report multi-terapia o cartella clinica completa;
+- i record storici senza medicina corrente o senza snapshot terapia non vengono attribuiti a una terapia per evitare associazioni inventate.
+
+I report futuri dovrebbero estendere questo servizio con profilo, piu' terapie, storico filtrabile per intervallo temporale e formati piu' adatti a visite mediche.
 
 ### Backup Cloud
 
@@ -1053,6 +1073,7 @@ Punti solidi:
 - gestione autonoma delle terapie con dettaglio, archiviazione ed eliminazione persistente;
 - spostamento persistente delle medicine tra terapie attive.
 - storico assunzioni base persistente per stati assunta e saltata.
+- riepilogo PDF condivisibile per singola terapia.
 - notifiche locali con stato permessi visibile in Impostazioni.
 - alert locali di scorta bassa con deduplica su attraversamento soglia.
 

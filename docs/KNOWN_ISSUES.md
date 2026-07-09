@@ -396,33 +396,62 @@ Parzialmente risolto
 - usare un timezone configurabile o rilevato dal dispositivo;
 - introdurre promemoria avanzati e configurabili per il riacquisto delle scorte.
 
-## Backup e report PDF sono voci non operative
+## Backup e report PDF completi sono voci non operative
 
 ### Categoria
 
-Bug da correggere ora.
+Limite funzionale.
 
 ### Stato
 
-Risolto
+Parzialmente risolto
 
-### Data risoluzione
+### Data aggiornamento
 
-2026-06-19
+2026-07-09
 
-### Come e' stato risolto
+### Cosa e' stato risolto
 
-Le voci Backup e Report medico PDF nelle impostazioni ora mostrano un messaggio che comunica che la funzionalita' sara' disponibile in una prossima versione. Non e' stato implementato backup, cloud o generazione PDF.
+Le voci Backup e Report medico PDF nelle impostazioni mostrano un messaggio chiaro invece di comportarsi come controlli operativi. Dal 2026-07-09 il dettaglio terapia permette anche di esportare e condividere un PDF base di riepilogo della singola terapia.
 
 ### File modificati
 
 - `lib/screens/settings_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `lib/services/therapy_pdf_export_service.dart`;
+- `test/therapy_pdf_export_service_test.dart`;
 - `docs/KNOWN_ISSUES.md`;
 - `docs/CHANGELOG_PROGRESS.md`.
 
 ### Note
 
-Backup e report PDF restano nella roadmap come feature future, ma non sono piu' controlli senza feedback.
+Backup, cloud, report multi-terapia e cartella clinica completa restano nella roadmap. Il PDF attuale e' un riepilogo personale di una singola terapia, non un documento medico completo.
+
+## Limiti export PDF riepilogo terapia
+
+### Categoria
+
+Limite funzionale / reportistica.
+
+### Stato
+
+Rimandato
+
+### Cosa e' stato trovato
+
+Il PDF generato dal dettaglio terapia include informazioni terapia, medicine associate, schedule, scorte, soglia minima, aderenza ultimi 30 giorni e disclaimer. Non include ancora grafici, firma, profilo completo, allegati, export multi-terapia o selezione manuale dell'intervallo temporale.
+
+### Motivazione
+
+Lo sprint introduce un primo riepilogo utile senza modificare schema database, storico, statistiche o notifiche. I record storici senza medicina corrente o senza snapshot terapia non vengono attribuiti alla terapia per evitare collegamenti non verificabili. Il PDF usa i font standard del pacchetto `pdf`; per supporto tipografico Unicode completo e resa piu' curata sara' opportuno aggiungere un font asset dedicato.
+
+### Possibili soluzioni
+
+- aggiungere in futuro snapshot terapia agli `intake_records`;
+- introdurre filtri di periodo per il PDF;
+- estendere il report a piu' terapie o a un riepilogo profilo;
+- aggiungere un font asset locale per coprire meglio accenti e caratteri speciali;
+- valutare grafici e sezioni avanzate in uno sprint dedicato.
 
 ## Overflow temporaneo in Aggiungi Medicina con tastiera aperta
 
