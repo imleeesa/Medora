@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'primary_button.dart';
 
 /// Widget per mostrare uno stato vuoto
@@ -33,10 +34,10 @@ class EmptyState extends StatelessWidget {
               width: iconSize + 20,
               height: iconSize + 20,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
+                color: AppColors.primaryTint,
                 borderRadius: BorderRadius.circular(iconSize / 2 + 10),
               ),
-              child: Icon(icon, size: iconSize, color: const Color(0xFF2E7D32)),
+              child: Icon(icon, size: iconSize, color: AppColors.primary700),
             ),
             const SizedBox(height: 24),
 
@@ -47,7 +48,7 @@ class EmptyState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1E1E1E),
+                color: AppColors.ink,
                 letterSpacing: 0,
               ),
             ),

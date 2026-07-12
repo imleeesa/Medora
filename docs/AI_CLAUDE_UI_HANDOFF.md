@@ -23,9 +23,13 @@ Sostituire la bottom nav custom attuale con una **soft floating navbar** (angoli
 
 Fallback se l'incavo concavo è troppo fragile in Flutter: stessa barra ma con angoli arrotondati semplici (no `CustomClipper`), bottone solo sovrapposto via `Stack`/`Positioned`. Spec tecnica completa in `UI_DESIGN_SYSTEM.md` sezione "Bottom navbar".
 
-## Prossimo sprint da fare: Sprint Redesign 1
+## Sprint Redesign 1 — fatto
 
-Design tokens + componenti base. Creare `lib/theme/app_colors.dart` (token da `UI_DESIGN_SYSTEM.md`), aggiornare/creare `AppCard`, `StatusChip`, restyle `PrimaryButton`/`SecondaryButton`/`EmptyState`. **Zero cambi visivi alle schermate finché i componenti non vengono cablati** — sprint a rischio basso, base per tutto il resto.
+Creati: `lib/theme/app_colors.dart`, `app_dimens.dart`, `responsive.dart` (token colore/spacing/radius/breakpoint); `lib/utils/color_parser.dart`, `weekday_labels.dart` (utility pure non ancora cablate); `lib/widgets/app_card.dart`, `status_chip.dart` (nuovi, non ancora cablati). Restylati con i nuovi token (stessa API, solo colori/radius): `primary_button.dart`, `empty_state.dart`, `app.dart` (ColorScheme, AppBar, TextTheme, InputDecorationTheme, ElevatedButtonTheme). Cambio visivo reale ma contenuto: verde più profondo su bottoni/empty state/focus border ovunque già cablati; nessuna schermata redisegnata. `flutter analyze`, `flutter test` (121 test) e `flutter build apk --debug` verdi.
+
+## Prossimo sprint: Sprint Redesign 2 — App shell + nuova bottom navbar
+
+Vedi sezione "Navbar" sopra e `UI_DESIGN_SYSTEM.md` per la spec tecnica completa.
 
 Roadmap completa (sprint 0-9) in `docs/UI_SPRINT_ROADMAP.md`.
 

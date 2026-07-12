@@ -7,6 +7,7 @@ import 'providers/medicine_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/medicine_detail_screen.dart';
 import 'services/notification_navigation_service.dart';
+import 'theme/app_colors.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -74,56 +75,56 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32),
+          seedColor: AppColors.primary700,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF5F7F8),
-        cardColor: Colors.white,
+        scaffoldBackgroundColor: AppColors.background,
+        cardColor: AppColors.surface,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.surface,
           elevation: 0,
           centerTitle: true,
           titleTextStyle: TextStyle(
-            color: Color(0xFF1E1E1E),
+            color: AppColors.ink,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
-          iconTheme: IconThemeData(color: Color(0xFF1E1E1E)),
+          iconTheme: IconThemeData(color: AppColors.ink),
         ),
         textTheme: const TextTheme(
           displayLarge: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E1E1E),
+            color: AppColors.ink,
             letterSpacing: 0,
           ),
           displayMedium: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1E1E1E),
+            color: AppColors.ink,
             letterSpacing: 0,
           ),
           titleLarge: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1E1E1E),
+            color: AppColors.ink,
           ),
           bodyLarge: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF1E1E1E),
+            color: AppColors.ink,
             letterSpacing: 0.3,
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF696969),
+            color: AppColors.inkSoft,
             letterSpacing: 0.2,
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E7D32),
+            backgroundColor: AppColors.primary700,
             foregroundColor: Colors.white,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -134,18 +135,18 @@ class _MyAppState extends State<MyApp> {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: AppColors.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[300]!),
+            borderSide: const BorderSide(color: AppColors.border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[200]!),
+            borderSide: const BorderSide(color: AppColors.border),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
+            borderSide: const BorderSide(color: AppColors.primary700, width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -162,7 +163,7 @@ class _MyAppState extends State<MyApp> {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32),
+          seedColor: AppColors.primary700,
           brightness: Brightness.dark,
         ),
       ),

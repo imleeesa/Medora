@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_dimens.dart';
 
 /// Pulsante primario verde personalizzato
 class PrimaryButton extends StatefulWidget {
@@ -51,7 +53,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
         decoration: BoxDecoration(
           gradient: widget.isEnabled
               ? const LinearGradient(
-                  colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                  colors: [AppColors.primary700, AppColors.primary800],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
@@ -60,11 +62,11 @@ class _PrimaryButtonState extends State<PrimaryButton>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           boxShadow: widget.isEnabled
               ? [
                   BoxShadow(
-                    color: const Color(0xFF2E7D32).withValues(alpha: 0.24),
+                    color: AppColors.primary700.withValues(alpha: 0.24),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -86,7 +88,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
                     widget.onPressed();
                   }
                 : null,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -154,16 +156,16 @@ class SecondaryButton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         border: Border.all(
-          color: isEnabled ? const Color(0xFF2E7D32) : Colors.grey[300]!,
+          color: isEnabled ? AppColors.primary700 : Colors.grey[300]!,
           width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isEnabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -172,16 +174,14 @@ class SecondaryButton extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 8),
                   child: Icon(
                     icon,
-                    color: isEnabled
-                        ? const Color(0xFF2E7D32)
-                        : Colors.grey[400],
+                    color: isEnabled ? AppColors.primary700 : Colors.grey[400],
                     size: 20,
                   ),
                 ),
               Text(
                 label,
                 style: TextStyle(
-                  color: isEnabled ? const Color(0xFF2E7D32) : Colors.grey[400],
+                  color: isEnabled ? AppColors.primary700 : Colors.grey[400],
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
