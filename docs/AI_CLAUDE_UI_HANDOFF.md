@@ -27,9 +27,13 @@ Fallback se l'incavo concavo è troppo fragile in Flutter: stessa barra ma con a
 
 Creati: `lib/theme/app_colors.dart`, `app_dimens.dart`, `responsive.dart` (token colore/spacing/radius/breakpoint); `lib/utils/color_parser.dart`, `weekday_labels.dart` (utility pure non ancora cablate); `lib/widgets/app_card.dart`, `status_chip.dart` (nuovi, non ancora cablati). Restylati con i nuovi token (stessa API, solo colori/radius): `primary_button.dart`, `empty_state.dart`, `app.dart` (ColorScheme, AppBar, TextTheme, InputDecorationTheme, ElevatedButtonTheme). Cambio visivo reale ma contenuto: verde più profondo su bottoni/empty state/focus border ovunque già cablati; nessuna schermata redisegnata. `flutter analyze`, `flutter test` (121 test) e `flutter build apk --debug` verdi.
 
-## Prossimo sprint: Sprint Redesign 2 — App shell + nuova bottom navbar
+## Sprint Redesign 2 — fatto
 
-Vedi sezione "Navbar" sopra e `UI_DESIGN_SYSTEM.md` per la spec tecnica completa.
+Creati `lib/widgets/app_bottom_nav_bar.dart` (navbar pill flottante, Opzione A: nessun `CustomClipper`, bottone centrale sovrapposto solo via `Stack`/`Positioned`) e `lib/widgets/quick_action_sheet.dart` (bottom sheet generico `QuickAction`). `dashboard_screen.dart` aggiornato: `_PremiumBottomNavigationBar` rimossa, sostituita da `AppBottomNavBar`; nuovo `_openQuickActions` con 4 voci (Aggiungi terapia, Aggiungi medicina con guardia "nessuna terapia" riusata da `medicines_screen.dart`, Registra assunzione → switch a tab Home, Ricarica scorta → `StockScreen`) — tutte pura navigazione, zero logica nuova. `IndexedStack`/indice tab invariati.
+
+## Prossimo sprint: Sprint Redesign 3 — nuova Dashboard
+
+Vedi `UI_REDESIGN_DIRECTION.md` sezione "Proposta nuova Dashboard".
 
 Roadmap completa (sprint 0-9) in `docs/UI_SPRINT_ROADMAP.md`.
 

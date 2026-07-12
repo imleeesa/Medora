@@ -7,12 +7,17 @@ import '../models/intake_stock_change.dart';
 import '../models/scheduled_intake.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_bottom_nav_bar.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/quick_action_sheet.dart';
+import 'add_medicine_screen.dart';
 import 'add_therapy_screen.dart';
 import 'history_screen.dart';
 import 'medicine_detail_screen.dart';
 import 'medicines_screen.dart';
 import 'profile_screen.dart';
+import 'stock_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -34,12 +39,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F8),
+      backgroundColor: AppColors.background,
       body: IndexedStack(index: _selectedIndex, children: pages),
-      bottomNavigationBar: _PremiumBottomNavigationBar(
+      bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
         onSelected: (index) => setState(() => _selectedIndex = index),
+        onQuickAction: () => _openQuickActions(context),
       ),
+    );
+  }
+
+  void _openQuickActions(BuildContext context) {
+    showQuickActionSheet(context, [
+      QuickAction(
+        icon: Icons.health_and_safety_outlined,
+        label: 'Aggiungi terapia',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
+        ),
+      ),
+      QuickAction(
+        icon: Icons.medication_outlined,
+        label: 'Aggiungi medicina',
+        onTap: () => _openAddMedicine(context),
+      ),
+      QuickAction(
+        icon: Icons.check_circle_outline,
+        label: 'Registra assunzione',
+        onTap: () => setState(() => _selectedIndex = 0),
+      ),
+      QuickAction(
+        icon: Icons.inventory_2_outlined,
+        label: 'Ricarica scorta',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const StockScreen()),
+        ),
+      ),
+    ]);
+  }
+
+  void _openAddMedicine(BuildContext context) {
+    if (context.read<MedicineProvider>().therapies.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Per aggiungere una medicina devi prima creare una terapia.',
+          ),
+          action: SnackBarAction(
+            label: 'Crea terapia',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddMedicineScreen()),
     );
   }
 }
@@ -153,115 +214,6 @@ void _openMedicineDetail(BuildContext context, String medicineId) {
     context,
     MaterialPageRoute(builder: (_) => MedicineDetailScreen(medicine: medicine)),
   );
-}
-
-class _PremiumBottomNavigationBar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  const _PremiumBottomNavigationBar({
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      _NavItem(Icons.home_outlined, Icons.home, 'Home'),
-      _NavItem(Icons.spa_outlined, Icons.spa, 'Terapie'),
-      _NavItem(Icons.history_outlined, Icons.history, 'Storico'),
-      _NavItem(Icons.person_outline, Icons.person, 'Profilo'),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 22,
-            offset: const Offset(0, -8),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          child: Row(
-            children: List.generate(items.length, (index) {
-              final item = items[index];
-              final isSelected = selectedIndex == index;
-
-              return Expanded(
-                child: Semantics(
-                  selected: isSelected,
-                  button: true,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onSelected(index),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      height: 56,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFFE8F5E9)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedScale(
-                            scale: isSelected ? 1.08 : 1,
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            child: Icon(
-                              isSelected ? item.activeIcon : item.icon,
-                              size: 22,
-                              color: isSelected
-                                  ? const Color(0xFF2E7D32)
-                                  : Colors.grey.shade500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: isSelected
-                                  ? const Color(0xFF2E7D32)
-                                  : Colors.grey.shade500,
-                              letterSpacing: 0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-
-  const _NavItem(this.icon, this.activeIcon, this.label);
 }
 
 class _Header extends StatelessWidget {
