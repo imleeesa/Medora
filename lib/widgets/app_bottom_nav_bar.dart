@@ -25,37 +25,27 @@ class AppBottomNavBar extends StatelessWidget {
     _NavTab(Icons.person_outline, Icons.person, 'Profilo'),
   ];
 
-  static const double _barHeight = 60;
-  static const double _buttonSize = 56;
+  static const double _barHeight = 58;
+  static const double _buttonSize = 54;
 
   @override
   Widget build(BuildContext context) {
     final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
 
-    return Container(
-      color: Colors.transparent,
-      padding: EdgeInsets.only(
-        left: AppSpacing.lg,
-        right: AppSpacing.lg,
-        bottom: bottomSafeArea + AppSpacing.sm,
-      ),
-      child: SizedBox(
-        height: _barHeight + _buttonSize / 2,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            _NavBarShell(
-              tabs: _tabs,
-              selectedIndex: selectedIndex,
-              onSelected: onSelected,
-            ),
-            Positioned(
-              top: 0,
-              child: _CenterActionButton(onTap: onQuickAction),
-            ),
-          ],
-        ),
+    return SizedBox(
+      height: _barHeight + _buttonSize / 2 + bottomSafeArea,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          _NavBarShell(
+            tabs: _tabs,
+            selectedIndex: selectedIndex,
+            onSelected: onSelected,
+            bottomSafeArea: bottomSafeArea,
+          ),
+          Positioned(top: 0, child: _CenterActionButton(onTap: onQuickAction)),
+        ],
       ),
     );
   }
@@ -65,35 +55,39 @@ class _NavBarShell extends StatelessWidget {
   final List<_NavTab> tabs;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final double bottomSafeArea;
 
   const _NavBarShell({
     required this.tabs,
     required this.selectedIndex,
     required this.onSelected,
+    required this.bottomSafeArea,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: AppBottomNavBar._barHeight,
+      padding: EdgeInsets.only(bottom: bottomSafeArea),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.ink.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: AppColors.ink.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          _tabGroup(tabs.sublist(0, 2), startIndex: 0),
-          const SizedBox(width: AppBottomNavBar._buttonSize + AppSpacing.sm),
-          _tabGroup(tabs.sublist(2, 4), startIndex: 2),
-        ],
+      child: SizedBox(
+        height: AppBottomNavBar._barHeight,
+        child: Row(
+          children: [
+            _tabGroup(tabs.sublist(0, 2), startIndex: 0),
+            const SizedBox(width: AppBottomNavBar._buttonSize + AppSpacing.sm),
+            _tabGroup(tabs.sublist(2, 4), startIndex: 2),
+          ],
+        ),
       ),
     );
   }
@@ -174,18 +168,28 @@ class _CenterActionButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Azioni rapide',
-      child: Material(
-        color: AppColors.primary700,
-        shape: const CircleBorder(),
-        elevation: 4,
-        shadowColor: AppColors.primary700.withValues(alpha: 0.4),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: SizedBox(
-            width: AppBottomNavBar._buttonSize,
-            height: AppBottomNavBar._buttonSize,
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
+      child: Container(
+        width: AppBottomNavBar._buttonSize,
+        height: AppBottomNavBar._buttonSize,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.ink.withValues(alpha: 0.14),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: const Icon(Icons.add, color: AppColors.primary700, size: 26),
           ),
         ),
       ),
