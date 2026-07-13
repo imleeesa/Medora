@@ -13,6 +13,32 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-13 - Sprint Hotfix Design Gate (redesign UI Calm Precision)
+
+Tipo modifica: UI / Bug Fix visivo / Documentation.
+
+Descrizione:
+
+- aggiunti `filledButtonTheme` e `outlinedButtonTheme` in `lib/app.dart` sui token Calm Precision (`AppColors.primary700`, `AppRadius.md`), cosi' `FilledButton`/`OutlinedButton` (incluse le azioni Assunta/Saltata) non usano piu' il verde tonale derivato dal seed Material 3;
+- la sezione "Terapie attive" della Dashboard ora filtra `therapy.isActive`, escludendo le terapie archiviate mostrate erroneamente;
+- l'avatar profilo nell'header Dashboard e' ora tappabile e porta alla tab Profilo, coerente con l'affordance gia' presente per il pulsante azioni rapide;
+- la dose non viene piu' mostrata nella hero card e nelle card "Assunzioni di oggi" quando e' solo il fallback "Dose non specificata"; nessuna modifica al model o a `Medicine.doseLabel`.
+
+File modificati:
+
+- `lib/app.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `lib/widgets/next_intake_hero_card.dart`;
+- `lib/widgets/today_intake_card.dart`;
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Una design gate review sul redesign Calm Precision (Sprint Redesign 1-3) ha promosso la direzione "con fix": 4 incoerenze visive/UX minori da correggere prima di estendere il redesign a Terapie e Dettaglio Terapia, per non replicarle in altre schermate. Nessuna modifica a database, Provider, repository, notifiche, storico, statistiche, export o logica scorte.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
+
 ## 2026-07-09 - QA Export PDF Riepilogo Terapia
 
 Tipo modifica: QA / Bug Fix / Test / Documentation.

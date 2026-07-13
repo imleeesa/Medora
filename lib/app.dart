@@ -8,6 +8,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/medicine_detail_screen.dart';
 import 'services/notification_navigation_service.dart';
 import 'theme/app_colors.dart';
+import 'theme/app_dimens.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -130,6 +131,27 @@ class _MyAppState extends State<MyApp> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary700,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary700,
+            side: const BorderSide(color: AppColors.primary700, width: 1.5),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
           ),
         ),

@@ -31,9 +31,23 @@ Creati: `lib/theme/app_colors.dart`, `app_dimens.dart`, `responsive.dart` (token
 
 Creati `lib/widgets/app_bottom_nav_bar.dart` (navbar pill flottante, Opzione A: nessun `CustomClipper`, bottone centrale sovrapposto solo via `Stack`/`Positioned`) e `lib/widgets/quick_action_sheet.dart` (bottom sheet generico `QuickAction`). `dashboard_screen.dart` aggiornato: `_PremiumBottomNavigationBar` rimossa, sostituita da `AppBottomNavBar`; nuovo `_openQuickActions` con 4 voci (Aggiungi terapia, Aggiungi medicina con guardia "nessuna terapia" riusata da `medicines_screen.dart`, Registra assunzione → switch a tab Home, Ricarica scorta → `StockScreen`) — tutte pura navigazione, zero logica nuova. `IndexedStack`/indice tab invariati.
 
-## Prossimo sprint: Sprint Redesign 3 — nuova Dashboard
+## Sprint Redesign 3 — fatto
 
-Vedi `UI_REDESIGN_DIRECTION.md` sezione "Proposta nuova Dashboard".
+Dashboard riorganizzata in: Header (invariato, con `+`), `NextIntakeHeroCard` (hero, mostra anche terapia e scorta bassa se pertinente), `_TodayIntakesSection`/`TodayIntakeCard` (con `StatusChip`), `_LowStockSection`/`LowStockMiniCard` (tono ottone, mai rosso/arancio), `_TherapiesSection`/`_TherapyChipCard` (larghezza `IntrinsicWidth` + `ConstrainedBox(min:152, max:220)`, non più fissa a 178px). **Rimossa** la sezione mini-stat "Attività di oggi" (ridondante con Oggi/Terapie). Marcatura Assunta/Saltata invariata (stesso `MedicineProvider.markMedicineAsTaken/Skipped`), solo relocata in `today_intake_card.dart`. Nomi terapia risolti con `provider.getTherapyById` (getter già esistente, sola lettura).
+
+Nuovi widget in `lib/widgets/`: `next_intake_hero_card.dart`, `today_intake_card.dart`, `low_stock_mini_card.dart`, `dashboard_section_header.dart`. Prima adozione reale di `parseHexColor` (Sprint 1) e `AppCard`/`StatusChip` (Sprint 1, prima volta cablati in una schermata).
+
+## Sprint Hotfix Design Gate — fatto
+
+Dopo una design review (Fable), 4 fix applicati prima di Sprint 4, tutti solo presentazione:
+- `lib/app.dart`: aggiunti `filledButtonTheme`/`outlinedButtonTheme` sui token (`primary700`, `AppRadius.md`) — prima `FilledButton`/`OutlinedButton` (incluso Assunta/Saltata) usavano il verde tonale M3 derivato dal seed, non il token esatto.
+- `dashboard_screen.dart`: sezione "Terapie attive" ora filtra `therapy.isActive` (prima mostrava anche archiviate).
+- `dashboard_screen.dart`: avatar profilo nell'header ora tappabile, passa a tab Profilo (`onOpenProfile` come `onQuickActions`).
+- `next_intake_hero_card.dart` / `today_intake_card.dart`: la dose si mostra solo se `medicine.dose.trim().isNotEmpty` (mai più "Dose non specificata" in UI); nessun cambio al model/a `doseLabel`.
+
+## Prossimo sprint: Sprint Redesign 4 — Terapie e Dettaglio Terapia
+
+Riusare `AppCard`/`StatusChip`/`DashboardSectionHeader`/`parseHexColor`; separare visivamente terapie attive/archiviate; allineare `TherapyCard` esistente ai token; medicine nel dettaglio terapia con lo stesso linguaggio di `TodayIntakeCard`. Non toccare archiviazione/eliminazione/export PDF.
 
 Roadmap completa (sprint 0-9) in `docs/UI_SPRINT_ROADMAP.md`.
 
