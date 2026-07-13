@@ -17,11 +17,11 @@ Artifact di riferimento (mockup visivo palette/componenti/Dashboard/Terapie/Stat
 - Uno sprint = una modifica tematica, mai tutto in un commit.
 - Qualsiasi tocco a Provider/repository/servizi durante uno sprint UI va segnalato come rischio prima di procedere, non fatto silenziosamente.
 
-## Navbar (decisione presa)
+## Navbar (decisione finale, dopo 2 iterazioni scartate)
 
-Sostituire la bottom nav custom attuale con una **soft floating navbar** (angoli pill, 4 tab Home/Terapie/Storico/Profilo, pulsante centrale `+` verde sollevato). Il `+` apre un quick action sheet con 4 voci, tutte pura navigazione verso flussi già esistenti: Aggiungi medicina, Aggiungi terapia, Registra assunzione (→ Dashboard/Oggi), Ricarica scorta (→ StockScreen). Nessuna nuova logica Provider.
+Le prime due versioni (pill con bottone `+` sospeso, poi variante bianca piatta con bottone sospeso) non convincevano esteticamente — troppo "custom per forza" per un'app medical-tech seria. **Decisione finale**: `NavigationBar` Material 3 nativo (`lib/widgets/app_bottom_nav_bar.dart`), 4 tab Home/Terapie/Storico/Profilo, restilizzato solo via `NavigationBarThemeData` (indicatorColor `primaryTint`, icona/label attivi `primary700`/`primary800`, inattivi `inkFaint`), **nessun bottone centrale**. Più stabile, meno codice custom, coerente con "seria e ordinata".
 
-Fallback se l'incavo concavo è troppo fragile in Flutter: stessa barra ma con angoli arrotondati semplici (no `CustomClipper`), bottone solo sovrapposto via `Stack`/`Positioned`. Spec tecnica completa in `UI_DESIGN_SYSTEM.md` sezione "Bottom navbar".
+Le quick action (Aggiungi terapia, Aggiungi medicina, Registra assunzione, Ricarica scorta) sono rimaste **invariate** (`quick_action_sheet.dart` non toccato) ma ora si aprono da un'icona `+` nell'header della Dashboard (`_Header` in `dashboard_screen.dart`), accanto all'avatar profilo — non più dalla navbar.
 
 ## Sprint Redesign 1 — fatto
 

@@ -73,13 +73,8 @@ Due varianti: successo (`primaryTint` bg, `primary800` testo/icona check) ed err
 ### Form
 Sezioni con intestazione (icona + titolo) racchiuse in `AppCard`, non lista piatta di campi. Pattern responsive esistente (`LayoutBuilder` breakpoint 340px per campi affiancati) da centralizzare in un helper unico (es. `context.isNarrow`) e riusare per color/icon picker.
 
-## Bottom navbar — spec componente
+## Bottom navbar — spec componente (revisione dopo hotfix UI)
 
-Nuovo widget `AppBottomNavBar` (Sprint Redesign 2):
+`AppBottomNavBar` (`lib/widgets/app_bottom_nav_bar.dart`) è un `NavigationBar` Material 3 nativo avvolto in `Material(elevation: 8)` + `SafeArea(top: false)`, restilizzato via `NavigationBarThemeData`: `indicatorColor: primaryTint`, icona/label attivi `primary700`/`primary800`, inattivi `inkFaint`, `height: 64`. Nessun bottone centrale, nessun `CustomClipper`, nessuna geometria custom — scelta deliberata dopo due iterazioni scartate (pill con bottone sospeso, poi variante piatta con bottone sospeso) giudicate troppo "custom per forza" per un'app medical-tech seria.
 
-- **Struttura**: `Stack` — barra pill in basso (`Container`/`CustomPainter` per il bordo superiore arrotondato/inciso) + `Positioned` con il pulsante centrale `+` sollevato (56-60px, cerchio `primary700`, icona bianca).
-- **Tab**: Home, Terapie, Storico, Profilo — 2 a sinistra e 2 a destra del pulsante centrale, icona + micro-label 10-11px, stato attivo = icona filled + colore `primary700`, inattivo = icona outline + `inkFaint`.
-- **Pulsante centrale**: non è una tab selezionabile, sempre neutro, apre `showModalBottomSheet` con 4 voci (Aggiungi medicina, Aggiungi terapia, Registra assunzione, Ricarica scorta) — tutte navigazione pura verso schermate esistenti.
-- **Altezza totale**: barra + bottone sollevato ≤ 80dp.
-- **Fallback sicuro**: se l'incavo concavo (`CustomClipper`/path) risulta fragile, usare angoli arrotondati semplici (28px) senza incavo, bottone solo sovrapposto via `Positioned` — stesso effetto visivo al 90%, zero rischio di geometria custom.
-- **Vincoli**: nessuna modifica a `IndexedStack`/logica indice tab esistente in `DashboardScreen`; `SafeArea`/`viewPadding.bottom` gestiti nel widget; contenuto scrollabile delle tab deve avere `padding.bottom` ≥ altezza barra + offset bottone.
+Le quick action (`quick_action_sheet.dart`, invariato) si aprono da un'icona `+` nell'header della Dashboard (`_HeaderIconButton` in `dashboard_screen.dart`), non dalla navbar.

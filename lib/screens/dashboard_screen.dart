@@ -32,7 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const _HomeDashboard(),
+      _HomeDashboard(onQuickActions: () => _openQuickActions(context)),
       const MedicinesScreen(showAppBar: false),
       const HistoryScreen(showAppBar: false),
       const ProfileScreen(showAppBar: false),
@@ -44,7 +44,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
         onSelected: (index) => setState(() => _selectedIndex = index),
-        onQuickAction: () => _openQuickActions(context),
       ),
     );
   }
@@ -106,7 +105,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _HomeDashboard extends StatelessWidget {
-  const _HomeDashboard();
+  final VoidCallback onQuickActions;
+
+  const _HomeDashboard({required this.onQuickActions});
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +115,7 @@ class _HomeDashboard extends StatelessWidget {
       builder: (context, provider, child) {
         if (provider.isLoading) {
           return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+            child: CircularProgressIndicator(color: AppColors.primary700),
           );
         }
 
@@ -129,7 +130,10 @@ class _HomeDashboard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
                   child: Column(
                     children: [
-                      _Header(name: provider.currentProfile.name),
+                      _Header(
+                        name: provider.currentProfile.name,
+                        onQuickActions: onQuickActions,
+                      ),
                       Expanded(
                         child: EmptyState(
                           title: 'Non hai ancora aggiunto terapie',
@@ -148,7 +152,10 @@ class _HomeDashboard extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
                       sliver: SliverToBoxAdapter(
-                        child: _Header(name: provider.currentProfile.name),
+                        child: _Header(
+                          name: provider.currentProfile.name,
+                          onQuickActions: onQuickActions,
+                        ),
                       ),
                     ),
                     SliverPadding(
@@ -218,8 +225,9 @@ void _openMedicineDetail(BuildContext context, String medicineId) {
 
 class _Header extends StatelessWidget {
   final String name;
+  final VoidCallback onQuickActions;
 
-  const _Header({required this.name});
+  const _Header({required this.name, required this.onQuickActions});
 
   @override
   Widget build(BuildContext context) {
@@ -238,32 +246,30 @@ class _Header extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF1E1E1E),
+                  color: AppColors.ink,
                   letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 _capitalize(date),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
+                  color: AppColors.inkSoft,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        Container(
-          width: 48,
-          height: 48,
-          decoration: const BoxDecoration(
-            color: Color(0xFFE8F5E9),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.person, color: Color(0xFF2E7D32)),
+        const SizedBox(width: 10),
+        _HeaderIconButton(
+          icon: Icons.add,
+          semanticLabel: 'Azioni rapide',
+          onTap: onQuickActions,
         ),
+        const SizedBox(width: 10),
+        const _HeaderIconButton(icon: Icons.person, semanticLabel: 'Profilo'),
       ],
     );
   }
@@ -299,6 +305,49 @@ class _Header extends StatelessWidget {
     ];
 
     return '${weekdays[date.weekday - 1]} ${date.day} ${months[date.month - 1]}';
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final String semanticLabel;
+  final VoidCallback? onTap;
+
+  const _HeaderIconButton({
+    required this.icon,
+    required this.semanticLabel,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final circle = Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(
+        color: AppColors.primaryTint,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: AppColors.primary700),
+    );
+
+    if (onTap == null) {
+      return Semantics(label: semanticLabel, child: circle);
+    }
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: circle,
+        ),
+      ),
+    );
   }
 }
 
