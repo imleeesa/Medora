@@ -3,6 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_dimens.dart';
+import '../widgets/app_card.dart';
+import '../widgets/dashboard_section_header.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/medora_3d_asset.dart';
 import '../widgets/therapy_card.dart';
 import 'add_medicine_screen.dart';
 import 'add_therapy_screen.dart';
@@ -23,27 +29,34 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F8),
+      backgroundColor: AppColors.background,
       appBar: widget.showAppBar ? AppBar(title: const Text('Terapie')) : null,
       body: Consumer<MedicineProvider>(
         builder: (context, provider, _) {
-          final therapies = _filterTherapies(provider.therapies);
+          final filtered = _filterTherapies(provider.therapies);
+          final activeTherapies = filtered
+              .where((therapy) => therapy.isActive)
+              .toList();
+          final archivedTherapies = filtered
+              .where((therapy) => !therapy.isActive)
+              .toList();
+          final isSearching = _searchQuery.trim().isNotEmpty;
 
           return SafeArea(
             top: !widget.showAppBar,
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
                   child: Row(
                     children: [
                       const Expanded(
                         child: Text(
                           'Terapie',
                           style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF1E1E1E),
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink,
                           ),
                         ),
                       ),
@@ -52,11 +65,11 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
                         onPressed: _openAddMedicine,
                         icon: const Icon(Icons.medication_outlined),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       IconButton.filled(
                         tooltip: 'Crea terapia',
                         style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
+                          backgroundColor: AppColors.primary700,
                           foregroundColor: Colors.white,
                         ),
                         onPressed: _openAddTherapy,
@@ -66,50 +79,64 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Cerca terapia o medicina...',
+                      hintText: 'Cerca terapia o medicina',
                       prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        borderSide: const BorderSide(color: AppColors.border),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary700,
+                          width: 2,
+                        ),
                       ),
                     ),
                     onChanged: (value) => setState(() => _searchQuery = value),
                   ),
                 ),
                 Expanded(
-                  child: therapies.isEmpty
-                      ? _EmptyTherapiesState(
-                          isSearching: _searchQuery.isNotEmpty,
-                          onCreate: _openAddTherapy,
+                  child: filtered.isEmpty
+                      ? EmptyState(
+                          title: isSearching
+                              ? 'Nessun risultato'
+                              : 'Nessuna terapia',
+                          description: isSearching
+                              ? 'Prova con un nome diverso.'
+                              : 'Crea la tua prima terapia e aggiungi le medicine quando serve.',
+                          icon: isSearching
+                              ? Icons.search_off
+                              : Icons.spa_outlined,
+                          imageAsset: isSearching
+                              ? null
+                              : Medora3DAsset.heartPulse,
+                          buttonLabel: isSearching ? null : 'Crea Terapia',
+                          onButtonPressed: isSearching ? null : _openAddTherapy,
                         )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                          itemCount: therapies.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final therapy = therapies[index];
-                            return TherapyCard(
-                              therapy: therapy,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => TherapyDetailScreen(
-                                    therapyId: therapy.id,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                          children: [
+                            if (activeTherapies.isNotEmpty) ...[
+                              const DashboardSectionHeader('Attive'),
+                              const SizedBox(height: AppSpacing.md),
+                              ..._therapyTiles(context, activeTherapies),
+                            ] else if (archivedTherapies.isNotEmpty)
+                              _NoActiveTherapiesCard(onCreate: _openAddTherapy),
+                            if (archivedTherapies.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.lg),
+                              const DashboardSectionHeader('Archiviate'),
+                              const SizedBox(height: AppSpacing.md),
+                              ..._therapyTiles(context, archivedTherapies),
+                            ],
+                          ],
                         ),
                 ),
               ],
@@ -120,12 +147,30 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
       floatingActionButton: widget.showAppBar
           ? FloatingActionButton(
               tooltip: 'Crea terapia',
-              backgroundColor: const Color(0xFF2E7D32),
+              backgroundColor: AppColors.primary700,
               onPressed: _openAddTherapy,
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
     );
+  }
+
+  List<Widget> _therapyTiles(BuildContext context, List<Therapy> therapies) {
+    return [
+      for (final therapy in therapies)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: TherapyCard(
+            therapy: therapy,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TherapyDetailScreen(therapyId: therapy.id),
+              ),
+            ),
+          ),
+        ),
+    ];
   }
 
   List<Therapy> _filterTherapies(List<Therapy> therapies) {
@@ -174,52 +219,51 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
   }
 }
 
-class _EmptyTherapiesState extends StatelessWidget {
-  final bool isSearching;
+/// Empty state "nessuna terapia attiva" quando esistono archiviate
+/// (mockup 08): illustrazione leggera, messaggio calmo e CTA tonale.
+class _NoActiveTherapiesCard extends StatelessWidget {
   final VoidCallback onCreate;
 
-  const _EmptyTherapiesState({
-    required this.isSearching,
-    required this.onCreate,
-  });
+  const _NoActiveTherapiesCard({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.spa_outlined, size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              isSearching ? 'Nessun risultato' : 'Nessuna terapia',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: Colors.grey.shade700,
-              ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        children: [
+          const Medora3DAsset(Medora3DAsset.capsuleMint, size: 96),
+          const SizedBox(height: AppSpacing.lg),
+          const Text(
+            'Nessuna terapia attiva',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
             ),
-            const SizedBox(height: 6),
-            Text(
-              isSearching
-                  ? 'Prova con un nome diverso.'
-                  : 'Crea una terapia, poi aggiungi le medicine quando serve.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Quando vorrai, potrai aggiungerne una nuova. Quelle concluse restano disponibili qui sotto.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: AppColors.inkSoft,
+              height: 1.4,
             ),
-            if (!isSearching) ...[
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: onCreate,
-                icon: const Icon(Icons.add),
-                label: const Text('Crea Terapia'),
-              ),
-            ],
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primaryTint,
+              foregroundColor: AppColors.primary800,
+            ),
+            onPressed: onCreate,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Aggiungi terapia'),
+          ),
+        ],
       ),
     );
   }

@@ -321,7 +321,12 @@ class _SettingsSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.grey.shade200),
           ),
-          child: Column(children: children),
+          child: Material(
+            type: MaterialType.transparency,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: children),
+          ),
         ),
       ],
     );

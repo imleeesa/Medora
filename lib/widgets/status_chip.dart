@@ -3,7 +3,9 @@ import '../theme/app_colors.dart';
 
 /// Tono semantico di uno stato (non lega il widget a un enum di dominio
 /// specifico, cosi' resta riusabile da storico, dashboard, scorte, ecc.).
-enum StatusTone { positive, neutral, critical, info }
+/// `warning` (ambra) e' per stati non critici da attenzionare: dose saltata,
+/// scorta bassa, assunzione in arrivo (mockup finali).
+enum StatusTone { positive, neutral, warning, critical, info }
 
 /// Chip di stato standard del design system "Calm Precision".
 /// Es. Assunta -> positive, Saltata -> neutral, Dimenticata -> critical,
@@ -40,6 +42,8 @@ class StatusChip extends StatelessWidget {
         return const _ChipColors(AppColors.primaryTint, AppColors.primary800);
       case StatusTone.neutral:
         return const _ChipColors(AppColors.border, AppColors.inkSoft);
+      case StatusTone.warning:
+        return const _ChipColors(AppColors.warningTint, AppColors.warning);
       case StatusTone.critical:
         return const _ChipColors(AppColors.criticalTint, AppColors.critical);
       case StatusTone.info:

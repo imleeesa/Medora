@@ -907,7 +907,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Dettagli Medicina'), findsNothing);
-        expect(find.text('Non hai ancora aggiunto terapie'), findsOneWidget);
+        expect(find.text('Nessuna terapia ancora'), findsOneWidget);
       },
     );
 

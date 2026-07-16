@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/medicine.dart';
-import '../models/scheduled_intake.dart';
-import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
-import '../utils/color_parser.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import '../widgets/app_card.dart';
 import '../widgets/dashboard_section_header.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/low_stock_mini_card.dart';
+import '../widgets/medora_3d_asset.dart';
 import '../widgets/next_intake_hero_card.dart';
 import '../widgets/quick_action_sheet.dart';
 import '../widgets/today_intake_card.dart';
@@ -40,6 +38,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _HomeDashboard(
         onQuickActions: () => _openQuickActions(context),
         onOpenProfile: () => setState(() => _selectedIndex = 3),
+        onOpenHistory: () => setState(() => _selectedIndex = 2),
+        onAddTherapy: () => _openAddTherapy(context),
+        onAddMedicine: () => _openAddMedicine(context),
       ),
       const MedicinesScreen(showAppBar: false),
       const HistoryScreen(showAppBar: false),
@@ -61,10 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       QuickAction(
         icon: Icons.health_and_safety_outlined,
         label: 'Aggiungi terapia',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
-        ),
+        onTap: () => _openAddTherapy(context),
       ),
       QuickAction(
         icon: Icons.medication_outlined,
@@ -87,6 +85,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ]);
   }
 
+  void _openAddTherapy(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
+    );
+  }
+
   void _openAddMedicine(BuildContext context) {
     if (context.read<MedicineProvider>().therapies.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,10 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           action: SnackBarAction(
             label: 'Crea terapia',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
-            ),
+            onPressed: () => _openAddTherapy(context),
           ),
         ),
       );
@@ -115,10 +117,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _HomeDashboard extends StatelessWidget {
   final VoidCallback onQuickActions;
   final VoidCallback onOpenProfile;
+  final VoidCallback onOpenHistory;
+  final VoidCallback onAddTherapy;
+  final VoidCallback onAddMedicine;
 
   const _HomeDashboard({
     required this.onQuickActions,
     required this.onOpenProfile,
+    required this.onOpenHistory,
+    required this.onAddTherapy,
+    required this.onAddMedicine,
   });
 
   @override
@@ -142,100 +150,106 @@ class _HomeDashboard extends StatelessWidget {
           return provider.getTherapyById(therapyId)?.name;
         }
 
-        return SafeArea(
-          child: therapies.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                  child: Column(
-                    children: [
-                      _Header(
-                        name: provider.currentProfile.name,
-                        onQuickActions: onQuickActions,
-                        onOpenProfile: onOpenProfile,
-                      ),
-                      Expanded(
-                        child: EmptyState(
-                          title: 'Non hai ancora aggiunto terapie',
-                          description:
-                              'Crea la tua prima terapia e aggiungi i farmaci da seguire',
-                          icon: Icons.health_and_safety_outlined,
-                          buttonLabel: 'Crea Terapia',
-                          onButtonPressed: () => _openAddTherapy(context),
-                        ),
-                      ),
-                    ],
+        if (therapies.isEmpty) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              child: Column(
+                children: [
+                  _Header(
+                    name: provider.currentProfile.name,
+                    onQuickActions: onQuickActions,
+                    onOpenProfile: onOpenProfile,
                   ),
-                )
-              : CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-                      sliver: SliverToBoxAdapter(
-                        child: _Header(
-                          name: provider.currentProfile.name,
-                          onQuickActions: onQuickActions,
-                          onOpenProfile: onOpenProfile,
-                        ),
-                      ),
+                  Expanded(
+                    child: EmptyState(
+                      title: 'Nessuna terapia ancora',
+                      description:
+                          'Inizia aggiungendo la tua prima terapia per ricevere promemoria e tenere tutto sotto controllo.',
+                      icon: Icons.health_and_safety_outlined,
+                      imageAsset: Medora3DAsset.emptyPillsIllustration,
+                      buttonLabel: 'Aggiungi terapia',
+                      onButtonPressed: onAddTherapy,
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      sliver: SliverToBoxAdapter(
-                        child: nextIntake == null
-                            ? const _NoNextIntakeCard()
-                            : NextIntakeHeroCard(
-                                intake: nextIntake,
-                                therapyName: therapyNameFor(
-                                  nextIntake.medicine,
-                                ),
-                                lowStock:
-                                    nextIntake.medicine.stockQuantity <=
-                                    nextIntake.medicine.stockWarningThreshold,
-                                onTap: () => _openMedicineDetail(
-                                  context,
-                                  nextIntake.medicine.id,
-                                ),
-                              ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      sliver: SliverToBoxAdapter(
-                        child: _TodayIntakesSection(
-                          intakes: todayIntakes,
-                          therapyNameFor: therapyNameFor,
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      sliver: SliverToBoxAdapter(
-                        child: _LowStockSection(
-                          lowStockMedicines: lowStockMedicines,
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                      sliver: SliverToBoxAdapter(
-                        child: _TherapiesSection(
-                          therapies: therapies
-                              .where((therapy) => therapy.isActive)
-                              .toList(),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                sliver: SliverToBoxAdapter(
+                  child: _Header(
+                    name: provider.currentProfile.name,
+                    onQuickActions: onQuickActions,
+                    onOpenProfile: onOpenProfile,
+                  ),
                 ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                sliver: SliverToBoxAdapter(
+                  child: _TodayTitle(date: DateTime.now()),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                sliver: SliverToBoxAdapter(
+                  child: nextIntake == null
+                      ? const _NoNextIntakeCard()
+                      : NextIntakeHeroCard(
+                          intake: nextIntake,
+                          therapyName: therapyNameFor(nextIntake.medicine),
+                          lowStock:
+                              nextIntake.medicine.stockQuantity <=
+                              nextIntake.medicine.stockWarningThreshold,
+                          onTap: () => _openMedicineDetail(
+                            context,
+                            nextIntake.medicine.id,
+                          ),
+                        ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                sliver: SliverToBoxAdapter(
+                  child: TodayIntakesCard(
+                    intakes: todayIntakes,
+                    onOpenMedicine: (medicineId) =>
+                        _openMedicineDetail(context, medicineId),
+                  ),
+                ),
+              ),
+              if (lowStockMedicines.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  sliver: SliverToBoxAdapter(
+                    child: _LowStockCard(
+                      lowStockMedicines: lowStockMedicines,
+                      onOpenMedicine: (medicineId) =>
+                          _openMedicineDetail(context, medicineId),
+                    ),
+                  ),
+                ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                sliver: SliverToBoxAdapter(
+                  child: _QuickActionsSection(
+                    onAddMedicine: onAddMedicine,
+                    onAddTherapy: onAddTherapy,
+                    onOpenHistory: onOpenHistory,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
-    );
-  }
-
-  void _openAddTherapy(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddTherapyScreen()),
     );
   }
 }
@@ -264,84 +278,90 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = _dateLabel(DateTime.now());
-
     return Row(
       children: [
+        Semantics(
+          button: true,
+          label: 'Profilo',
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: onOpenProfile,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryTint,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _initials(name),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Buongiorno, $name',
+                _greeting(DateTime.now().hour),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+              Text(
+                name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: AppColors.ink,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _capitalize(date),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkSoft,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.sm),
         _HeaderIconButton(
           icon: Icons.add,
           semanticLabel: 'Azioni rapide',
           onTap: onQuickActions,
         ),
-        const SizedBox(width: 10),
-        _HeaderIconButton(
-          icon: Icons.person,
-          semanticLabel: 'Profilo',
-          onTap: onOpenProfile,
-        ),
       ],
     );
   }
 
-  String _capitalize(String value) {
-    if (value.isEmpty) return value;
-    return value[0].toUpperCase() + value.substring(1);
+  String _greeting(int hour) {
+    if (hour < 12) return 'Buongiorno,';
+    if (hour < 18) return 'Buon pomeriggio,';
+    return 'Buonasera,';
   }
 
-  String _dateLabel(DateTime date) {
-    const weekdays = [
-      'Luned\u00EC',
-      'Marted\u00EC',
-      'Mercoled\u00EC',
-      'Gioved\u00EC',
-      'Venerd\u00EC',
-      'Sabato',
-      'Domenica',
-    ];
-    const months = [
-      'Gennaio',
-      'Febbraio',
-      'Marzo',
-      'Aprile',
-      'Maggio',
-      'Giugno',
-      'Luglio',
-      'Agosto',
-      'Settembre',
-      'Ottobre',
-      'Novembre',
-      'Dicembre',
-    ];
-
-    return '${weekdays[date.weekday - 1]} ${date.day} ${months[date.month - 1]}';
+  String _initials(String value) {
+    final parts = value
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'M';
+    final first = parts.first[0];
+    final second = parts.length > 1 ? parts[1][0] : '';
+    return (first + second).toUpperCase();
   }
 }
 
@@ -388,6 +408,66 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
+class _TodayTitle extends StatelessWidget {
+  final DateTime date;
+
+  const _TodayTitle({required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Oggi',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: AppColors.ink,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          _dateLabel(date),
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.inkSoft,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _dateLabel(DateTime date) {
+    const weekdays = [
+      'Lunedì',
+      'Martedì',
+      'Mercoledì',
+      'Giovedì',
+      'Venerdì',
+      'Sabato',
+      'Domenica',
+    ];
+    const months = [
+      'gennaio',
+      'febbraio',
+      'marzo',
+      'aprile',
+      'maggio',
+      'giugno',
+      'luglio',
+      'agosto',
+      'settembre',
+      'ottobre',
+      'novembre',
+      'dicembre',
+    ];
+
+    return '${weekdays[date.weekday - 1]} ${date.day} ${months[date.month - 1]}';
+  }
+}
+
 class _NoNextIntakeCard extends StatelessWidget {
   const _NoNextIntakeCard();
 
@@ -422,13 +502,89 @@ class _NoNextIntakeCard extends StatelessWidget {
   }
 }
 
-class _TodayIntakesSection extends StatelessWidget {
-  final List<ScheduledIntake> intakes;
-  final String? Function(Medicine medicine) therapyNameFor;
+class _LowStockCard extends StatelessWidget {
+  final List<Medicine> lowStockMedicines;
+  final void Function(String medicineId) onOpenMedicine;
 
-  const _TodayIntakesSection({
-    required this.intakes,
-    required this.therapyNameFor,
+  const _LowStockCard({
+    required this.lowStockMedicines,
+    required this.onOpenMedicine,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final count = lowStockMedicines.length;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.warningTint,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                ),
+                child: const Medora3DAsset(Medora3DAsset.pillAmber, size: 28),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Scorte basse',
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    Text(
+                      count == 1
+                          ? 'Una medicina sta per finire.'
+                          : '$count medicine stanno per finire.',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.inkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final medicine in lowStockMedicines)
+            LowStockMiniCard(
+              medicine: medicine,
+              onTap: () => onOpenMedicine(medicine.id),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionsSection extends StatelessWidget {
+  final VoidCallback onAddMedicine;
+  final VoidCallback onAddTherapy;
+  final VoidCallback onOpenHistory;
+
+  const _QuickActionsSection({
+    required this.onAddMedicine,
+    required this.onAddTherapy,
+    required this.onOpenHistory,
   });
 
   @override
@@ -436,188 +592,89 @@ class _TodayIntakesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionHeader('Assunzioni di oggi'),
+        const DashboardSectionHeader('Azioni rapide'),
         const SizedBox(height: AppSpacing.md),
-        if (intakes.isEmpty)
-          AppCard(
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryTint,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: AppColors.primary700,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                const Expanded(
-                  child: Text(
-                    'Nessuna assunzione programmata per oggi.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...intakes.map(
-            (intake) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: TodayIntakeCard(
-                intake: intake,
-                therapyName: therapyNameFor(intake.medicine),
-                onTap: () => _openMedicineDetail(context, intake.medicine.id),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _TherapiesSection extends StatelessWidget {
-  final List<Therapy> therapies;
-
-  const _TherapiesSection({required this.therapies});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const DashboardSectionHeader('Terapie attive'),
-        const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: 136,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: therapies.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, index) =>
-                _TherapyChipCard(therapy: therapies[index]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TherapyChipCard extends StatelessWidget {
-  final Therapy therapy;
-
-  const _TherapyChipCard({required this.therapy});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = parseHexColor(therapy.color);
-
-    return IntrinsicWidth(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 152, maxWidth: 220),
-        child: AppCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: color.withValues(alpha: 0.12),
-                child: Icon(Icons.spa, color: color, size: 20),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                therapy.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.medication_outlined,
+                  label: 'Aggiungi\nmedicina',
+                  onTap: onAddMedicine,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '${therapy.medicines.length} medicine',
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkFaint,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.health_and_safety_outlined,
+                  label: 'Aggiungi\nterapia',
+                  onTap: onAddTherapy,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _QuickActionTile(
+                  icon: Icons.history,
+                  label: 'Vedi\nstorico',
+                  onTap: onOpenHistory,
                 ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }
 
-class _LowStockSection extends StatelessWidget {
-  final List<Medicine> lowStockMedicines;
+class _QuickActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
-  const _LowStockSection({required this.lowStockMedicines});
+  const _QuickActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const DashboardSectionHeader('Scorte'),
-        const SizedBox(height: AppSpacing.md),
-        AppCard(
-          child: lowStockMedicines.isEmpty
-              ? Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryTint,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: AppColors.primary700,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    const Expanded(
-                      child: Text(
-                        'Tutte le scorte sono a posto',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final medicine in lowStockMedicines)
-                      LowStockMiniCard(
-                        medicine: medicine,
-                        onTap: () => _openMedicineDetail(context, medicine.id),
-                      ),
-                  ],
-                ),
-        ),
-      ],
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.lg,
+        horizontal: AppSpacing.sm,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: AppColors.primaryTint,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primary700, size: 20),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+              height: 1.25,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

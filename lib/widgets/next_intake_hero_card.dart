@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import '../models/scheduled_intake.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import 'app_card.dart';
+import 'medora_3d_asset.dart';
+import 'status_chip.dart';
 
-/// Hero card "prossima assunzione" della Dashboard. Riceve solo dati gia'
-/// calcolati dal Provider (nessuna logica di dominio in questo widget).
+/// Card "prossima assunzione" della Dashboard, stile mockup 04: card bianca
+/// con pill orario, niente gradiente. Riceve solo dati gia' calcolati dal
+/// Provider (nessuna logica di dominio in questo widget).
 class NextIntakeHeroCard extends StatelessWidget {
   final ScheduledIntake intake;
   final String? therapyName;
@@ -22,109 +26,123 @@ class NextIntakeHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final medicine = intake.medicine;
-    final time = TimeOfDay.fromDateTime(intake.scheduledDateTime);
+    final time = TimeOfDay.fromDateTime(
+      intake.scheduledDateTime,
+    ).format(context);
+    final hasDose = medicine.dose.trim().isNotEmpty;
+    final subtitleParts = [
+      if (hasDose) medicine.doseLabel,
+      if (therapyName != null) therapyName!,
+    ];
 
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary700, AppColors.primary800],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Prossima assunzione',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  time,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary800,
+                  ),
+                ),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary700.withValues(alpha: 0.24),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.notifications_active,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
                     Text(
-                      'Prossima assunzione',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.9),
+                      medicine.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                        height: 1.15,
                       ),
                     ),
-                    const Spacer(),
-                    const Icon(Icons.chevron_right, color: Colors.white),
+                    if (subtitleParts.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitleParts.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  medicine.name,
-                  maxLines: 2,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              const Medora3DAsset(Medora3DAsset.capsuleMint, size: 64),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              const Icon(
+                Icons.timer_outlined,
+                size: 15,
+                color: AppColors.inkFaint,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Tra ${_timeUntil(intake.scheduledDateTime)}',
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkFaint,
                   ),
                 ),
-                if (therapyName != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    therapyName!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    _HeroPill(
-                      icon: Icons.schedule,
-                      label: time.format(context),
-                    ),
-                    _HeroPill(
-                      icon: Icons.timer_outlined,
-                      label: 'Tra ${_timeUntil(intake.scheduledDateTime)}',
-                    ),
-                    if (medicine.dose.trim().isNotEmpty)
-                      _HeroPill(
-                        icon: Icons.medication_outlined,
-                        label: medicine.doseLabel,
-                      ),
-                    if (lowStock)
-                      _HeroPill(
-                        icon: Icons.inventory_2_outlined,
-                        label: 'Scorta bassa',
-                        emphasized: true,
-                      ),
-                  ],
+              ),
+              if (lowStock) ...[
+                const SizedBox(width: AppSpacing.sm),
+                const StatusChip(
+                  label: 'Scorta bassa',
+                  tone: StatusTone.warning,
                 ),
               ],
-            ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -134,46 +152,5 @@ class NextIntakeHeroCard extends StatelessWidget {
     final minutes = difference.inMinutes <= 0 ? 1 : difference.inMinutes;
     if (minutes < 60) return '$minutes min';
     return '${minutes ~/ 60}h ${minutes % 60}m';
-  }
-}
-
-class _HeroPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool emphasized;
-
-  const _HeroPill({
-    required this.icon,
-    required this.label,
-    this.emphasized = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = emphasized ? AppColors.gold : Colors.white;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: emphasized
-            ? Colors.white.withValues(alpha: 0.92)
-            : Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: foreground),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: foreground,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

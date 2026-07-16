@@ -13,6 +13,160 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-13 - Sprint Redesign 4 (redesign UI Calm Precision - Terapie e Dettaglio Terapia)
+
+Tipo modifica: UI / Redesign / Documentation.
+
+Descrizione:
+
+- `TherapyCard` riscritta su `AppCard` e `StatusChip` (Attiva/Archiviata), colore terapia tramite `parseHexColor` condiviso;
+- `MedicinesScreen` riorganizzata in sezioni "Attive"/"Archiviate" (`DashboardSectionHeader`), con nota calma quando esistono solo terapie archiviate;
+- empty state di `MedicinesScreen` allineato al widget `EmptyState` condiviso, rimossa la variante locale duplicata;
+- campo di ricerca allineato all'`InputDecorationTheme` globale invece di uno stile divergente;
+- `TherapyDetailScreen`: header terapia e tile medicina riscritti su `AppCard`/`StatusChip`, sezione "Medicine associate" con `DashboardSectionHeader`, dose "non specificata" soppressa nella tile medicina;
+- nessuna modifica a modifica/archivia/riattiva/elimina terapia, eliminazione medicina o export PDF terapia.
+
+File modificati:
+
+- `lib/widgets/therapy_card.dart`;
+- `lib/screens/medicines_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/UI_SPRINT_ROADMAP.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Quarto sprint del redesign Calm Precision: estende i componenti e i token gia' introdotti (Sprint 1-3, hotfix Design Gate) a Terapie e Dettaglio Terapia, eliminando gli ultimi stili di card locali su queste schermate senza toccare logica di dominio, database o servizi.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
+
+## 2026-07-16 - Sprint C: Terapie + Dettaglio Terapia Soft Clinical
+
+Tipo modifica: UI / Redesign / Documentation.
+
+Descrizione:
+
+- `TherapyCard` riallineata al mockup 07: cerchio icona nel colore terapia (attenuato per archiviate), chip "N medicine" tinta, chip stato, chevron;
+- lista Terapie: titolo 28 coerente con la Dashboard, campo ricerca a pillola, empty "nessuna terapia attiva" (con archiviate presenti) come card con capsula 3D e CTA tonale;
+- Dettaglio terapia (mockup 10): header con cerchio icona 56, tile medicina su due livelli con chip orari (max 2 + contatore), chip fascia giornata derivata dall'ora (pura presentazione), chip scorta residua in ambra quando sotto soglia;
+- "Aggiungi medicina" come riga tratteggiata full-width disegnata con CustomPainter, disabilitata per terapie archiviate;
+- empty "nessuna medicina associata" con blister 3D e copy invitante;
+- nessuna modifica a creazione/modifica/archiviazione/riattivazione/eliminazione terapia, export PDF, eliminazione medicina, ricerca o navigazione.
+
+File modificati:
+
+- `lib/widgets/therapy_card.dart`;
+- `lib/screens/medicines_screen.dart`;
+- `lib/screens/therapy_detail_screen.dart`;
+- `docs/UI_SPRINT_ROADMAP.md`;
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Terzo sprint implementativo Soft Clinical: Terapie e Dettaglio Terapia raggiungono il livello visivo della Dashboard, riusando token e componenti condivisi. Rimandati: espansione set icone terapia con picker, card Note (nessun campo note nel model).
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
+
+## 2026-07-16 - Sprint asset 3D Medora
+
+Tipo modifica: UI / Brand asset / Documentation.
+
+Descrizione:
+
+- registrata la cartella `assets/images/medora/` in `pubspec.yaml` (7 asset 3D AI generati e approvati manualmente, PNG con trasparenza);
+- nuovo widget `Medora3DAsset`: rendering controllato degli asset, decorativi per default (esclusi dalla semantica screen reader), label opzionale, fallback invisibile se un asset manca;
+- `EmptyState` supporta un'illustrazione opzionale al posto dell'icona nel cerchio tinta;
+- integrazioni mirate (solo punti editoriali, mai liste/navbar/chip): illustrazione pillole+calendario nell'empty state della Dashboard (mockup 05), cuore 3D nell'empty state Terapie, capsula menta 64px nella hero "Prossima assunzione" (mockup 04), compressa ambra nell'header della card Scorte basse (mockup 22);
+- asset riservati per sprint futuri: blister (Scorte), campana (onboarding), compressa lavanda (dettaglio medicina);
+- nota: `calendar_3d_check.png` dell'elenco previsto non e' presente nella cartella.
+
+File modificati:
+
+- `pubspec.yaml`;
+- `lib/widgets/medora_3d_asset.dart` (nuovo);
+- `lib/widgets/empty_state.dart`;
+- `lib/widgets/next_intake_hero_card.dart`;
+- `lib/screens/dashboard_screen.dart`;
+- `lib/screens/medicines_screen.dart`;
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Gli asset 3D nello stile dei mockup rendono empty state e momenti chiave della Dashboard riconoscibili e premium senza appesantire le liste dense. Nessuna modifica a logica, Provider, servizi o database.
+
+Stato finale: completato con `flutter pub get`, `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
+
+## 2026-07-14 - Sprint B: Dashboard Soft Clinical
+
+Tipo modifica: UI / Redesign / Documentation.
+
+Descrizione:
+
+- Dashboard riallineata al mockup 04: header con avatar a iniziali (tap -> tab Profilo), saluto time-aware, titolo grande "Oggi" con data;
+- hero "Prossima assunzione" ora card bianca con pill orario, dose/terapia, countdown e chip scorta bassa (gradiente verde eliminato);
+- "Assunzioni di oggi" diventa una card unica a righe con divider, icona tinta per stato e chip semantici (Saltata ora in tono warning ambra); azioni Assunta/Saltata invariate nella logica, solo compatte;
+- card "Scorte basse" su fondo ambra con quantita' residue, mostrata solo quando esistono scorte basse;
+- nuova sezione "Azioni rapide" a 3 tile (Aggiungi medicina, Aggiungi terapia, Vedi storico);
+- rimossa la sezione "Terapie attive" dalla Dashboard (ridondante con la tab Terapie, assente nel mockup);
+- empty state primo avvio con copy del mockup 05; 4 asserzioni di copy aggiornate nei test widget (nessun test di logica modificato).
+
+File modificati:
+
+- `lib/screens/dashboard_screen.dart`;
+- `lib/widgets/next_intake_hero_card.dart`;
+- `lib/widgets/today_intake_card.dart`;
+- `lib/widgets/low_stock_mini_card.dart`;
+- `test/widget_test.dart`;
+- `test/medicine_provider_notification_test.dart` (solo copy empty state);
+- `docs/UI_SPRINT_ROADMAP.md`;
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Primo sprint implementativo della direzione Soft Clinical: la Dashboard diventa il benchmark visivo per gli sprint C-I. Nessuna modifica a Provider, repository, servizi, notifiche o logica di assunzioni/scorte.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
+
+## 2026-07-14 - Sprint A: direzione finale "Soft Clinical" dai mockup
+
+Tipo modifica: UI direction / Design system / Documentation.
+
+Descrizione:
+
+- analizzate tutte le 26 tavole in `docs/ui_mockup_reference/` e distillate nella nuova UI bible `docs/UI_FINAL_MOCKUP_REFERENCE.md` (direzione, palette, componenti, reference per schermata, elenco vincolante di cosa NON copiare perche' finto o inesistente);
+- aggiornati i token: palette "Soft Clinical" (`primary #1E6B5A`, ink ardesia, canvas caldo `#FCFAF7`, `warning` ambra al posto dell'accento ottone, accento `lavender`), radius `12/20/24/pill`;
+- `AppCard` passa al linguaggio soft-shadow dei mockup (ombra diffusa di default, hairline attenuata);
+- `StatusChip` guadagna il tono `warning` (saltata/scorta bassa/in arrivo);
+- tutti i bottoni diventano a pillola (tema globale + `PrimaryButton`, che perde il gradiente e diventa verde pieno);
+- navbar M3 senza indicatore a pillola, tab attiva verde;
+- roadmap riscritta come Sprint A-I (`docs/UI_SPRINT_ROADMAP.md`), handoff aggiornato;
+- nessuna schermata ridisegnata in questo sprint (i cambi token si propagano da soli alle schermate gia' migrate).
+
+File modificati:
+
+- `lib/theme/app_colors.dart`;
+- `lib/theme/app_dimens.dart`;
+- `lib/widgets/app_card.dart`;
+- `lib/widgets/status_chip.dart`;
+- `lib/widgets/primary_button.dart`;
+- `lib/widgets/app_bottom_nav_bar.dart`;
+- `lib/app.dart`;
+- `docs/UI_FINAL_MOCKUP_REFERENCE.md` (nuovo);
+- `docs/UI_DESIGN_SYSTEM.md`;
+- `docs/UI_SPRINT_ROADMAP.md`;
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+I mockup finali diventano la fonte visiva ufficiale del prodotto. Questo sprint strategico li trasforma in direzione implementabile (token + componenti base + documenti normativi) senza ridisegnare le schermate, che seguiranno negli Sprint B-I. Nessuna modifica a database, Provider, repository, servizi o logica.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
+
 ## 2026-07-13 - Sprint Hotfix Design Gate (redesign UI Calm Precision)
 
 Tipo modifica: UI / Bug Fix visivo / Documentation.

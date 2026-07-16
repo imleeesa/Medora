@@ -3,8 +3,8 @@ import '../models/medicine.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 
-/// Riga "scorta bassa" della Dashboard: informativa e non allarmista
-/// (tono ottone, non rosso/arancio da alert).
+/// Riga "scorta bassa" da usare dentro la card ambra della Dashboard
+/// (mockup 04/22): informativa e non allarmista, mostra le unita' residue.
 class LowStockMiniCard extends StatelessWidget {
   final Medicine medicine;
   final VoidCallback onTap;
@@ -17,6 +17,8 @@ class LowStockMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final remaining = Medicine.formatQuantity(medicine.stockQuantity);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -28,12 +30,12 @@ class LowStockMiniCard extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: const BoxDecoration(
-                color: AppColors.goldTint,
+                color: AppColors.surface,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.inventory_2_outlined,
-                color: AppColors.gold,
+                Icons.medication_outlined,
+                color: AppColors.warning,
                 size: 18,
               ),
             ),
@@ -50,15 +52,15 @@ class LowStockMiniCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            const Text(
-              'Scorta bassa',
-              style: TextStyle(
-                color: AppColors.gold,
+            Text(
+              '$remaining rimaste',
+              style: const TextStyle(
+                color: AppColors.warning,
                 fontWeight: FontWeight.w700,
                 fontSize: 12.5,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 2),
             const Icon(
               Icons.chevron_right,
               color: AppColors.inkFaint,

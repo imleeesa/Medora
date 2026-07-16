@@ -130,7 +130,7 @@ class _MyAppState extends State<MyApp> {
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
         ),
@@ -141,7 +141,7 @@ class _MyAppState extends State<MyApp> {
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
         ),
@@ -151,7 +151,7 @@ class _MyAppState extends State<MyApp> {
             side: const BorderSide(color: AppColors.primary700, width: 1.5),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
         ),

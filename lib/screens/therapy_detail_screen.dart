@@ -9,6 +9,14 @@ import '../models/medicine.dart';
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
 import '../services/therapy_pdf_export_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_dimens.dart';
+import '../utils/color_parser.dart';
+import '../utils/therapy_icons.dart';
+import '../widgets/app_card.dart';
+import '../widgets/dashboard_section_header.dart';
+import '../widgets/medora_3d_asset.dart';
+import '../widgets/status_chip.dart';
 import 'add_medicine_screen.dart';
 import 'add_therapy_screen.dart';
 import 'medicine_detail_screen.dart';
@@ -34,7 +42,7 @@ class TherapyDetailScreen extends StatelessWidget {
 
         final medicines = provider.getMedicinesByTherapy(therapy.id);
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F7F8),
+          backgroundColor: AppColors.background,
           appBar: AppBar(
             title: const Text('Dettaglio Terapia'),
             actions: [
@@ -91,38 +99,18 @@ class TherapyDetailScreen extends StatelessWidget {
                   therapy: therapy,
                   medicineCount: medicines.length,
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Medicine associate',
-                        style: TextStyle(
-                          color: Color(0xFF1E1E1E),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton.filled(
-                      tooltip: 'Aggiungi medicina',
-                      onPressed: therapy.isActive
-                          ? () => _openAddMedicine(context, therapy)
-                          : null,
-                      icon: const Icon(Icons.add),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.xl),
+                const DashboardSectionHeader('Medicine associate'),
+                const SizedBox(height: AppSpacing.md),
                 if (medicines.isEmpty)
                   _EmptyMedicines(therapy: therapy)
-                else
+                else ...[
                   ...medicines.map(
                     (medicine) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: _TherapyMedicineTile(
                         medicine: medicine,
-                        color: _parseColor(therapy.color),
+                        color: parseHexColor(therapy.color),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -135,6 +123,12 @@ class TherapyDetailScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  _AddMedicineDashedButton(
+                    enabled: therapy.isActive,
+                    onTap: () => _openAddMedicine(context, therapy),
+                  ),
+                ],
               ],
             ),
           ),
@@ -369,11 +363,6 @@ class TherapyDetailScreen extends StatelessWidget {
       ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
-
-  Color _parseColor(String colorHex) {
-    final value = colorHex.replaceFirst('#', '');
-    return Color(int.parse('FF$value', radix: 16));
-  }
 }
 
 enum _TherapyAction { exportPdf, archive, deletePermanently, reactivate }
@@ -398,60 +387,60 @@ class _TherapyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _parseColor(therapy.color);
+    final color = parseHexColor(therapy.color);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  IconData(
-                    therapy.iconCodePoint ?? Icons.spa.codePoint,
-                    fontFamily: 'MaterialIcons',
-                  ),
+                  therapyIconForCodePoint(therapy.iconCodePoint),
                   color: color,
+                  size: 26,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   therapy.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF1E1E1E),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    color: AppColors.ink,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              _StatusPill(isActive: therapy.isActive, color: color),
+              const SizedBox(width: AppSpacing.sm),
+              StatusChip(
+                label: therapy.isActive ? 'Attiva' : 'Archiviata',
+                tone: therapy.isActive
+                    ? StatusTone.positive
+                    : StatusTone.neutral,
+              ),
             ],
           ),
           if (therapy.description?.isNotEmpty ?? false) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               therapy.description!,
-              style: TextStyle(color: Colors.grey.shade700, height: 1.35),
+              style: const TextStyle(color: AppColors.inkSoft, height: 1.35),
             ),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.lg),
           Wrap(
-            spacing: 16,
-            runSpacing: 8,
+            spacing: AppSpacing.lg,
+            runSpacing: AppSpacing.sm,
             children: [
               _HeaderMeta(
                 icon: Icons.medication_outlined,
@@ -469,39 +458,8 @@ class _TherapyHeader extends StatelessWidget {
     );
   }
 
-  Color _parseColor(String colorHex) {
-    final value = colorHex.replaceFirst('#', '');
-    return Color(int.parse('FF$value', radix: 16));
-  }
-
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  final bool isActive;
-  final Color color;
-
-  const _StatusPill({required this.isActive, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: (isActive ? color : Colors.grey).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        isActive ? 'Attiva' : 'Archiviata',
-        style: TextStyle(
-          color: isActive ? color : Colors.grey.shade700,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
   }
 }
 
@@ -516,12 +474,12 @@ class _HeaderMeta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: Colors.grey.shade600),
+        Icon(icon, size: 16, color: AppColors.inkFaint),
         const SizedBox(width: 6),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.grey.shade700,
+          style: const TextStyle(
+            color: AppColors.inkSoft,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -538,27 +496,32 @@ class _EmptyMedicines extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         children: [
-          Icon(
-            Icons.medication_outlined,
-            size: 38,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 10),
+          const Medora3DAsset(Medora3DAsset.blisterSoft, size: 96),
+          const SizedBox(height: AppSpacing.md),
           const Text(
             'Nessuna medicina associata',
-            style: TextStyle(fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
+          const Text(
+            'Aggiungi la prima medicina per impostare orari e promemoria.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.inkSoft,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           OutlinedButton.icon(
             onPressed: therapy.isActive
                 ? () => Navigator.push(
@@ -569,12 +532,102 @@ class _EmptyMedicines extends StatelessWidget {
                   )
                 : null,
             icon: const Icon(Icons.add),
-            label: const Text('Aggiungi Medicina'),
+            label: const Text('Aggiungi medicina'),
           ),
         ],
       ),
     );
   }
+}
+
+/// Bottone "Aggiungi medicina" a riga tratteggiata (mockup 10).
+class _AddMedicineDashedButton extends StatelessWidget {
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _AddMedicineDashedButton({required this.enabled, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = enabled ? AppColors.primary700 : AppColors.inkFaint;
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: 'Aggiungi medicina',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: CustomPaint(
+            painter: _DashedRRectPainter(
+              color: color.withValues(alpha: enabled ? 0.7 : 0.4),
+              radius: AppRadius.md,
+            ),
+            child: SizedBox(
+              height: 52,
+              width: double.infinity,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_circle, color: color, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'Aggiungi medicina',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedRRectPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+
+  const _DashedRRectPainter({required this.color, required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+
+    const dashLength = 6.0;
+    const gapLength = 5.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(
+          metric.extractPath(distance, distance + dashLength),
+          paint,
+        );
+        distance += dashLength + gapLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRRectPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.radius != radius;
 }
 
 class _TherapyMedicineTile extends StatelessWidget {
@@ -592,26 +645,29 @@ class _TherapyMedicineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final schedules = medicine.times
-        .map((time) => time.format(context))
-        .join(', ');
+    final times = medicine.times;
+    final visibleTimes = times.take(2).toList();
+    final extraTimes = times.length - visibleTimes.length;
+    final hasDose = medicine.dose.trim().isNotEmpty;
+    final isLowStock = medicine.stockQuantity <= medicine.stockWarningThreshold;
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
+    return AppCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(Icons.medication_outlined, color: color),
-              const SizedBox(width: 10),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.medication_outlined, color: color, size: 20),
+              ),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,26 +676,34 @@ class _TherapyMedicineTile extends StatelessWidget {
                       medicine.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${medicine.doseLabel} - $schedules',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 13,
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
                       ),
                     ),
+                    if (hasDose) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        medicine.doseLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.inkFaint,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              Icon(
-                medicine.isActive
-                    ? Icons.check_circle_outline
-                    : Icons.pause_circle_outline,
-                color: medicine.isActive ? color : Colors.grey.shade500,
+              const SizedBox(width: AppSpacing.sm),
+              StatusChip(
+                label: medicine.isActive ? 'Attiva' : 'Inattiva',
+                tone: medicine.isActive
+                    ? StatusTone.positive
+                    : StatusTone.neutral,
               ),
               PopupMenuButton<String>(
                 tooltip: 'Azioni medicina',
@@ -661,7 +725,121 @@ class _TherapyMedicineTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              if (times.isEmpty)
+                const _MedicineMetaChip(
+                  icon: Icons.schedule,
+                  label: 'Nessun orario',
+                )
+              else ...[
+                for (final time in visibleTimes)
+                  _MedicineMetaChip(
+                    icon: Icons.schedule,
+                    label: time.format(context),
+                  ),
+                if (extraTimes > 0)
+                  _MedicineMetaChip(icon: null, label: '+$extraTimes'),
+                _DayPeriodChip(time: times.first),
+              ],
+              _MedicineMetaChip(
+                icon: Icons.inventory_2_outlined,
+                label:
+                    '${Medicine.formatQuantity(medicine.stockQuantity)} '
+                    'rimaste',
+                foreground: isLowStock ? AppColors.warning : null,
+                background: isLowStock ? AppColors.warningTint : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chip informativo compatto per la tile medicina (orario, scorta, extra).
+class _MedicineMetaChip extends StatelessWidget {
+  final IconData? icon;
+  final String label;
+  final Color? foreground;
+  final Color? background;
+
+  const _MedicineMetaChip({
+    required this.icon,
+    required this.label,
+    this.foreground,
+    this.background,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = foreground ?? AppColors.inkSoft;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: background ?? AppColors.border.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: fg),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chip fascia giornata (Mattina/Pomeriggio/Sera) derivato dall'orario:
+/// pura presentazione, nessuna logica di dominio (mockup 10).
+class _DayPeriodChip extends StatelessWidget {
+  final TimeOfDay time;
+
+  const _DayPeriodChip({required this.time});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon) = switch (time.hour) {
+      < 12 => ('Mattina', Icons.wb_sunny_outlined),
+      < 18 => ('Pomeriggio', Icons.wb_twilight_outlined),
+      _ => ('Sera', Icons.nightlight_outlined),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.primary800),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.primary800,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -15,12 +15,15 @@ class AppSpacing {
 class AppRadius {
   AppRadius._();
 
-  /// Input, chip.
-  static const double sm = 10;
+  /// Input, chip quadrati, tile icona.
+  static const double sm = 12;
 
   /// Card standard - unico raggio per tutte le card dell'app.
-  static const double md = 16;
+  static const double md = 20;
 
-  /// Hero card, sheet, navbar.
+  /// Hero card, sheet, dialog.
   static const double lg = 24;
+
+  /// Bottoni e chip a pillola (mockup finali: CTA sempre pill).
+  static const double pill = 999;
 }

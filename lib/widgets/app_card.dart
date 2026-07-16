@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 
-/// Card bianca standard del design system "Calm Precision": bordo hairline,
-/// raggio unico, ombra leggera opzionale. Sostituisce le varianti locali
-/// "container bianco con bordo grigio" duplicate in piu' schermate.
-/// Non ancora cablata in nessuna schermata esistente.
+/// Card bianca standard del design system Medora: superficie morbida con
+/// ombra diffusa leggera e hairline appena percettibile (linguaggio dei
+/// mockup finali, docs/ui_mockup_reference). Unica card ammessa nell'app.
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -17,7 +16,7 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.lg),
     this.onTap,
-    this.elevated = false,
+    this.elevated = true,
   });
 
   @override
@@ -26,13 +25,16 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.6),
+          width: 1,
+        ),
         boxShadow: elevated
             ? [
                 BoxShadow(
-                  color: AppColors.ink.withValues(alpha: 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: AppColors.ink.withValues(alpha: 0.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
                 ),
               ]
             : null,

@@ -1,22 +1,24 @@
-# Roadmap Full UI Redesign — Medora "Calm Precision"
+# Roadmap Full UI Redesign — Medora "Soft Clinical"
 
-Ordine adottato: quello proposto dall'utente, con la navbar in Sprint 2 (subito dopo i token, prima della Dashboard, perché la Dashboard dipende visivamente dalla navbar). Dettaglio Medicina separato dal Form (Sprint 6 dopo Sprint 5) per poter unificare prima la logica di raggruppamento schedule nel form e poi riapplicarla al dettaglio senza duplicarla due volte.
+**Fase 2 (corrente): implementazione mockup finali.** Fonte visiva: `docs/ui_mockup_reference/` + `docs/UI_FINAL_MOCKUP_REFERENCE.md` (UI bible, decisioni vincolanti). La fase 1 (Calm Precision, sprint 0-4 + hotfix + fix icone) è storicizzata in fondo.
 
 | Sprint | Obiettivo | File probabili | Non toccare | Rischio | Output atteso |
 |---|---|---|---|---|---|
-| **0** | Direzione UI + documentazione handoff | `docs/UI_*.md` | tutto il codice app | nessuno | questo set di documenti (fatto) |
-| **1** ✅ | Design tokens + componenti base | `lib/theme/app_colors.dart`, `app_dimens.dart`, `responsive.dart`; `lib/utils/color_parser.dart`, `weekday_labels.dart`; `lib/widgets/app_card.dart`, `status_chip.dart`; restyle `primary_button.dart`, `empty_state.dart`, `app.dart` | provider, repository, services, data | basso | fatto — `flutter analyze`/`test`/`build apk --debug` verdi |
-| **2** ✅ | App shell + nuova bottom navbar | `lib/widgets/app_bottom_nav_bar.dart`, `quick_action_sheet.dart`, `dashboard_screen.dart` (shell + quick actions) | logica tab index, Provider | basso (Opzione A, no CustomClipper) | fatto — navbar pill + `+` con quick sheet, `flutter analyze`/`test`/`build apk --debug` verdi |
-| **3** ✅ | Nuova Dashboard | `dashboard_screen.dart`, nuovi `NextIntakeHeroCard`/`TodayIntakeCard`/`LowStockMiniCard`/`DashboardSectionHeader` | `MedicineProvider`, calcolo next-intake | basso (solo lettura via getter esistenti) | fatto — sezioni Header/Hero/Oggi/Scorte/Terapie, mini-stat "Attività di oggi" rimossa, larghezza fissa terapie corretta |
-| **4** | Terapie e Dettaglio Terapia | `medicines_screen.dart`, `therapy_detail_screen.dart` | azioni archivia/elimina/cambio terapia | medio | liste/dettaglio coerenti, riuso card medicina |
-| **5** | Form Medicina | `add_medicine_screen.dart` | validazione/salvataggio verso Provider | medio-alto (file più complesso) | form sezionato, estrazione logica raggruppamento schedule in helper condiviso |
-| **6** | Dettaglio Medicina | `medicine_detail_screen.dart` | azioni edit/cambio terapia/elimina | medio | riuso helper schedule dello Sprint 5, fix box larghezza fissa 132px |
-| **7** | Storico e Statistiche | `history_screen.dart`, `statistics_screen.dart` | `HistoryFilterService`, `HistoryStatisticsService`, formula aderenza | medio (CustomPainter del grafico) | filtri a sheet, statistiche più visive, grafico restilizzato |
-| **8** | Scorte, Impostazioni, Profilo | `stock_screen.dart`, `settings_screen.dart`, `profile_screen.dart` | `NotificationService`, stato permessi reale | basso | fix onestà UI Backup/PDF, fix `SizedBox(width:116)`, riuso componenti |
-| **9** | Responsive QA Samsung Z Flip | trasversale | nessuna logica | basso | verifica sistematica 280-344px, touch target, tastiera aperta |
+| **A** ✅ | Design system finale dai mockup: token aggiornati (palette Soft Clinical, radius 12/20/24/pill), AppCard soft-shadow, StatusChip tono `warning`, bottoni a pillola, navbar senza indicatore, UI bible | `lib/theme/`, `app_card.dart`, `status_chip.dart`, `primary_button.dart`, `app.dart`, `app_bottom_nav_bar.dart`, docs | schermate, provider, servizi | basso | fatto — analyze/test/build verdi |
+| **B** ✅ | Dashboard da mockup 04: hero bianca con pill orario (via gradiente), card unica "oggi" a righe+divider, scorte basse in `warningTint` (solo se presenti), Azioni rapide a tile, header avatar-iniziali + saluto time-aware, Saltata→warning, rimossa sezione Terapie attive (ridondante con tab) | `dashboard_screen.dart`, `next_intake_hero_card.dart`, `today_intake_card.dart`, `low_stock_mini_card.dart` | markTaken/Skipped, getter provider | medio | fatto — 121/121 test, build ok; 4 asserzioni copy nei test aggiornate al nuovo microcopy |
+| **C** ✅ | Terapie + Dettaglio terapia da mockup 07/08/10: TherapyCard con cerchio icona + chip "N medicine" tinta, ricerca a pillola, empty "nessuna attiva" con capsula 3D e CTA tonale, header dettaglio a cerchio 56, tile medicina con chip orario/fascia giornata/scorta, riga "Aggiungi medicina" tratteggiata (CustomPainter), empty medicine con blister 3D | `medicines_screen.dart`, `therapy_detail_screen.dart`, `therapy_card.dart` | archivia/elimina/PDF logic (non toccati) | medio | fatto — 121/121, build ok. Rimandati: icone terapia estese (~8) + picker (spostati a sprint D o dedicato), card Note (nessun campo note nel model) |
+| **D** | Form medicina + Dettaglio medicina da mockup 11/12/13: sezioni-card con cerchio icona, giorni a quadratini toggle, orari a pill, card scorta con barra, card storico recente (cache esistente), coppia CTA | `add_medicine_screen.dart`, `medicine_detail_screen.dart` | validazione/salvataggio, schedule logic | alto (file più grossi) | form leggibile + dettaglio = mockup; unificare qui l'helper raggruppamento schedule (debito noto) |
+| **E** | Storico + Statistiche da mockup 14/15: filtri in sheet con bottone "Filtri", righe con cerchio icona+terapia, anello aderenza CustomPainter, area chart sfumata, chip tripletta, messaggio incoraggiante rule-based | `history_screen.dart`, `statistics_screen.dart` | HistoryFilterService, HistoryStatisticsService, formula aderenza | medio-alto (painter) | storico/statistiche = mockup, zero dipendenze nuove |
+| **F** | Scorte + Ricarica da mockup 16/17/22: header riepilogo, card con barra e Ricarica inline, bottom sheet ricarica (stessa logica addStock) | `stock_screen.dart` | addStock, soglie, notifiche scorta | basso | scorte = mockup |
+| **G** | Profilo + Impostazioni da mockup 18/19/20: card identità con iniziali, tripletta stat, accessi rapidi onesti, permessi a card, fix `SizedBox(width:116)` | `profile_screen.dart`, `settings_screen.dart` | NotificationService, permessi reali | basso | profilo/impostazioni = mockup senza feature finte |
+| **H** | Onboarding + Splash da mockup 01/02/03 (richiede asset logo dal designer; senza asset: solo splash testuale + pagina benvenuto/notifiche) | nuovi `splash/onboarding` screen, `main.dart`/`app.dart` (route iniziale) | richiesta permessi esistente (riusarla) | medio (first-run flow) | primo avvio curato, skip se già configurato |
+| **I** | Polish Z Flip + accessibilità: passata sistematica 280-344px, touch target ≥48, contrasti (inkFaint solo su testi non essenziali), tastiera aperta, semantica screen reader | trasversale | logica | basso | QA finale documentata |
 
-## Regole di esecuzione
-- Uno sprint = una PR/commit tematico, mai tutto insieme.
-- Dopo ogni sprint: `flutter analyze` + `flutter test` prima di passare al successivo.
-- Sprint 2 (navbar) e Sprint 5-6 (schedule) richiedono test manuale su emulatore/dispositivo oltre ai test automatici.
-- Qualsiasi modifica che tocchi Provider/repository/servizi durante uno sprint UI va segnalata esplicitamente come rischio prima di procedere, non applicata silenziosamente.
+## Regole di esecuzione (invariate)
+- Uno sprint = un commit tematico. Dopo ogni sprint: `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test`, `flutter build apk --debug`.
+- Sprint B, D, E richiedono anche verifica visiva su device reale (Z Flip).
+- Mai copiare dai mockup gli elementi elencati in UI bible §28.
+- Qualsiasi tocco a Provider/repository/servizi va dichiarato come rischio prima di procedere.
+
+## Storico Fase 1 — Calm Precision (completata)
+- Sprint 0 ✅ direzione + docs · Sprint 1 ✅ token/componenti base · Sprint 2 ✅ navbar M3 (dopo 2 iterazioni custom scartate) · Sprint 3 ✅ Dashboard v1 · Hotfix Design Gate ✅ (button theme, filtro attive, avatar, dose fallback) · Sprint 4 ✅ Terapie/Dettaglio v1 · Fix icone ✅ (IconData dinamico → costanti; Material in _SettingsSection).

@@ -1,25 +1,29 @@
-# Design System — Medora "Calm Precision"
+# Design System — Medora "Soft Clinical"
 
-Specifica tecnica dei token e componenti da implementare negli Sprint Redesign. Riferimento normativo per l'implementazione (evita di re-decidere stile ad ogni sprint).
+Specifica tecnica dei token e componenti. **Aggiornato ai mockup finali** (`docs/ui_mockup_reference/`): per anatomia delle schermate e decisioni visive vincolanti vedi `docs/UI_FINAL_MOCKUP_REFERENCE.md` (UI bible), che prevale su questo file in caso di conflitto.
 
-## Color tokens
-
-Definire in un file nuovo, es. `lib/theme/app_colors.dart` (Sprint Redesign 1), senza toccare provider/servizi:
+## Color tokens (implementati in `lib/theme/app_colors.dart`)
 
 ```dart
-primary700   #1F5C4A   // brand, CTA primarie, stato "assunta"
-primary800   #164536   // testo su tint, pressed/hover
-primaryTint  #E4EFE9   // sfondi chip/badge positivi
-gold         #B8894A   // accento caldo, avvisi scorte
-goldTint     #F5EBDD   // sfondo badge scorte/avviso
-ink          #1B211E   // testo primario
-inkSoft      #5C6864   // testo secondario
-inkFaint     #8A9490   // caption/placeholder
-background   #F3F5F3   // sfondo app (scaffold)
-surface      #FFFFFF   // card/superfici
-border       #E1E7E3   // hairline
-critical     #B14834   // stato "dimenticata", errori
-info         #4C6B85   // stato "programmata"
+primary700    #1E6B5A   // brand, CTA, tab attiva, positivo
+primary800    #124C3E   // pressed, testo su tint verde
+primaryTint   #E6F2EC   // sfondi chip/badge positivi, cerchi icona
+mint          #A8DCC6   // riempimenti decorativi (barre, ring)
+warning       #B4711E   // scorta bassa, saltata, in arrivo (testo/icona)
+warningTint   #FBF1DC   // sfondo avvisi ambra
+gold/goldTint = alias di warning/warningTint (compatibilita' legacy)
+lavender      #7A70C9   // accento decorativo raro, mai semantico
+lavenderTint  #ECEAF9
+ink           #24313F   // titoli (ardesia)
+inkSoft       #4A5568   // testo secondario
+inkFaint      #94A0AC   // caption, tab inattive (mai per info essenziali)
+background    #FCFAF7   // canvas bianco caldo
+surface       #FFFFFF   // card
+border        #E6E8EB   // hairline (60% alpha dentro AppCard)
+critical      #B14834   // dimenticata, errori
+criticalTint  #F9E7E1
+info          #4C6B85   // programmata/informativo
+infoTint      #E7EEF3
 ```
 
 Tema resta **solo light** (nessuna modifica a questa decisione già presa nel progetto).
@@ -39,27 +43,28 @@ Font: resta il default di sistema/Roboto (già in bundle per l'export PDF) — n
 ## Spacing & radius
 
 - Spacing scale: 4, 8, 12, 16, 24, 32, 40.
-- Radius: `sm=10` (input/chip), `md=16` (card standard — **unico raggio per tutte le card**), `lg=24` (hero card, sheet, navbar).
-- Elevazione: bordo hairline (`border`) + ombra sottile opzionale (blur 12-16, alpha 0.03-0.05). Mai ombre pesanti.
+- Radius (aggiornati Sprint A): `sm=12` (input, tile icona), `md=20` (card standard — **unico raggio per tutte le card**), `lg=24` (sheet/dialog/hero), `pill=999` (bottoni e chip).
+- Elevazione card: ombra diffusa `ink` 5% alpha blur 18 offset (0,6) + hairline `border` al 60% (linguaggio soft-shadow dei mockup). Mai ombre dure o annidate in liste dense (`elevated: false` dove serve).
 
 ## Regole componenti
 
-### AppCard (nuovo, sostituisce le 15+ varianti locali)
-Bianco, `radius md`, bordo `border` 1px, padding 16. Usare ovunque serva "card bianca con bordo grigio" (oggi reimplementata in dashboard, statistics, history, profile, settings).
+### AppCard (unica card ammessa)
+Bianca, `radius md=20`, ombra soft di default (`elevated: true`), hairline attenuata. Anatomia riga tipo mockup: cerchio icona tinta 40-48px + titolo/sottotitolo + chip/valore a destra + chevron opzionale.
 
 ### Bottoni
-- `PrimaryButton`: CTA principale di ogni schermata/form — gradiente `primary700→primary800`, radius 14-16. **Uno solo per vista.**
-- `SecondaryButton`: outline `primary700`, azioni secondarie (es. "Aggiungi programmazione").
+- `PrimaryButton`: CTA principale — **pillola piena `primary700`** (gradiente eliminato negli Sprint mockup), testo bianco. **Uno solo per vista.**
+- `SecondaryButton`: pillola outline `primary700`.
+- `FilledButton`/`OutlinedButton`/`ElevatedButton` ereditano la pillola dal tema globale (`app.dart`).
 - Azioni distruttive: solo testo/icona in `critical`, mai bottone pieno rosso.
-- Vietato: `ElevatedButton`/`FilledButton` grezzi fuori da questi due componenti.
 
-### StatusChip
-| Stato | Sfondo | Testo |
+### StatusChip (mappa vincolante, UI bible §10)
+| Stato | Tone | Sfondo/Testo |
 |---|---|---|
-| Assunta | `primaryTint` | `primary800` |
-| Saltata | `border` | `inkSoft` |
-| Dimenticata | tint terracotta chiaro (`#F6E4DF`) | `critical` |
-| Programmata | tint blu-grigio chiaro (`#E7EEF3`) | `info` |
+| Assunta / Attiva / Nella norma | `positive` | `primaryTint` / `primary800` |
+| Saltata / Scorta bassa / In arrivo | `warning` | `warningTint` / `warning` |
+| Archiviata / Inattiva | `neutral` | `border` / `inkSoft` |
+| Dimenticata / errore | `critical` | `criticalTint` / `critical` |
+| Programmata / informativo | `info` | `infoTint` / `info` |
 
 ### Empty state
 Riusare sempre `EmptyState` esistente (icona in cerchio tinta `primaryTint`, titolo, descrizione, bottone opzionale). Vietato ricrearne varianti locali (oggi duplicato in `medicines_screen.dart`, `history_screen.dart` x2).
@@ -73,8 +78,8 @@ Due varianti: successo (`primaryTint` bg, `primary800` testo/icona check) ed err
 ### Form
 Sezioni con intestazione (icona + titolo) racchiuse in `AppCard`, non lista piatta di campi. Pattern responsive esistente (`LayoutBuilder` breakpoint 340px per campi affiancati) da centralizzare in un helper unico (es. `context.isNarrow`) e riusare per color/icon picker.
 
-## Bottom navbar — spec componente (revisione dopo hotfix UI)
+## Bottom navbar — spec componente (allineata ai mockup, Sprint A)
 
-`AppBottomNavBar` (`lib/widgets/app_bottom_nav_bar.dart`) è un `NavigationBar` Material 3 nativo avvolto in `Material(elevation: 8)` + `SafeArea(top: false)`, restilizzato via `NavigationBarThemeData`: `indicatorColor: primaryTint`, icona/label attivi `primary700`/`primary800`, inattivi `inkFaint`, `height: 64`. Nessun bottone centrale, nessun `CustomClipper`, nessuna geometria custom — scelta deliberata dopo due iterazioni scartate (pill con bottone sospeso, poi variante piatta con bottone sospeso) giudicate troppo "custom per forza" per un'app medical-tech seria.
+`AppBottomNavBar` (`lib/widgets/app_bottom_nav_bar.dart`) è un `NavigationBar` Material 3 nativo avvolto in `Material(elevation: 8)` + `SafeArea(top: false)`: **indicatore trasparente** (via il pill M3, come da mockup), tab attiva icona+label `primary700` w700, inattive `inkFaint`, `height: 64`, 4 tab fisse Home/Terapie/Storico/Profilo. Nessun bottone centrale, nessuna quinta tab Statistiche (decisione UI bible §12). Nessun `CustomClipper` — le due iterazioni custom restano scartate.
 
-Le quick action (`quick_action_sheet.dart`, invariato) si aprono da un'icona `+` nell'header della Dashboard (`_HeaderIconButton` in `dashboard_screen.dart`), non dalla navbar.
+Le quick action (`quick_action_sheet.dart`) si aprono dall'icona `+` nell'header della Dashboard; dallo Sprint B si aggiunge anche la sezione "Azioni rapide" a tile in fondo alla Dashboard (mockup 04/06).

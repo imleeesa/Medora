@@ -1,83 +1,56 @@
 # AI/Claude UI Handoff — Medora
 
-Leggi solo questo file per riprendere il lavoro UI senza rileggere tutto il repo. Dettagli completi in `docs/UI_REDESIGN_DIRECTION.md` e `docs/UI_DESIGN_SYSTEM.md`. Roadmap in `docs/UI_SPRINT_ROADMAP.md`.
+Leggi solo questo file per riprendere il lavoro UI. Gerarchia documenti: **`UI_FINAL_MOCKUP_REFERENCE.md` (UI bible, vincolante)** → `UI_DESIGN_SYSTEM.md` (token/componenti) → `UI_SPRINT_ROADMAP.md` (sprint A-I) → `UI_REDESIGN_DIRECTION.md` (storico fase 1, solo contesto). Mockup sorgente: `docs/ui_mockup_reference/` (26 PNG, già analizzati e distillati nella bible — non rileggerli se non per dettagli visivi di uno sprint specifico).
 
-## Direzione scelta
+## Direzione attuale
 
-**Calm Precision** — ibrido calm clinical + premium health tracker. Verde profondo (`#1F5C4A`) come brand, accento ottone (`#B8894A`) usato con parsimonia, neutri caldi, card unica (`radius 16`, bordo `#E1E7E3`, no ombre pesanti). Palette e token completi in `UI_DESIGN_SYSTEM.md`.
+**"Soft Clinical"** (Fase 2, dai mockup finali): canvas caldo `#FCFAF7`, card bianche soft-shadow radius 20, cerchi icona tinta, chip e CTA a pillola, verde `#1E6B5A`, ink ardesia `#24313F`, ambra per avvisi, niente gradienti. Sostituisce Calm Precision (fase 1, completata: sprint 0-4 + hotfix gate + fix icone).
 
-Artifact di riferimento (mockup visivo palette/componenti/Dashboard/Terapie/Statistiche): "Medora — Calm Precision" — se non più recuperabile, la direzione è comunque interamente ricostruita in questi 4 file markdown, non serve rigenerarlo.
+## Regole non negoziabili
 
-## Regole principali (non negoziabili)
+- Architettura: UI → Provider → Services/Repositories → Drift. Mai classi Drift nella UI. Niente logica nelle schermate.
+- Nessuna nuova dipendenza (grafici/navbar/font/PDF-preview: tutto con widget Flutter standard + CustomPainter).
+- MAI `IconData(codePoint)` dinamico — solo `Icons.xxx` costanti (bug tree-shaking già risolto; per le terapie usare `kTherapyIconChoices`/`therapyIconForCodePoint` in `lib/utils/therapy_icons.dart`).
+- Mockup = riferimento visivo, NON funzionale. Lista completa del "non copiare" in bible §28 (campanella badge, 5ª tab Statistiche, calendario storico, backup/crittografia/assistenza finti, anteprima PDF renderizzata, ecc.).
+- Un solo stile card (`AppCard`), mappa StatusChip vincolante (bible §10), una CTA primaria per vista.
+- Uno sprint = un commit. Tocchi a Provider/servizi vanno dichiarati prima.
 
-- Architettura: UI → Provider → Services/Repositories → Drift. Mai classi Drift nella UI.
-- Nessuna logica di business nelle schermate durante il redesign.
-- Nessuna nuova dipendenza UI esterna (niente librerie charting/navbar di terze parti).
-- Un solo stile di card/bottone/chip in tutta l'app (vedi `UI_DESIGN_SYSTEM.md`).
-- Uno sprint = una modifica tematica, mai tutto in un commit.
-- Qualsiasi tocco a Provider/repository/servizi durante uno sprint UI va segnalato come rischio prima di procedere, non fatto silenziosamente.
+## Stato: Sprint A completato
 
-## Navbar (decisione finale, dopo 2 iterazioni scartate)
+Token aggiornati (`app_colors.dart` palette Soft Clinical + `warning`/`lavender`; `app_dimens.dart` radius 12/20/24/pill), `AppCard` soft-shadow di default, `StatusChip` con tono `warning`, bottoni tutti a pillola (tema + `PrimaryButton` ora solido, gradiente eliminato), navbar senza indicatore pill. Nessuna schermata ridisegnata in questo sprint: le schermate fase-1 hanno assorbito i token automaticamente; le legacy (storico/statistiche/scorte/profilo/impostazioni/form) restano vecchie fino al loro sprint. `gold`/`goldTint` sono alias di `warning`/`warningTint`.
 
-Le prime due versioni (pill con bottone `+` sospeso, poi variante bianca piatta con bottone sospeso) non convincevano esteticamente — troppo "custom per forza" per un'app medical-tech seria. **Decisione finale**: `NavigationBar` Material 3 nativo (`lib/widgets/app_bottom_nav_bar.dart`), 4 tab Home/Terapie/Storico/Profilo, restilizzato solo via `NavigationBarThemeData` (indicatorColor `primaryTint`, icona/label attivi `primary700`/`primary800`, inattivi `inkFaint`), **nessun bottone centrale**. Più stabile, meno codice custom, coerente con "seria e ordinata".
+## Sprint B — fatto
 
-Le quick action (Aggiungi terapia, Aggiungi medicina, Registra assunzione, Ricarica scorta) sono rimaste **invariate** (`quick_action_sheet.dart` non toccato) ma ora si aprono da un'icona `+` nell'header della Dashboard (`_Header` in `dashboard_screen.dart`), accanto all'avatar profilo — non più dalla navbar.
+Dashboard = mockup 04: header con avatar-iniziali (→Profilo), saluto time-aware, `+` quick actions; titolo grande "Oggi"+data; hero bianca `NextIntakeHeroCard` (pill orario, dose·terapia, countdown, chip scorta bassa — gradiente eliminato); `TodayIntakesCard` unica a righe+divider (icona tinta per stato, chip: Assunta=positive, Saltata=warning, Dimenticata=critical, Da assumere=info; azioni Assunta/Saltata identiche a prima, solo compatte); card Scorte basse in `warningTint` con "N rimaste" (mostrata SOLO se esistono scorte basse); sezione Azioni rapide (3 tile: Aggiungi medicina/Aggiungi terapia/Vedi storico→tab). **Rimossa la sezione "Terapie attive"** (ridondante con la tab, assente nel mockup). Empty state copy mockup 05 ("Nessuna terapia ancora"/"Aggiungi terapia"). 4 asserzioni di copy nei test aggiornate di conseguenza (`widget_test.dart`, `medicine_provider_notification_test.dart:910`) — nessun test di logica toccato.
 
-## Sprint Redesign 1 — fatto
+## Sprint asset 3D — fatto
 
-Creati: `lib/theme/app_colors.dart`, `app_dimens.dart`, `responsive.dart` (token colore/spacing/radius/breakpoint); `lib/utils/color_parser.dart`, `weekday_labels.dart` (utility pure non ancora cablate); `lib/widgets/app_card.dart`, `status_chip.dart` (nuovi, non ancora cablati). Restylati con i nuovi token (stessa API, solo colori/radius): `primary_button.dart`, `empty_state.dart`, `app.dart` (ColorScheme, AppBar, TextTheme, InputDecorationTheme, ElevatedButtonTheme). Cambio visivo reale ma contenuto: verde più profondo su bottoni/empty state/focus border ovunque già cablati; nessuna schermata redisegnata. `flutter analyze`, `flutter test` (121 test) e `flutter build apk --debug` verdi.
+Asset AI approvati in `assets/images/medora/` (7 PNG RGBA 1024-1254px; **manca `calendar_3d_check.png`** dell'elenco originale — l'illustrazione empty contiene comunque un calendario). Registrati in `pubspec.yaml` (`- assets/images/medora/`). Nuovo widget `lib/widgets/medora_3d_asset.dart` (`Medora3DAsset`): path in costanti statiche, decorativo di default (`ExcludeSemantics`), `semanticLabel` opzionale, `errorBuilder` che degrada a spazio vuoto. Usati SOLO in punti editoriali: `empty_pills_illustration` → empty Dashboard; `heartPulse` → empty Terapie (non in ricerca); `capsuleMint` 64px → destra della hero card (mockup 04); `pillAmber` 28px in cerchio bianco → header card Scorte basse (mockup 22). `EmptyState` ha ora il param opzionale `imageAsset`. **Riservati per sprint futuri**: `blisterSoft` (F Scorte), `bellSoft` (H onboarding), `pillLavender` (D dettaglio medicina). MAI asset 3D in navbar, chip, righe dense, bottoni.
 
-## Sprint Redesign 2 — fatto
+## Sprint C — fatto
 
-Creati `lib/widgets/app_bottom_nav_bar.dart` (navbar pill flottante, Opzione A: nessun `CustomClipper`, bottone centrale sovrapposto solo via `Stack`/`Positioned`) e `lib/widgets/quick_action_sheet.dart` (bottom sheet generico `QuickAction`). `dashboard_screen.dart` aggiornato: `_PremiumBottomNavigationBar` rimossa, sostituita da `AppBottomNavBar`; nuovo `_openQuickActions` con 4 voci (Aggiungi terapia, Aggiungi medicina con guardia "nessuna terapia" riusata da `medicines_screen.dart`, Registra assunzione → switch a tab Home, Ricarica scorta → `StockScreen`) — tutte pura navigazione, zero logica nuova. `IndexedStack`/indice tab invariati.
+Terapie (mockup 07/08): `TherapyCard` con cerchio icona nel colore terapia (attenuato per archiviate), chip "N medicine" tinta con icona link, chip stato in alto a destra, chevron; titolo 28 coerente con Dashboard; ricerca a pillola; empty "nessuna terapia attiva" = card con `capsuleMint` 96px + CTA tonale (`_NoActiveTherapiesCard`). Dettaglio (mockup 10): header con cerchio 56; tile medicina su due livelli (riga identità + `Wrap` di chip: orari max 2 + "+N", fascia giornata Mattina/Pomeriggio/Sera derivata dall'ora — pura presentazione, scorta "N rimaste" in ambra se sotto soglia); "Aggiungi medicina" ora riga tratteggiata full-width (`_DashedRRectPainter`, disabilitata se archiviata); empty medicine con `blisterSoft` 96px. **Logica non toccata**: `_handleAction`/`_exportPdf`/`_confirmDeleteMedicine`/ricerca/sezioni invariati. Rimandati: espansione icone terapia (~8) + picker (bible §24, farlo con Sprint D o micro-sprint), card Note (il model Therapy non ha campo note: solo description, già nell'header).
 
-## Sprint Redesign 3 — fatto
+## Prossimo sprint: D — Form Medicina + Dettaglio Medicina (mockup 11/12/13)
 
-Dashboard riorganizzata in: Header (invariato, con `+`), `NextIntakeHeroCard` (hero, mostra anche terapia e scorta bassa se pertinente), `_TodayIntakesSection`/`TodayIntakeCard` (con `StatusChip`), `_LowStockSection`/`LowStockMiniCard` (tono ottone, mai rosso/arancio), `_TherapiesSection`/`_TherapyChipCard` (larghezza `IntrinsicWidth` + `ConstrainedBox(min:152, max:220)`, non più fissa a 178px). **Rimossa** la sezione mini-stat "Attività di oggi" (ridondante con Oggi/Terapie). Marcatura Assunta/Saltata invariata (stesso `MedicineProvider.markMedicineAsTaken/Skipped`), solo relocata in `today_intake_card.dart`. Nomi terapia risolti con `provider.getTherapyById` (getter già esistente, sola lettura).
-
-Nuovi widget in `lib/widgets/`: `next_intake_hero_card.dart`, `today_intake_card.dart`, `low_stock_mini_card.dart`, `dashboard_section_header.dart`. Prima adozione reale di `parseHexColor` (Sprint 1) e `AppCard`/`StatusChip` (Sprint 1, prima volta cablati in una schermata).
-
-## Sprint Hotfix Design Gate — fatto
-
-Dopo una design review (Fable), 4 fix applicati prima di Sprint 4, tutti solo presentazione:
-- `lib/app.dart`: aggiunti `filledButtonTheme`/`outlinedButtonTheme` sui token (`primary700`, `AppRadius.md`) — prima `FilledButton`/`OutlinedButton` (incluso Assunta/Saltata) usavano il verde tonale M3 derivato dal seed, non il token esatto.
-- `dashboard_screen.dart`: sezione "Terapie attive" ora filtra `therapy.isActive` (prima mostrava anche archiviate).
-- `dashboard_screen.dart`: avatar profilo nell'header ora tappabile, passa a tab Profilo (`onOpenProfile` come `onQuickActions`).
-- `next_intake_hero_card.dart` / `today_intake_card.dart`: la dose si mostra solo se `medicine.dose.trim().isNotEmpty` (mai più "Dose non specificata" in UI); nessun cambio al model/a `doseLabel`.
-
-## Prossimo sprint: Sprint Redesign 4 — Terapie e Dettaglio Terapia
-
-Riusare `AppCard`/`StatusChip`/`DashboardSectionHeader`/`parseHexColor`; separare visivamente terapie attive/archiviate; allineare `TherapyCard` esistente ai token; medicine nel dettaglio terapia con lo stesso linguaggio di `TodayIntakeCard`. Non toccare archiviazione/eliminazione/export PDF.
-
-Roadmap completa (sprint 0-9) in `docs/UI_SPRINT_ROADMAP.md`.
+Sezioni-card con cerchio icona, giorni a quadratini toggle, orari a pill, card scorta con barra, card storico recente (cache provider esistente), coppia CTA. Qui va chiuso il debito: helper condiviso raggruppamento schedule (form ↔ dettaglio). Dettagli: bible §16-17.
 
 ## File da NON toccare in nessuno sprint UI
 
-`lib/providers/medicine_provider.dart`, tutto `lib/repositories/`, tutto `lib/data/` (incl. `local_database.g.dart`), `lib/services/*` (notifiche, CSV, PDF, storico, missed planner), tutto `lib/models/`, `android/app/src/main/AndroidManifest.xml`, `pubspec.yaml`/`pubspec.lock`, `assets/fonts/`, `test/` (salvo nuovi widget test aggiunti per le modifiche UI stesse).
+`lib/providers/medicine_provider.dart`, `lib/repositories/`, `lib/data/`, `lib/services/*`, `lib/models/`, `AndroidManifest.xml`, `pubspec.yaml`/lock, `assets/fonts/`, Gradle/Kotlin/AGP, `test/` (salvo nuovi widget test per le modifiche UI).
 
 ## Comandi test dopo ogni sprint
 
 ```bash
-flutter pub get
-dart format lib test
-dart analyze
-flutter analyze
-flutter test
-flutter build apk --debug
+flutter pub get && dart format lib test && dart analyze && flutter analyze && flutter test && flutter build apk --debug
 ```
 
-## Note Samsung Z Flip
+## Note Z Flip / accessibilità
 
-- Nessuna larghezza fissa in px per contenitori di contenuto (oggi presenti: card riepilogo terapia 178px, box giorni dettaglio medicina 132px, tile notifiche impostazioni 116px — da correggere negli sprint dedicati).
-- Breakpoint responsive unico consigliato: 340px (pattern già esistente in `add_medicine_screen.dart` per i campi scorte, da centralizzare in un helper `context.isNarrow`).
-- Touch target minimo 48x48.
-- Test manuale a 280px, 320px, 344px (Z Flip aperto) + verifica con tastiera aperta.
-- Navbar: altezza totale (barra + bottone sollevato) ≤ 80dp per non erodere spazio verticale.
+Niente larghezze fisse (residuo noto: `SizedBox(width:116)` in settings → Sprint G). Breakpoint unico 340px (`context.isNarrowScreen`). Touch target ≥48. `inkFaint` mai per informazioni essenziali. Test manuale 280/320/344px + tastiera aperta. Device reale: SM F766B via ADB wireless (può cadere: riattivare debug wireless dal telefono).
 
-## Come continuare senza rileggere tutto
+## Asset mancanti / decisioni aperte
 
-1. Leggi questo file.
-2. Se lo sprint richiede palette/tipografia/spacing esatti → apri `UI_DESIGN_SYSTEM.md`.
-3. Se serve il "perché" di una scelta (navbar, dashboard, form, ecc.) → apri `UI_REDESIGN_DIRECTION.md`.
-4. Se serve solo sapere cosa viene dopo → `UI_SPRINT_ROADMAP.md`.
-5. Non rifare l'audit delle schermate: è già confluito in questi documenti.
+- Logo cuore Medora: nessun asset reale — Splash/Onboarding (Sprint H) parzialmente bloccati; in-app solo wordmark testuale.
+- Brand nei testi UI = "Medora" (rename tecnico package/appId resta rimandato, KNOWN_ISSUES).
+- Debito noto da chiudere nello Sprint D: logica raggruppamento schedule duplicata tra form e dettaglio medicina.

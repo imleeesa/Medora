@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'medora_3d_asset.dart';
 import 'primary_button.dart';
 
-/// Widget per mostrare uno stato vuoto
+/// Widget per mostrare uno stato vuoto. Puo' usare un'icona Material nel
+/// classico cerchio tinta oppure, se `imageAsset` e' valorizzato, un asset
+/// 3D Medora (decorativo, escluso dalla semantica: il messaggio resta
+/// affidato a titolo e descrizione).
 class EmptyState extends StatelessWidget {
   final String title;
   final String description;
   final IconData icon;
+  final String? imageAsset;
   final String? buttonLabel;
   final VoidCallback? onButtonPressed;
   final double iconSize;
@@ -16,6 +21,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.description,
     required this.icon,
+    this.imageAsset,
     this.buttonLabel,
     this.onButtonPressed,
     this.iconSize = 80,
@@ -29,16 +35,18 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icona con background
-            Container(
-              width: iconSize + 20,
-              height: iconSize + 20,
-              decoration: BoxDecoration(
-                color: AppColors.primaryTint,
-                borderRadius: BorderRadius.circular(iconSize / 2 + 10),
+            if (imageAsset != null)
+              Medora3DAsset(imageAsset!, size: 160)
+            else
+              Container(
+                width: iconSize + 20,
+                height: iconSize + 20,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint,
+                  borderRadius: BorderRadius.circular(iconSize / 2 + 10),
+                ),
+                child: Icon(icon, size: iconSize, color: AppColors.primary700),
               ),
-              child: Icon(icon, size: iconSize, color: AppColors.primary700),
-            ),
             const SizedBox(height: 24),
 
             // Titolo
@@ -58,10 +66,10 @@ class EmptyState extends StatelessWidget {
             Text(
               description,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w400,
-                color: Colors.grey[600],
+                color: AppColors.inkSoft,
                 height: 1.4,
                 letterSpacing: 0.2,
               ),

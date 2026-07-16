@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/therapy.dart';
 import '../providers/medicine_provider.dart';
+import '../utils/therapy_icons.dart';
 import '../widgets/primary_button.dart';
 
 class AddTherapyScreen extends StatefulWidget {
@@ -27,12 +28,7 @@ class _AddTherapyScreenState extends State<AddTherapyScreen> {
     '#C62828',
     '#546E7A',
   ];
-  final _icons = const [
-    Icons.spa,
-    Icons.favorite_outline,
-    Icons.monitor_heart_outlined,
-    Icons.medical_services_outlined,
-  ];
+  final _icons = kTherapyIconChoices;
 
   late String _selectedColor;
   late int _selectedIconCodePoint;

@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 
-/// Bottom navigation "Calm Precision": barra Material 3 standard, 4 tab,
-/// nessun bottone centrale sospeso. Scelta deliberata: un `NavigationBar`
-/// nativo e' piu' stabile, piu' leggibile e piu' coerente con un'app
-/// medical-tech seria di una forma custom "particolare a tutti i costi".
-/// Le azioni rapide (quick action sheet) sono ora raggiungibili dall'header
-/// della Dashboard, non da questa barra.
+/// Bottom navigation Medora: barra Material 3 standard, 4 tab, nessun
+/// bottone centrale. Stile mockup finali: barra bianca pulita, tab attiva
+/// verde senza indicatore a pillola (indicator trasparente), inattive
+/// grigio-ardesia. Le azioni rapide restano nell'header della Dashboard.
 class AppBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
@@ -37,7 +35,7 @@ class AppBottomNavBar extends StatelessWidget {
           data: NavigationBarThemeData(
             backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
-            indicatorColor: AppColors.primaryTint,
+            indicatorColor: Colors.transparent,
             indicatorShape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
@@ -47,7 +45,7 @@ class AppBottomNavBar extends StatelessWidget {
               return TextStyle(
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                color: selected ? AppColors.primary800 : AppColors.inkFaint,
+                color: selected ? AppColors.primary700 : AppColors.inkFaint,
               );
             }),
             iconTheme: WidgetStateProperty.resolveWith((states) {

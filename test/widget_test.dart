@@ -15,8 +15,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Buongiorno, Utente'), findsOneWidget);
-    expect(find.text('Non hai ancora aggiunto terapie'), findsOneWidget);
-    expect(find.text('Crea Terapia'), findsOneWidget);
+    // Il saluto e' time-aware, quindi il test verifica il nome da solo.
+    expect(find.text('Utente'), findsOneWidget);
+    expect(find.text('Nessuna terapia ancora'), findsOneWidget);
+    expect(find.text('Aggiungi terapia'), findsOneWidget);
   });
 }

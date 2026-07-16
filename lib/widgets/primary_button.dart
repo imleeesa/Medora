@@ -51,22 +51,12 @@ class _PrimaryButtonState extends State<PrimaryButton>
       child: Container(
         height: widget.height,
         decoration: BoxDecoration(
-          gradient: widget.isEnabled
-              ? const LinearGradient(
-                  colors: [AppColors.primary700, AppColors.primary800],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : LinearGradient(
-                  colors: [Colors.grey[300]!, Colors.grey[400]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          color: widget.isEnabled ? AppColors.primary700 : Colors.grey[350],
+          borderRadius: BorderRadius.circular(AppRadius.pill),
           boxShadow: widget.isEnabled
               ? [
                   BoxShadow(
-                    color: AppColors.primary700.withValues(alpha: 0.24),
+                    color: AppColors.primary700.withValues(alpha: 0.22),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -88,7 +78,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
                     widget.onPressed();
                   }
                 : null,
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -159,13 +149,13 @@ class SecondaryButton extends StatelessWidget {
           color: isEnabled ? AppColors.primary700 : Colors.grey[300]!,
           width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isEnabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
