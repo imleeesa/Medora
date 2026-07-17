@@ -13,6 +13,40 @@ Ogni voce deve includere:
 - motivazione;
 - stato.
 
+## 2026-07-17 - Sprint D: Form Medicina + Dettaglio Medicina Soft Clinical
+
+Tipo modifica: UI / Redesign / Refactor presentazione / Test.
+
+Descrizione:
+
+- `AddMedicineScreen` (mockup 11/12) e `MedicineDetailScreen` (mockup 13) riscritte su `FormSectionCard` (nuovo widget condiviso: cerchio icona tinta + titolo + contenuto);
+- form: sezioni Terapia associata, Dati principali, Dose opzionale, Programmazione (righe con pill giorni/orari, editor con toggle giorni a quadratini), Scorte, Colore (cerchi con check), Note; validazione, `_saveMedicine`, `_buildDose`/`_seedDose`, breakpoint scorte <340px invariati;
+- dettaglio: header a cerchio 52 con `StatusChip` Attiva/Inattiva, sezione Assunzione (dose mostrata solo se non vuota), sezione Scorta con barra (stessa euristica di `stock_screen.dart`), nuova sezione Storico recente (ultime 3 da `provider.intakeHistory`, solo se presenti), CTA Modifica/Cambia terapia;
+- nuova wiring UI di `toggleMedicineActive` (gia' presente in `MedicineProvider`, prima non collegata a nessuna schermata) nel menu azioni del dettaglio;
+- **debito tecnico chiuso**: raggruppamento schedule per display, prima duplicato identico tra le due schermate, ora centralizzato in `lib/utils/schedule_grouping.dart` (`ScheduleGrouping.groupsFor`/`groupSchedules`). Helper di sola presentazione: opera sempre su `MedicineSchedule` atomici reali, mai un prodotto cartesiano tra giorni e orari non correlati; il fallback su `medicine.times`/`medicine.daysOfWeek` resta solo per display quando `medicine.schedules` non ha entry attive, mai per generare nuove assunzioni operative;
+- nessuna modifica a database/Drift, repository, `MedicineProvider` (salvo lettura di un getter/metodo gia' esistente), notifiche, storico/statistiche, export CSV/PDF, scorte operative o missed planner.
+
+File creati:
+
+- `lib/utils/schedule_grouping.dart`;
+- `lib/widgets/form_section_card.dart`;
+- `test/schedule_grouping_test.dart` (8 test: singola/multiple programmazioni, merge stesso giorno-set, merge stesso orario, fallback legacy solo display, nessun prodotto cartesiano, schedule disattivati esclusi, "Tutti i giorni").
+
+File modificati:
+
+- `lib/screens/add_medicine_screen.dart`;
+- `lib/screens/medicine_detail_screen.dart`;
+- `test/medicine_provider_notification_test.dart` (copy aggiornata: "Dettaglio medicina"/"Modifica medicina"/"Salva modifiche"; `ensureVisible` prima del tap sul bottone Modifica, ora piu' in basso nel nuovo layout);
+- `docs/AI_CLAUDE_UI_HANDOFF.md`;
+- `docs/UI_SPRINT_ROADMAP.md`;
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Quinto sprint della Fase 2 "Soft Clinical": porta a termine il redesign di form e dettaglio medicina sui mockup finali e chiude, come richiesto, il debito di duplicazione della logica di raggruppamento schedule tra le due schermate, senza toccare la logica operativa di generazione delle assunzioni.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (134/134) e `flutter build apk --debug` superati.
+
 ## 2026-07-13 - Sprint Redesign 4 (redesign UI Calm Precision - Terapie e Dettaglio Terapia)
 
 Tipo modifica: UI / Redesign / Documentation.

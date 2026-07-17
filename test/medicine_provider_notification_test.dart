@@ -879,7 +879,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Dettagli Medicina'), findsOneWidget);
+      expect(find.text('Dettaglio medicina'), findsOneWidget);
       expect(find.text('medicine-1'), findsWidgets);
       expect(
         find.byKey(const ValueKey('medicine-schedule-time-8-0')),
@@ -906,7 +906,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Dettagli Medicina'), findsNothing);
+        expect(find.text('Dettaglio medicina'), findsNothing);
         expect(find.text('Nessuna terapia ancora'), findsOneWidget);
       },
     );
@@ -941,7 +941,7 @@ void main() {
       await tester.tap(find.text('medicine-1').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Dettagli Medicina'), findsOneWidget);
+      expect(find.text('Dettaglio medicina'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('medicine-schedule-time-23-59')),
         findsOneWidget,
@@ -1065,11 +1065,14 @@ void main() {
         ),
       );
 
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('medicine-detail-edit-button')),
+      );
       await tester.tap(
         find.byKey(const ValueKey('medicine-detail-edit-button')),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Modifica Medicina'), findsOneWidget);
+      expect(find.text('Modifica medicina'), findsOneWidget);
 
       await tester.enterText(
         find.byKey(const ValueKey('medicine-name-field')),
@@ -1084,8 +1087,8 @@ void main() {
         find.byKey(const ValueKey('medicine-warning-threshold-field')),
         '4',
       );
-      await tester.ensureVisible(find.text('Salva Modifiche'));
-      await tester.tap(find.text('Salva Modifiche'));
+      await tester.ensureVisible(find.text('Salva modifiche'));
+      await tester.tap(find.text('Salva modifiche'));
       await tester.pumpAndSettle();
 
       final updated = fixture.provider.getMedicineById('medicine-1')!;
@@ -1123,6 +1126,9 @@ void main() {
         ),
       );
 
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('medicine-detail-edit-button')),
+      );
       await tester.tap(
         find.byKey(const ValueKey('medicine-detail-edit-button')),
       );
@@ -1173,7 +1179,7 @@ void main() {
       await tester.tap(find.text('Assunta'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Dettagli Medicina'), findsNothing);
+      expect(find.text('Dettaglio medicina'), findsNothing);
       expect(fixture.provider.intakeHistory.single.status, IntakeStatus.taken);
     });
 

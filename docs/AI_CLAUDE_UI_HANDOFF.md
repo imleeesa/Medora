@@ -31,9 +31,15 @@ Asset AI approvati in `assets/images/medora/` (7 PNG RGBA 1024-1254px; **manca `
 
 Terapie (mockup 07/08): `TherapyCard` con cerchio icona nel colore terapia (attenuato per archiviate), chip "N medicine" tinta con icona link, chip stato in alto a destra, chevron; titolo 28 coerente con Dashboard; ricerca a pillola; empty "nessuna terapia attiva" = card con `capsuleMint` 96px + CTA tonale (`_NoActiveTherapiesCard`). Dettaglio (mockup 10): header con cerchio 56; tile medicina su due livelli (riga identità + `Wrap` di chip: orari max 2 + "+N", fascia giornata Mattina/Pomeriggio/Sera derivata dall'ora — pura presentazione, scorta "N rimaste" in ambra se sotto soglia); "Aggiungi medicina" ora riga tratteggiata full-width (`_DashedRRectPainter`, disabilitata se archiviata); empty medicine con `blisterSoft` 96px. **Logica non toccata**: `_handleAction`/`_exportPdf`/`_confirmDeleteMedicine`/ricerca/sezioni invariati. Rimandati: espansione icone terapia (~8) + picker (bible §24, farlo con Sprint D o micro-sprint), card Note (il model Therapy non ha campo note: solo description, già nell'header).
 
-## Prossimo sprint: D — Form Medicina + Dettaglio Medicina (mockup 11/12/13)
+## Sprint D — fatto
 
-Sezioni-card con cerchio icona, giorni a quadratini toggle, orari a pill, card scorta con barra, card storico recente (cache provider esistente), coppia CTA. Qui va chiuso il debito: helper condiviso raggruppamento schedule (form ↔ dettaglio). Dettagli: bible §16-17.
+Form Medicina (mockup 11/12) e Dettaglio Medicina (mockup 13) riscritti su `FormSectionCard` (nuovo widget: cerchio icona tinta + titolo + contenuto, in `lib/widgets/form_section_card.dart`). Form: sezioni Terapia associata / Dati principali / Dose opzionale / Programmazione (righe `_ScheduleGroupRow` con pill giorni+orari, editor `_ScheduleGroupEditor` con toggle giorni a quadratini) / Scorte / Colore (cerchi con check) / Note; validazione, `_saveMedicine`, `_buildDose`/`_seedDose`, breakpoint scorte <340px invariati. Dettaglio: header cerchio 52 + `StatusChip` Attiva/Inattiva, sezione Assunzione (dose SOLO se non vuota, programmazione via helper condiviso, terapia), sezione Scorta con barra (stessa euristica di `stock_screen.dart`), sezione Storico recente (ultime 3 da `provider.intakeHistory`, solo se non vuoto), CTA Modifica/Cambia terapia; **nuova wiring** di `toggleMedicineActive` (già esistente in `MedicineProvider`, prima non collegato a nessuna UI) nel menu azioni. Nessun asset 3D nel dettaglio (i colori fissi mint/lavanda/ambra non si accordano con il colore libero scelto dall'utente per la medicina).
+
+**Debito chiuso**: raggruppamento schedule per display era duplicato identico in `add_medicine_screen.dart` e `medicine_detail_screen.dart`. Ora vive in `lib/utils/schedule_grouping.dart` (`ScheduleGrouping.groupsFor`/`groupSchedules`, solo presentazione). Regola invariata: opera sempre su `MedicineSchedule` atomici reali, mai un prodotto cartesiano tra un elenco di giorni e uno di orari non correlati; il fallback su `medicine.times`/`medicine.daysOfWeek` esiste solo quando `medicine.schedules` non ha entry attive ed è usato solo per display (mai per generare nuove assunzioni operative, che restano sempre a carico di `MedicineProvider`/repository sugli schedule atomici). Test dedicato: `test/schedule_grouping_test.dart` (8 casi: singola/multiple programmazioni, merge per stesso giorno-set, merge per stesso orario, fallback legacy, niente cartesian product, schedule disattivati esclusi, "Tutti i giorni").
+
+## Prossimo sprint: E — Storico + Statistiche (mockup 14/15)
+
+Filtri in bottom sheet, righe con cerchio icona+terapia, anello aderenza CustomPainter, area chart sfumata, chip tripletta, messaggio incoraggiante rule-based. Nessuna nuova dipendenza (chart/anello con CustomPainter). Non toccare `HistoryFilterService`/`HistoryStatisticsService`/formula aderenza. Dettagli: bible.
 
 ## File da NON toccare in nessuno sprint UI
 
@@ -53,4 +59,4 @@ Niente larghezze fisse (residuo noto: `SizedBox(width:116)` in settings → Spri
 
 - Logo cuore Medora: nessun asset reale — Splash/Onboarding (Sprint H) parzialmente bloccati; in-app solo wordmark testuale.
 - Brand nei testi UI = "Medora" (rename tecnico package/appId resta rimandato, KNOWN_ISSUES).
-- Debito noto da chiudere nello Sprint D: logica raggruppamento schedule duplicata tra form e dettaglio medicina.
+- Debito raggruppamento schedule form/dettaglio: chiuso nello Sprint D (`lib/utils/schedule_grouping.dart`).

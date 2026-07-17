@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/intake_record.dart';
 import '../models/medicine.dart';
-import '../models/medicine_schedule.dart';
 import '../providers/medicine_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_dimens.dart';
+import '../utils/color_parser.dart';
+import '../utils/schedule_grouping.dart';
+import '../utils/weekday_labels.dart';
+import '../widgets/app_card.dart';
+import '../widgets/form_section_card.dart';
+import '../widgets/primary_button.dart';
+import '../widgets/status_chip.dart';
 import 'add_medicine_screen.dart';
 
 class MedicineDetailScreen extends StatelessWidget {
@@ -17,286 +26,207 @@ class MedicineDetailScreen extends StatelessWidget {
       builder: (context, provider, _) {
         final currentMedicine =
             provider.getMedicineById(medicine.id) ?? medicine;
+        final therapy = currentMedicine.therapyId == null
+            ? null
+            : provider.getTherapyById(currentMedicine.therapyId!);
+        final hasDose = currentMedicine.dose.trim().isNotEmpty;
+        final scheduleGroups = ScheduleGrouping.groupsFor(currentMedicine);
+        final isLowStock =
+            currentMedicine.stockQuantity <=
+            currentMedicine.stockWarningThreshold;
+        final recentRecords = provider.intakeHistory
+            .where((record) => record.medicineId == currentMedicine.id)
+            .take(3)
+            .toList(growable: false);
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F7F8),
+          backgroundColor: AppColors.background,
           appBar: AppBar(
-            title: const Text('Dettagli Medicina'),
-            elevation: 0,
-            backgroundColor: Colors.white,
+            title: const Text('Dettaglio medicina'),
             actions: [
-              IconButton(
-                key: const ValueKey('medicine-detail-edit-button'),
-                tooltip: 'Modifica medicina',
-                onPressed: () => _editMedicine(context, currentMedicine),
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              IconButton(
-                tooltip: 'Cambia terapia',
-                onPressed: () => _changeTherapy(context, currentMedicine),
-                icon: const Icon(Icons.swap_horiz_outlined),
-              ),
-              IconButton(
-                tooltip: 'Elimina medicina',
-                onPressed: () => _confirmDelete(context, currentMedicine),
-                icon: const Icon(Icons.delete_outline),
+              PopupMenuButton<_MedicineAction>(
+                tooltip: 'Azioni medicina',
+                onSelected: (action) =>
+                    _handleAction(context, currentMedicine, action),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: _MedicineAction.toggleActive,
+                    child: Row(
+                      children: [
+                        Icon(
+                          currentMedicine.isActive
+                              ? Icons.pause_circle_outline
+                              : Icons.play_circle_outline,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentMedicine.isActive
+                              ? 'Disattiva medicina'
+                              : 'Attiva medicina',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: _MedicineAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline),
+                        SizedBox(width: 8),
+                        Text('Elimina medicina'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Card header
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _parseColor(currentMedicine.color),
-                        _parseColor(
-                          currentMedicine.color,
-                        ).withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.all(24),
+                _MedicineHeader(medicine: currentMedicine),
+                const SizedBox(height: AppSpacing.lg),
+                FormSectionCard(
+                  icon: Icons.schedule,
+                  title: 'Assunzione',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        currentMedicine.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                      if (hasDose) ...[
+                        _DetailLabel(
+                          icon: Icons.medication_outlined,
+                          label: 'Dose',
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Dosaggio: ${currentMedicine.doseLabel}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          currentMedicine.isActive ? 'Attiva' : 'Inattiva',
+                        const SizedBox(height: 6),
+                        Text(
+                          currentMedicine.doseLabel,
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.md),
+                        Divider(
+                          height: 1,
+                          color: AppColors.border.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      const _DetailLabel(
+                        icon: Icons.calendar_month_outlined,
+                        label: 'Programmazione',
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                Builder(
-                  builder: (context) {
-                    final therapy = currentMedicine.therapyId == null
-                        ? null
-                        : provider.getTherapyById(currentMedicine.therapyId!);
-                    return _buildSection(
-                      title: 'Terapia',
-                      icon: Icons.medical_information_outlined,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              therapy?.name ?? 'Terapia non disponibile',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1E1E1E),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          TextButton.icon(
-                            onPressed: () =>
-                                _changeTherapy(context, currentMedicine),
-                            icon: const Icon(Icons.swap_horiz_outlined),
-                            label: const Text('Cambia'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Orari
-                _buildSection(
-                  title: 'Orari di Assunzione',
-                  icon: Icons.schedule,
-                  child: _ScheduleList(
-                    groups: _displayScheduleGroups(currentMedicine),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Giorni
-                _buildSection(
-                  title: 'Giorni della Settimana',
-                  icon: Icons.calendar_today,
-                  child: Wrap(
-                    spacing: 8,
-                    children: _getDayNames(currentMedicine.daysOfWeek)
-                        .map(
-                          (day) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFF2E7D32),
-                              ),
-                            ),
-                            child: Text(
-                              day,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF2E7D32),
-                              ),
-                            ),
+                      const SizedBox(height: 8),
+                      if (scheduleGroups.isEmpty)
+                        const Text(
+                          'Nessun orario programmato',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.inkFaint,
                           ),
                         )
-                        .toList(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Stock
-                _buildSection(
-                  title: 'Giacenza',
-                  icon: Icons.inventory_2_outlined,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Quantita attuale',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              Medicine.formatQuantity(
-                                currentMedicine.stockQuantity,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1E1E1E),
-                              ),
-                            ),
-                          ],
-                        ),
+                      else
+                        for (var i = 0; i < scheduleGroups.length; i++) ...[
+                          if (i > 0) const SizedBox(height: AppSpacing.md),
+                          _ScheduleGroupTile(group: scheduleGroups[i]),
+                        ],
+                      const SizedBox(height: AppSpacing.md),
+                      Divider(
+                        height: 1,
+                        color: AppColors.border.withValues(alpha: 0.7),
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              currentMedicine.stockQuantity <=
-                                  currentMedicine.stockWarningThreshold
-                              ? Colors.orange[50]
-                              : const Color(0xFFE8F5E9),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                currentMedicine.stockQuantity <=
-                                    currentMedicine.stockWarningThreshold
-                                ? Colors.orange[300]!
-                                : const Color(0xFF2E7D32),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Soglia Minima',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              Medicine.formatQuantity(
-                                currentMedicine.stockWarningThreshold,
-                              ),
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color:
-                                    currentMedicine.stockQuantity <=
-                                        currentMedicine.stockWarningThreshold
-                                    ? Colors.orange
-                                    : const Color(0xFF2E7D32),
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: AppSpacing.md),
+                      const _DetailLabel(
+                        icon: Icons.health_and_safety_outlined,
+                        label: 'Terapia associata',
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        therapy?.name ?? 'Terapia non disponibile',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Note
+                const SizedBox(height: AppSpacing.lg),
+                FormSectionCard(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'Scorta disponibile',
+                  trailing: StatusChip(
+                    label: isLowStock ? 'Scorta bassa' : 'Nella norma',
+                    tone: isLowStock ? StatusTone.warning : StatusTone.positive,
+                  ),
+                  child: _StockDetails(medicine: currentMedicine),
+                ),
+                if (recentRecords.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  FormSectionCard(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Storico recente',
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < recentRecords.length; i++) ...[
+                          _RecentIntakeRow(record: recentRecords[i]),
+                          if (i < recentRecords.length - 1)
+                            Divider(
+                              height: AppSpacing.md,
+                              color: AppColors.border.withValues(alpha: 0.7),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
                 if (currentMedicine.notes != null &&
-                    currentMedicine.notes!.isNotEmpty)
-                  _buildSection(
+                    currentMedicine.notes!.trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  FormSectionCard(
+                    icon: Icons.note_alt_outlined,
                     title: 'Note',
-                    icon: Icons.note_outlined,
                     child: Text(
                       currentMedicine.notes!,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF1E1E1E),
-                        height: 1.6,
+                        color: AppColors.inkSoft,
+                        height: 1.5,
                       ),
                     ),
                   ),
-                const SizedBox(height: 24),
+                ],
+                const SizedBox(height: AppSpacing.xl),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrimaryButton(
+                        key: const ValueKey('medicine-detail-edit-button'),
+                        label: 'Modifica medicina',
+                        icon: Icons.edit_outlined,
+                        onPressed: () =>
+                            _editMedicine(context, currentMedicine),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Cambia terapia',
+                        icon: Icons.swap_horiz_outlined,
+                        onPressed: () =>
+                            _changeTherapy(context, currentMedicine),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -305,41 +235,43 @@ class MedicineDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Costruisce una sezione
-  Widget _buildSection({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: const Color(0xFF2E7D32)),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E1E1E),
-                ),
-              ),
-            ],
+  Future<void> _handleAction(
+    BuildContext context,
+    Medicine currentMedicine,
+    _MedicineAction action,
+  ) async {
+    switch (action) {
+      case _MedicineAction.toggleActive:
+        await _toggleActive(context, currentMedicine);
+      case _MedicineAction.delete:
+        await _confirmDelete(context, currentMedicine);
+    }
+  }
+
+  Future<void> _toggleActive(
+    BuildContext context,
+    Medicine currentMedicine,
+  ) async {
+    try {
+      await context.read<MedicineProvider>().toggleMedicineActive(
+        currentMedicine.id,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            currentMedicine.isActive
+                ? 'Medicina disattivata'
+                : 'Medicina attivata',
           ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 
   Future<void> _confirmDelete(
@@ -447,7 +379,7 @@ class MedicineDetailScreen extends StatelessWidget {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, index) {
                     final therapy = targetTherapies[index];
-                    final color = _parseColor(therapy.color);
+                    final color = parseHexColor(therapy.color);
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: color.withValues(alpha: 0.14),
@@ -490,192 +422,222 @@ class MedicineDetailScreen extends StatelessWidget {
       ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
-
-  /// Ottiene i nomi dei giorni
-  List<String> _getDayNames(List<int> days) {
-    const names = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
-    final safeDays = days.toSet().where((day) => day >= 1 && day <= 7).toList()
-      ..sort();
-    return safeDays.map((d) => names[d - 1]).toList();
-  }
-
-  List<_DisplayScheduleGroup> _displayScheduleGroups(Medicine medicine) {
-    final sourceSchedules = medicine.schedules
-        .where((schedule) => schedule.isActive)
-        .toList(growable: false);
-    final schedules = sourceSchedules.isNotEmpty
-        ? sourceSchedules
-        : medicine.times
-              .map(
-                (time) => MedicineSchedule(
-                  time: time,
-                  daysOfWeek: medicine.daysOfWeek,
-                ),
-              )
-              .toList(growable: false);
-
-    final daysByTime = <String, Set<int>>{};
-    final timeByKey = <String, TimeOfDay>{};
-    for (final schedule in schedules) {
-      final days =
-          schedule.daysOfWeek
-              .where((day) => day >= 1 && day <= 7)
-              .toSet()
-              .toList()
-            ..sort();
-      if (days.isEmpty) continue;
-      final timeKey = '${schedule.time.hour}:${schedule.time.minute}';
-      timeByKey[timeKey] = schedule.time;
-      daysByTime.putIfAbsent(timeKey, () => <int>{}).addAll(days);
-    }
-
-    final timesByDays = <String, Map<String, TimeOfDay>>{};
-    final daysByKey = <String, List<int>>{};
-    for (final entry in daysByTime.entries) {
-      final days = entry.value.toList()..sort();
-      final daysKey = days.join(',');
-      daysByKey[daysKey] = days;
-      timesByDays.putIfAbsent(daysKey, () => <String, TimeOfDay>{})[entry.key] =
-          timeByKey[entry.key]!;
-    }
-
-    final result = timesByDays.entries.map((entry) {
-      final times = entry.value.values.toList()
-        ..sort((first, second) {
-          final firstMinutes = first.hour * 60 + first.minute;
-          final secondMinutes = second.hour * 60 + second.minute;
-          return firstMinutes.compareTo(secondMinutes);
-        });
-      return _DisplayScheduleGroup(days: daysByKey[entry.key]!, times: times);
-    }).toList();
-
-    result.sort((first, second) {
-      final firstDay = first.days.isEmpty ? 8 : first.days.first;
-      final secondDay = second.days.isEmpty ? 8 : second.days.first;
-      if (firstDay != secondDay) return firstDay.compareTo(secondDay);
-      final firstTime = first.times.isEmpty
-          ? const TimeOfDay(hour: 23, minute: 59)
-          : first.times.first;
-      final secondTime = second.times.isEmpty
-          ? const TimeOfDay(hour: 23, minute: 59)
-          : second.times.first;
-      final firstMinutes = firstTime.hour * 60 + firstTime.minute;
-      final secondMinutes = secondTime.hour * 60 + secondTime.minute;
-      return firstMinutes.compareTo(secondMinutes);
-    });
-    return result;
-  }
-
-  /// Converte codice colore hex a Color
-  Color _parseColor(String colorHex) {
-    colorHex = colorHex.replaceFirst('#', '');
-    return Color(int.parse('FF$colorHex', radix: 16));
-  }
 }
 
-class _DisplayScheduleGroup {
-  final List<int> days;
-  final List<TimeOfDay> times;
+enum _MedicineAction { toggleActive, delete }
 
-  const _DisplayScheduleGroup({required this.days, required this.times});
-}
+class _MedicineHeader extends StatelessWidget {
+  final Medicine medicine;
 
-class _ScheduleList extends StatelessWidget {
-  final List<_DisplayScheduleGroup> groups;
-
-  const _ScheduleList({required this.groups});
+  const _MedicineHeader({required this.medicine});
 
   @override
   Widget build(BuildContext context) {
-    if (groups.isEmpty) {
-      return Text(
-        'Nessun orario programmato',
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey.shade600,
-        ),
-      );
-    }
+    final color = parseHexColor(medicine.color);
 
-    return Column(
-      children: groups
-          .map(
-            (group) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    key: ValueKey(
-                      'medicine-schedule-group-${group.days.join('-')}-${group.times.map((time) => '${time.hour}-${time.minute}').join('-')}',
-                    ),
-                    width: 132,
-                    constraints: const BoxConstraints(minHeight: 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _dayNames(group.days).join(', '),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2E7D32),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: group.times
-                          .map(
-                            (time) => Container(
-                              key: ValueKey(
-                                'medicine-schedule-time-${time.hour}-${time.minute}',
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFF2E7D32),
-                                ),
-                              ),
-                              child: Text(
-                                time.format(context),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E1E1E),
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(growable: false),
-                    ),
-                  ),
-                ],
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.medication_outlined, color: color, size: 24),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              medicine.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
               ),
             ),
-          )
-          .toList(growable: false),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          StatusChip(
+            label: medicine.isActive ? 'Attiva' : 'Inattiva',
+            tone: medicine.isActive ? StatusTone.positive : StatusTone.neutral,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _DetailLabel({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.inkFaint),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.inkFaint,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleGroupTile extends StatelessWidget {
+  final ScheduleDisplayGroup group;
+
+  const _ScheduleGroupTile({required this.group});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          ScheduleGrouping.dayNames(group.daysOfWeek),
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.ink,
+          ),
+        ),
+        for (final time in group.times)
+          Container(
+            key: ValueKey('medicine-schedule-time-${time.hour}-${time.minute}'),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.primaryTint,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            child: Text(
+              time.format(context),
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary800,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StockDetails extends StatelessWidget {
+  final Medicine medicine;
+
+  const _StockDetails({required this.medicine});
+
+  @override
+  Widget build(BuildContext context) {
+    final threshold = medicine.stockWarningThreshold;
+    // Stessa euristica visiva gia' usata in StockScreen: presentazione,
+    // nessuna modifica alla logica scorte.
+    final progress = threshold <= 0
+        ? 1.0
+        : (medicine.stockQuantity / (threshold * 3)).clamp(0.0, 1.0);
+    final isLowStock = medicine.stockQuantity <= threshold;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${Medicine.formatQuantity(medicine.stockQuantity)} unità residue',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.ink,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Soglia avviso: ${Medicine.formatQuantity(threshold)} unità',
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.inkFaint,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            backgroundColor: AppColors.border,
+            color: isLowStock ? AppColors.warning : AppColors.primary700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecentIntakeRow extends StatelessWidget {
+  final IntakeRecord record;
+
+  const _RecentIntakeRow({required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    final displayed = record.actualDateTime ?? record.scheduledDateTime;
+    final (label, tone) = switch (record.status) {
+      IntakeStatus.taken => ('Assunta', StatusTone.positive),
+      IntakeStatus.skipped => ('Saltata', StatusTone.warning),
+      IntakeStatus.missed => ('Dimenticata', StatusTone.critical),
+      IntakeStatus.scheduled => ('Prevista', StatusTone.info),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.calendar_today_outlined,
+            size: 15,
+            color: AppColors.inkFaint,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _dateLabel(displayed, context),
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.inkSoft,
+              ),
+            ),
+          ),
+          StatusChip(label: label, tone: tone),
+        ],
+      ),
     );
   }
 
-  List<String> _dayNames(List<int> days) {
-    const names = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
-    final safeDays = days.toSet().where((day) => day >= 1 && day <= 7).toList()
-      ..sort();
-    return safeDays.map((day) => names[day - 1]).toList(growable: false);
+  String _dateLabel(DateTime dateTime, BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final time = TimeOfDay.fromDateTime(dateTime).format(context);
+
+    if (day == today) return 'Oggi, $time';
+    if (day == today.subtract(const Duration(days: 1))) return 'Ieri, $time';
+    return '${kWeekdayShortLabels[dateTime.weekday - 1]}, $time';
   }
 }
