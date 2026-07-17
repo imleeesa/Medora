@@ -41,6 +41,30 @@ Quarto sprint del redesign Calm Precision: estende i componenti e i token gia' i
 
 Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
 
+## 2026-07-16 - Indagine bug isolamento record storico + guardia difensiva
+
+Tipo modifica: Bug investigation / Hardening / Test / Documentation.
+
+Descrizione:
+
+- indagato il caso segnalato: dopo Assunta su una medicina nuova, nello storico un vecchio record "sasso" (terapia eliminata, "Terapia non disponibile") risultava Assunta;
+- audit completo dei punti di matching: `IntakeRepository.getIntakeRecordForSchedule`, `IntakeActionService.saveIntakeStatus`, `MedicineProvider._findIntakeRecord`, `MissedIntakePlanner` (chiave anti-duplicato) e `NotificationActionHandler`: tutti usano gia' la coppia stretta `medicineId + scheduledDateTime`; i record di medicine eliminate hanno `medicineId` NULL e non possono essere selezionati da nessuna query di azione;
+- non esiste oggi un percorso di codice che permetta a una nuova azione di modificare un record orfano: la spiegazione coerente del sintomo e' che il record "sasso" fosse gia' `taken` prima dell'eliminazione della terapia e sia stato conservato per progetto (snapshot);
+- aggiunta comunque una guardia difensiva in `IntakeActionService.saveIntakeStatus`: se il record trovato non appartiene alla medicina richiesta l'azione fallisce senza scrivere (protegge da regressioni future della query);
+- aggiunti 4 test di regressione in `test/intake_action_isolation_test.dart`: record orfano non modificato da nuova Assunta allo stesso orario; due medicine attive stesso orario aggiornate in isolamento (record e scorte); medicina eliminata non aggiornabile (azione diretta e stale da notifica); guardia difensiva contro un ipotetico matching largo del repository.
+
+File modificati:
+
+- `lib/services/intake_action_service.dart` (solo guardia difensiva);
+- `test/intake_action_isolation_test.dart` (nuovo);
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Motivazione:
+
+Il matching stretto va garantito da invarianti espliciti e test, non solo dalla forma attuale delle query. Nessuna modifica a storico esistente, UI, copy, notifiche o scorte.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (125/125) e `flutter build apk --debug` superati.
+
 ## 2026-07-16 - Sprint C: Terapie + Dettaglio Terapia Soft Clinical
 
 Tipo modifica: UI / Redesign / Documentation.

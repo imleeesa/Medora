@@ -126,6 +126,15 @@ class IntakeActionService {
       medicineId: medicineId,
       scheduledDateTime: scheduledDateTime,
     );
+    // Difesa in profondita': un'azione Assunta/Saltata puo' aggiornare solo
+    // un record che appartiene esattamente alla medicina selezionata.
+    // I record di medicine eliminate hanno medicineId null e non devono mai
+    // essere riusati da nuove azioni, anche se condividono data e orario.
+    if (existingRecord != null && existingRecord.medicineId != medicineId) {
+      throw StateError(
+        'Il record storico trovato non appartiene alla medicina selezionata.',
+      );
+    }
     final now = DateTime.now();
     final wasTaken = existingRecord?.status == IntakeStatus.taken;
     final isTaken = status == IntakeStatus.taken;
