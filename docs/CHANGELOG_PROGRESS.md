@@ -41,6 +41,36 @@ Quarto sprint del redesign Calm Precision: estende i componenti e i token gia' i
 
 Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (121/121) e `flutter build apk --debug` superati.
 
+## 2026-07-17 - Sprint QA tecnico/logico generale
+
+Tipo modifica: Audit / Test / Hardening.
+
+Descrizione:
+
+- audit sistematico di intake/storico, schedule avanzate, cancellazione/archiviazione, scorte, notifiche, export CSV/PDF, UI tecnica e layer Drift/repository, tramite lettura diretta del codice (nessuna modifica speculativa);
+- confermato che tutti i percorsi di matching intake (repository, provider, missed planner, notification handler) usano gia' `medicineId + scheduledDateTime` in modo stretto; nessun nuovo bug di isolamento trovato oltre a quello gia' corretto;
+- confermato cascade corretto su `deleteTherapy`/`deleteMedicine` (scollegamento intake prima della cancellazione fisica di schedule/medicina/terapia);
+- confermato che le medicine di terapie archiviate/eliminate sono escluse da `_activeMedicines()` e quindi da dashboard, missed planner e notifiche;
+- confermato nessuna doppia notifica di scorta bassa tra `IntakeActionService` e `MedicineProvider` (percorsi distinti, mai invocati insieme);
+- verificata copertura test esistente per: doppia Assunta, Assunta->Saltata->Assunta, scorta insufficiente, dose vuota/non interpretabile, modifica schedule, export CSV con snapshot medicine eliminate, PDF con caratteri Unicode, deep link verso medicina eliminata — tutti gia' coperti da test pre-esistenti;
+- aggiunto test mancante: fallback sicuro di `Medora3DAsset` quando l'asset non esiste (nessun crash, spazio vuoto della stessa dimensione).
+
+File modificati:
+
+- `test/medora_3d_asset_test.dart` (nuovo);
+- `docs/CHANGELOG_PROGRESS.md`.
+
+Debiti tecnici noti (non bloccanti, non corretti in questo sprint):
+
+- logica di raggruppamento schedule ancora duplicata tra `add_medicine_screen.dart` e `medicine_detail_screen.dart` (gia' documentato, previsto per Sprint D);
+- fallback legacy in `add_medicine_screen.dart` che ricostruisce schedule dall'unione `times`/`daysOfWeek` solo quando `medicine.schedules` e' vuoto (caso limite gia' documentato, non sfruttabile nel flusso UI attuale).
+
+Motivazione:
+
+Verifica di solidita' prima di proseguire con Sprint D. Nessuna modifica a database, UI/redesign, asset, notifiche o logica di dominio oltre al test aggiunto.
+
+Stato finale: completato con `dart format lib test`, `dart analyze`, `flutter analyze`, `flutter test` (126/126) e `flutter build apk --debug` superati.
+
 ## 2026-07-16 - Indagine bug isolamento record storico + guardia difensiva
 
 Tipo modifica: Bug investigation / Hardening / Test / Documentation.
